@@ -1,20 +1,29 @@
-deckshot-map 1
+deckshot-map 2
 name Gas Works
-spawn 140 580
-spawn 1140 580
-spawn 260 360
-spawn 1020 360
-rect 60 620 580 100
-rect 640 620 580 100
-rect 200 400 200 20
-rect 880 400 200 20
-oneway 520 300 120 14
-oneway 640 300 120 14
-obj gas h=42 hp=20 radius=110 w=28 x=380 y=578
-obj gas h=42 hp=20 radius=110 w=28 x=872 y=578
-obj gas h=42 hp=20 radius=110 w=28 x=520 y=578
-obj gas h=42 hp=20 radius=110 w=28 x=732 y=578
-obj crate drop=0.08 h=50 hp=60 w=50 x=440 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=790 y=570
-obj gas h=42 hp=20 radius=110 w=28 x=300 y=358
-obj gas h=42 hp=20 radius=110 w=28 x=952 y=358
+theme ice
+spawn 168 696
+spawn 1368 696
+spawn 312 432
+spawn 1224 432
+rect 72 744 696 120
+rect 768 744 696 120
+rect 240 480 240 24
+rect 1056 480 240 24
+oneway 624 360 144 17
+oneway 768 360 144 17
+oneway 336 192 144 14
+oneway 1056 192 144 14
+oneway 48 120 120 14
+oneway 1368 120 120 14
+obj gas h=42 hp=20 radius=110 w=28 x=456 y=702
+obj gas h=42 hp=20 radius=110 w=28 x=1046 y=702
+obj gas h=42 hp=20 radius=110 w=28 x=624 y=702
+obj gas h=42 hp=20 radius=110 w=28 x=878 y=702
+obj crate drop=0.08 h=50 hp=60 w=50 x=528 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=948 y=694
+obj gas h=42 hp=20 radius=110 w=28 x=360 y=438
+obj gas h=42 hp=20 radius=110 w=28 x=1142 y=438
+obj barrel h=48 w=36 x=378 y=696
+obj barrel h=48 w=36 x=1122 y=696
+obj wall h=96 hp=150 w=40 x=276 y=648
+obj wall h=96 hp=150 w=40 x=1220 y=648

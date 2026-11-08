@@ -1,4 +1,4 @@
--- Map editor. The arena is shown at 75% in the middle; tools on the left, the selected
+-- Map editor. The arena is shown at 62.5% in the middle; tools on the left, the selected
 -- item's properties on the right, messages along the bottom.
 --   Mouse: place / select / drag (corner handles resize). Right click: cancel / finish a path.
 --   Keys: 1-8 tools, G grid, M mirror, Del delete, Ctrl+D duplicate, Ctrl+Z / Ctrl+Y undo / redo,
@@ -12,10 +12,10 @@ local sfx = require "gfx.sfx"
 local Editor = {}
 Editor.__index = Editor
 
-local SCALE = 0.75
+local SCALE = 960 / Map.W
 local OX, OY = 150, 58               -- where the arena is drawn
-local AW, AH = 1280, 720
-local GRID, FINE = 20, 5
+local AW, AH = Map.W, Map.H
+local GRID, FINE = 24, 6
 local MAX_UNDO = 100
 
 local TOOLS = {
@@ -43,7 +43,7 @@ local function props(list, extra)
   for _, p in ipairs(extra or {}) do out[#out + 1] = p end
   return out
 end
-local WH = { { "w", "Width", 10, 10, 1280 }, { "h", "Height", 2, 4, 720 } }
+local WH = { { "w", "Width", 10, 10, Map.W }, { "h", "Height", 2, 4, Map.H } }
 local PROPS = {
   saw = { { "r", "Radius", 2, 10, 90 }, { "speed", "Speed", 20, 0, 800 }, { "damage", "Damage", 5, 0, 200 } },
   spikes = props(WH, { { "dir", "Points", options = DIRS4 }, { "damage", "Damage", 5, 0, 200 },
@@ -101,8 +101,8 @@ local function round(v) return math.floor(v + 0.5) end
 local function blankMap()
   return {
     name = "New Map",
-    spawns = { { 240, 580 }, { 1040, 580 }, { 400, 580 }, { 880, 580 } },
-    rects = { { x = 120, y = 620, w = 1040, h = 40 } },
+    spawns = { { 288, 696 }, { 1248, 696 }, { 480, 696 }, { 1056, 696 } },
+    rects = { { x = 144, y = 744, w = 1248, h = 48 } },
     objects = {},
   }
 end
@@ -653,7 +653,7 @@ function Editor:drawArena()
     love.graphics.line(AW / 2, 0, AW / 2, AH)
   end
 
-  Map.draw(m)
+  Map.draw(m, true)
   local list = Objects.build(m)
   Objects.draw(list, {})
   -- Path lines and rope previews
@@ -781,7 +781,7 @@ function Editor:drawInspector()
   if s.kind == "spawn" then
     rows = { { 1, "X", 5, 0, AW }, { 2, "Y", 5, 0, AH } }
   elseif s.kind == "rect" then
-    rows = { { "x", "X", 5, -100, AW }, { "y", "Y", 5, -100, AH }, { "w", "Width", 10, 10, 1500 },
+    rows = { { "x", "X", 5, -100, AW }, { "y", "Y", 5, -100, AH }, { "w", "Width", 10, 10, Map.W + 200 },
       { "h", "Height", 2, 4, 800 }, { "oneway", "One-way", options = { false, true } } }
   else
     rows = { { "x", "X", 5, -100, AW + 100 }, { "y", "Y", 5, -100, AH + 100 } }

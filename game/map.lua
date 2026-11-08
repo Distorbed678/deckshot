@@ -1,18 +1,26 @@
 -- Arenas (lists of solid rectangles) and collision helpers.
 local Map = {}
 
+-- The arena in world units. The whole arena is always on screen: the game view is drawn scaled
+-- by Map.VIEW so it fits the 1280x720 screen (menus and the HUD are not scaled).
+Map.W, Map.H = 1536, 864
+Map.VIEW = 1280 / Map.W
+Map.FORMAT = 2
+local OLD_SCALE = 1.2 -- format 1 maps were made for a 1280x720 arena
+
 -- Used if no map files are found (shouldn't happen in a release build).
 Map.FALLBACK = {
   name = "Fallback", id = "fallback",
-  spawns = { { 300, 580 }, { 980, 580 }, { 400, 580 }, { 880, 580 } },
-  rects = { { x = 140, y = 620, w = 1000, h = 40 } }, objects = {},
+  spawns = { { 360, 696 }, { 1176, 696 }, { 480, 696 }, { 1056, 696 } },
+  rects = { { x = 168, y = 744, w = 1200, h = 48 } }, objects = {},
 }
 
 
 ---------------------------------------------------------------- map files
 -- Every map is a small text file in the editor's format:
---   deckshot-map 1
+--   deckshot-map 2           (format 1 = the old 1280x720 arena, spread out when loaded)
 --   name <name>
+--   theme <name>             (optional background: see gfx/atmosphere.lua)
 --   spawn <x> <y>            (4 lines, spawns 1-4 in order)
 --   rect <x> <y> <w> <h>     solid block
 --   oneway <x> <y> <w> <h>   one-way platform
@@ -45,18 +53,64 @@ local function fmt(v)
   return tostring(v)
 end
 
+local function round(v) return math.floor(v + 0.5) end
+
+-- Spreads a format 1 map over the bigger arena: blocks grow with it, and things that sit on a
+-- surface (or hang from one) stay attached to it instead of floating. Sizes of breakables,
+-- saws and so on don't change.
+local WIDE = { spikes = true, acid = true, conveyor = true, crumble = true, platform = true, plank = true, crusher = true }
+local TOP_ALIGNED = { crusher = true }
+function Map.upgrade(map)
+  local k = OLD_SCALE
+  for _, s in ipairs(map.spawns) do s[1], s[2] = round(s[1] * k), round(s[2] * k) end
+  for _, r in ipairs(map.rects) do
+    local x1, y1 = round((r.x + r.w) * k), round((r.y + r.h) * k)
+    r.x, r.y = round(r.x * k), round(r.y * k)
+    r.w, r.h = x1 - r.x, y1 - r.y
+  end
+  for _, o in ipairs(map.objects) do
+    if o.w and o.h then
+      local dir = o.dir
+      local w, h = o.w, o.h
+      if WIDE[o.type] or dir == "left" or dir == "right" then w = round(w * k) end
+      if o.type == "fan" then
+        if dir == "left" or dir == "right" then h = h else h = round(h * k) end
+      end
+      if dir == "left" or dir == "right" then
+        if o.type == "spikes" then h, w = round(o.h * k), o.w end
+      end
+      local x, y = round(o.x * k), round(o.y * k)
+      local vertical = dir == "left" or dir == "right"
+      if not vertical and dir ~= "down" and not TOP_ALIGNED[o.type] then y = round((o.y + o.h) * k) - h end
+      if dir == "left" then x = round((o.x + o.w) * k) - w end
+      o.x, o.y, o.w, o.h = x, y, w, h
+    else
+      o.x, o.y = round(o.x * k), round(o.y * k)
+    end
+    if o.travel then o.travel = round(o.travel * k) end
+    if o.length and o.type == "flame" then o.length = round(o.length * k) end
+    if o.path then
+      for _, pt in ipairs(o.path) do pt[1], pt[2] = round(pt[1] * k), round(pt[2] * k) end
+    end
+  end
+end
+
 -- Text -> map table (or nil, error).
 function Map.parse(text)
   if type(text) ~= "string" then return nil, "no map data" end
   local map = { name = "Untitled", spawns = {}, rects = {}, objects = {} }
   local first = true
+  local format = 1
   for line in (text .. "\n"):gmatch("([^\r\n]*)\r?\n") do
     local word, rest = line:match("^%s*(%S+)%s*(.-)%s*$")
     if first and word then
       if word ~= "deckshot-map" then return nil, "not a Deckshot map" end
       first = false
+      format = tonumber(rest) or 1
     elseif word == "name" then
       map.name = rest ~= "" and rest:sub(1, 40) or "Untitled"
+    elseif word == "theme" then
+      map.theme = rest ~= "" and rest or nil
     elseif word == "spawn" then
       local x, y = rest:match("^(%S+)%s+(%S+)")
       if tonumber(x) and tonumber(y) then map.spawns[#map.spawns + 1] = { tonumber(x), tonumber(y) } end
@@ -86,16 +140,18 @@ function Map.parse(text)
     end
   end
   if first then return nil, "empty map" end
-  while #map.spawns < 4 do map.spawns[#map.spawns + 1] = { 640, 300 } end
+  if format < Map.FORMAT then Map.upgrade(map) end
+  while #map.spawns < 4 do map.spawns[#map.spawns + 1] = { Map.W / 2, 360 } end
   map.id = Map.idOf(map.name)
   return map
 end
 
 -- Map table -> text.
 function Map.serialize(map)
-  local out = { "deckshot-map 1", "name " .. (map.name or "Untitled") }
+  local out = { "deckshot-map " .. Map.FORMAT, "name " .. (map.name or "Untitled") }
+  if map.theme then out[#out + 1] = "theme " .. map.theme end
   for i = 1, 4 do
-    local s = map.spawns[i] or { 640, 300 }
+    local s = map.spawns[i] or { Map.W / 2, 360 }
     out[#out + 1] = "spawn " .. fmt(s[1]) .. " " .. fmt(s[2])
   end
   for _, r in ipairs(map.rects) do
@@ -244,8 +300,8 @@ function Map.setSession(entries)
       m.id = e.id
       if e.text then m.custom = true end
     else
-      m = { name = "Missing map", spawns = { { 300, 500 }, { 980, 500 }, { 400, 500 }, { 880, 500 } },
-        rects = { { x = 100, y = 560, w = 1080, h = 40 } }, objects = {} }
+      m = { name = "Missing map", spawns = { { 360, 600 }, { 1176, 600 }, { 480, 600 }, { 1056, 600 } },
+        rects = { { x = 120, y = 672, w = 1296, h = 48 } }, objects = {} }
     end
     list[#list + 1] = m
   end
@@ -271,6 +327,40 @@ function Map.random(exclude, disabled)
   return Map.list[i], i
 end
 
+-- King of the Hill: where a hill can sit. Surfaces wide enough to stand on, spread out over the
+-- arena and away from hazards.
+local HAZARD_TYPES = { saw = true, spikes = true, laser = true, crusher = true, flame = true, acid = true, turret = true, arm = true }
+function Map.hillPoints(map)
+  if map.hills then return map.hills end
+  local tops = {}
+  for _, r in ipairs(map.rects) do
+    if r.w >= 120 and r.y > 170 and r.y < Map.H - 30 then
+      tops[#tops + 1] = { r.x + r.w / 2, r.y - 70, r.w }
+    end
+  end
+  table.sort(tops, function(a, b) return a[3] > b[3] end)
+  local function safe(x, y)
+    for _, o in ipairs(map.objects or {}) do
+      if HAZARD_TYPES[o.type] then
+        local ox, oy = o.x + (o.w or 0) / 2, o.y + (o.h or 0) / 2
+        if (ox - x) ^ 2 + (oy - y) ^ 2 < 140 * 140 then return false end
+      end
+    end
+    return true
+  end
+  local out = {}
+  for _, t in ipairs(tops) do
+    local far = safe(t[1], t[2])
+    for _, o in ipairs(out) do
+      if (o[1] - t[1]) ^ 2 + (o[2] - t[2]) ^ 2 < 300 * 300 then far = false end
+    end
+    if far and #out < 8 then out[#out + 1] = { math.floor(t[1]), math.floor(t[2]) } end
+  end
+  if #out == 0 then out[1] = { Map.W / 2, Map.H / 2 } end
+  map.hills = out
+  return out
+end
+
 function Map.overlaps(ax, ay, aw, ah, b)
   return ax < b.x + b.w and ax + aw > b.x and ay < b.y + b.h and ay + ah > b.y
 end
@@ -286,35 +376,24 @@ end
 
 Map.loadAll()
 
-function Map.draw(map)
+-- plain: no background (map thumbnails).
+function Map.draw(map, plain)
+  local Atmosphere = require "gfx.atmosphere"
+  local t = plain and Atmosphere.themeOf(map) or Atmosphere.draw(map)
+  local c, e = t.block, t.edge
   for _, b in ipairs(map.rects) do
     if b.oneway then
-      love.graphics.setColor(0.3, 0.31, 0.38, 0.55)
+      love.graphics.setColor(c[1], c[2], c[3], 0.55)
       love.graphics.rectangle("fill", b.x, b.y, b.w, math.min(b.h, 10))
-      love.graphics.setColor(0.62, 0.64, 0.75)
+      love.graphics.setColor(e)
       love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
     else
-      love.graphics.setColor(0.3, 0.31, 0.38)
+      love.graphics.setColor(c)
       love.graphics.rectangle("fill", b.x, b.y, b.w, b.h)
-      love.graphics.setColor(0.45, 0.46, 0.55)
+      love.graphics.setColor(e[1], e[2], e[3], 0.8)
       love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
     end
   end
-  Map.drawEdges()
-end
-
--- The arena's damaging edges (left, right, bottom).
-function Map.drawEdges()
-  local t = love.timer.getTime()
-  local a = 0.45 + 0.15 * math.sin(t * 3)
-  love.graphics.setColor(1, 0.2, 0.18, a)
-  love.graphics.rectangle("fill", 0, 0, 4, 720)
-  love.graphics.rectangle("fill", 1276, 0, 4, 720)
-  love.graphics.rectangle("fill", 0, 716, 1280, 4)
-  love.graphics.setColor(1, 0.2, 0.18, a * 0.25)
-  love.graphics.rectangle("fill", 4, 0, 8, 720)
-  love.graphics.rectangle("fill", 1268, 0, 8, 720)
-  love.graphics.rectangle("fill", 0, 708, 1280, 8)
 end
 
 return Map

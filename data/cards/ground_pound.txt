@@ -1,4 +1,4 @@
 deckshot-card 1
 name Ground Pound
-rarity rare
+rarity uncommon
 trigger land shockwave damage=20 radius=110

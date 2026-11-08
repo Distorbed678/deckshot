@@ -1,6 +1,6 @@
 deckshot-card 1
 name Sprint Block
-rarity uncommon
+rarity common
 block
 row add sprintBlock 1
 note +blocking gives +40% move speed for 2s

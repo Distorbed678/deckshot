@@ -1,16 +1,21 @@
-deckshot-map 1
+deckshot-map 2
 name Overdrive
-spawn 180 300
-spawn 1100 300
-spawn 500 260
-spawn 780 260
-rect 60 620 580 60
-rect 640 620 580 60
-oneway 100 340 160 14
-oneway 1020 340 160 14
-oneway 440 300 120 14
-oneway 720 300 120 14
-obj conveyor h=20 speed=260 w=580 x=60 y=600
-obj conveyor h=20 speed=-260 w=580 x=640 y=600
-obj pad h=14 power=1350 w=60 x=400 y=586
-obj pad h=14 power=1350 w=60 x=820 y=586
+theme foundry
+spawn 216 360
+spawn 1320 360
+spawn 600 312
+spawn 936 312
+rect 72 744 696 72
+rect 768 744 696 72
+oneway 120 408 192 17
+oneway 1224 408 192 17
+oneway 528 360 144 17
+oneway 864 360 144 17
+oneway 288 192 144 14
+oneway 1104 192 144 14
+obj conveyor h=20 speed=260 w=696 x=72 y=724
+obj conveyor h=20 speed=-260 w=696 x=768 y=724
+obj pad h=14 power=1350 w=60 x=480 y=706
+obj pad h=14 power=1350 w=60 x=984 y=706
+obj crumble back=4 delay=0.5 h=18 w=144 x=576 y=120
+obj crumble back=4 delay=0.5 h=18 w=144 x=816 y=120

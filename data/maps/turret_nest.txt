@@ -1,16 +1,27 @@
-deckshot-map 1
+deckshot-map 2
 name Turret Nest
-spawn 140 580
-spawn 1140 580
-spawn 220 360
-spawn 1060 360
-rect 60 620 580 100
-rect 640 620 580 100
-rect 560 200 160 24
-oneway 160 400 160 14
-oneway 960 400 160 14
-obj turret damage=18 hp=80 rate=2.2 x=640 y=240
-obj wall h=120 hp=160 w=30 x=360 y=500
-obj wall h=120 hp=160 w=30 x=890 y=500
-obj wall h=120 hp=160 w=30 x=400 y=280
-obj wall h=120 hp=160 w=30 x=850 y=280
+theme foundry
+spawn 168 696
+spawn 1368 696
+spawn 264 432
+spawn 1272 432
+rect 72 744 696 120
+rect 768 744 696 120
+rect 672 240 192 29
+oneway 192 480 192 17
+oneway 1152 480 192 17
+oneway 384 120 120 14
+oneway 1032 120 120 14
+oneway 192 312 168 14
+oneway 1176 312 168 14
+obj turret damage=18 hp=80 rate=2.2 x=768 y=288
+obj wall h=120 hp=160 w=30 x=432 y=624
+obj wall h=120 hp=160 w=30 x=1068 y=624
+obj wall h=120 hp=160 w=30 x=480 y=360
+obj wall h=120 hp=160 w=30 x=1020 y=360
+obj barrel h=48 w=36 x=306 y=696
+obj barrel h=48 w=36 x=1194 y=696
+obj weight damage=60 r=26 x=584 y=190
+obj rope target=8 x=584 y=0
+obj weight damage=60 r=26 x=952 y=190
+obj rope target=10 x=952 y=0

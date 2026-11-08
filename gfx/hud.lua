@@ -45,18 +45,96 @@ end
 
 -- One panel per player across the top of the screen. Returns the card name items
 -- (see hud.cardChips, plus `bottom`, the end of that player's list) for hover tooltips.
+-- 3-4 players: the score panels leave a gap in the middle for the round timer.
+local TIMER_GAP = 150
+function hud.chipWidth(n)
+  return math.floor((app.W - 48 - (n - 1) * 16 - TIMER_GAP) / n)
+end
+
+function hud.chipX(i, n, pw)
+  local x = 24 + (i - 1) * (pw + 16)
+  if i > math.ceil(n / 2) then x = x + TIMER_GAP end
+  return x
+end
+
+-- Round timer, top middle. left: seconds until sudden death.
+function hud.drawTimer(left)
+  if not left then return end
+  local cx, w, h = app.W / 2, 124, 40
+  local urgent = left > 0 and left <= 10
+  if left <= 0 then
+    local a = 0.65 + 0.35 * math.sin(love.timer.getTime() * 7)
+    love.graphics.setColor(0.45, 0.05, 0.05, 0.85)
+    love.graphics.rectangle("fill", cx - 100, 8, 200, h, 8, 8)
+    love.graphics.setColor(1, 0.35, 0.3, a)
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.printf("SUDDEN DEATH", cx - 100, 8 + (h - app.fonts.med:getHeight()) / 2, 200, "center")
+    return
+  end
+  love.graphics.setColor(0, 0, 0, 0.55)
+  love.graphics.rectangle("fill", cx - w / 2, 8, w, h, 8, 8)
+  local s = math.ceil(left)
+  local text = string.format("%d:%02d", math.floor(s / 60), s % 60)
+  love.graphics.setFont(app.fonts.title)
+  if urgent then
+    local pulse = 0.5 + 0.5 * math.abs(math.sin(left * math.pi))
+    love.graphics.setColor(1, 0.3 + 0.2 * pulse, 0.25, 1)
+  else
+    love.graphics.setColor(1, 1, 1, 0.9)
+  end
+  love.graphics.printf(text, cx - w / 2, 8 + (h - app.fonts.title:getHeight()) / 2, w, "center")
+end
+
+-- King of the Hill: the zone, in world coordinates. hill = { x, y, t, owner }.
+function hud.drawHill(hill, players, H)
+  local c = { 1, 1, 1 }
+  if hill.owner == 255 then c = { 1, 0.45, 0.2 }
+  elseif hill.owner > 0 and players[hill.owner] then c = players[hill.owner].color end
+  local x, y = hill.x - H.w / 2, hill.y - H.h / 2
+  local a = 0.13 + 0.05 * math.sin(love.timer.getTime() * 5)
+  love.graphics.setColor(c[1], c[2], c[3], a)
+  love.graphics.rectangle("fill", x, y, H.w, H.h, 14, 14)
+  love.graphics.setColor(c[1], c[2], c[3], 0.85)
+  love.graphics.setLineWidth(3)
+  love.graphics.rectangle("line", x, y, H.w, H.h, 14, 14)
+  if hill.t > 0 then
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.rectangle("fill", x + 10, y - 9, (H.w - 20) * math.min(1, hill.t / H.move), 4, 2, 2)
+  end
+end
+
+-- King of the Hill: each side's progress, under the timer.
+function hud.drawHillScores(players, target, scoreOf)
+  local w, cx = 240, app.W / 2
+  local y, seen = 54, {}
+  for i, p in ipairs(players) do
+    local key = p.team or -i
+    if not seen[key] and not p.disconnected then
+      seen[key] = true
+      local frac = math.max(0, math.min(1, scoreOf(i) / target))
+      love.graphics.setColor(0, 0, 0, 0.55)
+      love.graphics.rectangle("fill", cx - w / 2, y, w, 9, 4, 4)
+      if w * frac > 2 then
+        love.graphics.setColor(p.color)
+        love.graphics.rectangle("fill", cx - w / 2, y, w * frac, 9, 4, 4)
+      end
+      y = y + 13
+    end
+  end
+end
+
 function hud.drawScores(players, winScore)
   local hover = {}
   local n = #players
   local W = app.W
-  local pw = n <= 2 and 320 or math.floor((W - 48 - (n - 1) * 16) / n)
+  local pw = n <= 2 and 320 or hud.chipWidth(n)
   for i, p in ipairs(players) do
     local x, align
     if n <= 2 then
       x = i == 1 and 24 or W - 24 - pw
       align = i == 1 and "left" or "right"
     else
-      x = 24 + (i - 1) * (pw + 16)
+      x = hud.chipX(i, n, pw)
       align = "left"
     end
     local a = p.disconnected and 0.35 or 1
@@ -176,14 +254,16 @@ end
 
 -- Card layout used for both drawing and mouse hit-testing.
 -- Cards shrink so that up to 6 fit across the screen.
-function hud.cardRects(n, selected)
+-- lift: card index -> 0..1, how far that card has slid up (a table), or the selected index.
+function hud.cardRects(n, selected, lift)
   local ch = 360
   local gap = n <= 3 and 36 or 18
   local cw = math.min(290, math.floor((app.W - 60 - (n - 1) * gap) / math.max(1, n)))
   local startX = (app.W - (n * cw + (n - 1) * gap)) / 2
   local rects = {}
   for i = 1, n do
-    rects[i] = { startX + (i - 1) * (cw + gap), i == selected and 195 or 220, cw, ch }
+    local k = lift and (lift[i] or 0) or (i == selected and 1 or 0)
+    rects[i] = { startX + (i - 1) * (cw + gap), 220 - 25 * k, cw, ch }
   end
   return rects
 end
@@ -267,7 +347,9 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     local _, sw = app.fonts.small:getWrap("Stacking: " .. card.stack, w - 28)
     stackH = #sw * app.fonts.small:getHeight() + 6
   end
-  local room = h - 100 - 40 - stackH
+  local synergyLine = #require("game.synergies").forCard(card, Cards.rules) > 0
+  local bottomGap = synergyLine and 56 or 40
+  local room = h - 100 - bottomGap - stackH
   local font, gap
   for _, f in ipairs({ { app.fonts.med, 10 }, { app.fonts.small, 6 }, { app.fonts.tiny, 3 } }) do
     font, gap = f[1], f[2]
@@ -306,7 +388,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     love.graphics.setFont(sf)
     local _, wrapped = sf:getWrap("Stacking: " .. card.stack, w - 28)
     love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.printf("Stacking: " .. card.stack, x + 14, y + h - 40 - #wrapped * sf:getHeight(), w - 28, "center")
+    love.graphics.printf("Stacking: " .. card.stack, x + 14, y + h - bottomGap - #wrapped * sf:getHeight(), w - 28, "center")
   end
 
   -- Synergies this card is part of.

@@ -1,5 +1,6 @@
 -- Settings, shown as an overlay on top of whatever screen opened it.
--- Tabs: Video, Controls (key rebinding) and Gameplay (card rules; the host's are used online).
+-- Tabs: Video, Audio, Controls (key rebinding) and Gameplay (everything about how a match plays;
+-- a client in a lobby sees the host's gameplay settings, read-only).
 local app = require "core.app"
 local ui = require "core.ui"
 local Settings = require "core.settings"
@@ -14,10 +15,20 @@ Screen.__index = Screen
 
 local TABS = { "Video", "Audio", "Controls", "Gameplay" }
 
-function Screen.new()
-  local s = setmetatable({ tab = 1, capture = nil }, Screen)
+function Screen.new(tab)
+  local s = setmetatable({ tab = tab or 1, capture = nil, scrolls = {} }, Screen)
   s:syncDisplay()
   return s
+end
+
+function Screen:enter()
+  ui.focus = self.tab -- the tab buttons are the first widgets
+end
+
+-- Back from the editor: the main menu with Settings > Gameplay open.
+function Screen.reopen()
+  app.switch(require("screens.menu").new())
+  app.push(Screen.new(4))
 end
 
 local function cycle(i, n, d)
@@ -34,8 +45,18 @@ end
 function Screen:close()
   Settings.save()
   local session = active.get()
-  if session.isHost and session.inLobby() then session.publishRules(Settings.values) end
+  if session.isHost and session.inLobby() then
+    session.setRounds(Settings.values.roundsToWin)
+    session.publishRules(Settings.values)
+    local under = app.base()
+    if under and under.sendInfo then under:sendInfo() end
+  end
   app.pop()
+end
+
+function Screen:wheelmoved(_, dy)
+  if self.tab == 3 and self.controlsScroll then ui.wheel(self.controlsScroll, dy) end
+  if self.tab == 4 and self.scroll then ui.wheel(self.scroll, dy) end
 end
 
 function Screen:setTab(t)
@@ -156,6 +177,12 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
     v.textSize = math.max(1, math.min(#Settings.TEXT_SIZES, v.textSize + d))
     Settings.applyEffects()
   end
+  ry = ry + gap
+
+  if not platform.web then
+    d = ui.cycler("Check for updates", v.checkUpdates and "On" or "Off", rx, ry, colW, h)
+    if d ~= 0 then v.checkUpdates = not v.checkUpdates end
+  end
 end
 
 local function volumeText(v)
@@ -167,7 +194,7 @@ function Screen:drawAudio(x, y, w)
   local h, gap = 44, 52
   local colW = (w - 30) / 2
   local rows = {
-    { "Master volume", "volMaster" }, { "Effects volume", "volSfx" }, { "Menu volume", "volUi" },
+    { "Master volume", "volMaster" }, { "Music volume", "volMusic" }, { "Effects volume", "volSfx" }, { "Menu volume", "volUi" },
   }
   for _, row in ipairs(rows) do
     local d = ui.cycler(row[1], volumeText(v[row[2]]), x, y, colW, h)
@@ -184,7 +211,7 @@ end
 
 -- Browser build: the page owns the window, so only the effects options apply.
 function Screen:drawVideoWeb(x, y, w)
-  local h, gap = 44, 52
+  local h, gap = 40, 46
   local colW = (w - 30) / 2
   self:drawGraphics(x, y, colW, h, gap)
   love.graphics.setFont(app.fonts.med)
@@ -197,7 +224,7 @@ end
 function Screen:drawVideo(x, y, w)
   if platform.web then return self:drawVideoWeb(x, y, w) end
   local v = Settings.values
-  local h, gap = 44, 52
+  local h, gap = 40, 46
   local colW = (w - 30) / 2
   local d
 
@@ -270,14 +297,18 @@ function Screen:drawVideo(x, y, w)
 
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)
-  love.graphics.printf("Window mode, monitor, resolution and VSync change when you press Apply " ..
-    "(unapplied changes are discarded on Back).\nF11 or Alt+Enter toggles fullscreen at any time.",
-    x, y + 6 * gap + 12, w, "center")
+  love.graphics.printf("Window mode, monitor, resolution and VSync change when you press Apply. " ..
+    "Unapplied changes are discarded on Back.",
+    x, y + 6 * gap + 4, colW, "center")
 end
 
 ---------------------------------------------------------------- controls
-function Screen:drawControls(x, y, w)
+function Screen:drawControls(x, y0, w, viewH)
   local schemes = Settings.BIND_SCHEMES
+  self.controlsScroll = self.controlsScroll or { y = 0 }
+  local rowsMax = 0
+  for _, scheme in ipairs(schemes) do rowsMax = math.max(rowsMax, #scheme.actions) end
+  local y = ui.beginScroll(self.controlsScroll, x - 4, y0, w + 8, viewH, 36 + rowsMax * 38 + 104)
   local gapX = 20
   local colW = (w - gapX * (#schemes - 1)) / #schemes
   local h, gap = 34, 38
@@ -316,125 +347,188 @@ function Screen:drawControls(x, y, w)
   local by = y + 36 + rows * gap + 4
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)
-  love.graphics.printf(
-    "Click a binding, then press a key or mouse button (Esc cancels). A key already in use is swapped.\n" ..
-    "Local players share the keyboard. Online play always aims with the mouse.",
+  love.graphics.printf("Click a binding, then press a key or mouse button (Esc cancels). A key already in use is swapped.",
     x, by, w, "center")
-  if ui.button("Reset Controls", x, by + 44, 220, 40, { font = app.fonts.med }) then
+  if ui.button("Reset Controls", x, by + 30, 220, 40, { font = app.fonts.med }) then
     self:stopCapture()
-    Settings.resetBinds()
+    require("screens.confirm").ask("Reset controls?", "Every key binding goes back to its default.",
+      function() Settings.resetBinds() end, { yes = "Reset", danger = true })
   end
   local v = Settings.values
   local modes = { "auto", "on", "off" }
   local names = { auto = "Auto", on = "On", off = "Off" }
-  local d = ui.cycler("Touch controls", names[v.touchControls] or "Auto", x + 236, by + 44, 300, 40)
+  local d = ui.cycler("Touch controls", names[v.touchControls] or "Auto", x + 236, by + 30, 300, 40)
   if d ~= 0 then
     local i = 1
     for k, m in ipairs(modes) do if m == v.touchControls then i = k end end
     v.touchControls = modes[(i - 1 + d) % 3 + 1]
     Settings.applyEffects()
   end
-  if ui.button("Touch layout...", x + 552, by + 44, 200, 40, { font = app.fonts.med }) then
+  if ui.button("Touch layout...", x + 552, by + 30, 200, 40, { font = app.fonts.med }) then
     app.push(require("screens.touchlayout").new())
   end
-  d = ui.cycler("Gamepad online", v.padOnline and "On" or "Off", x + 768, by + 44, w - 768, 40)
+  d = ui.cycler("Gamepad online", v.padOnline and "On" or "Off", x + 768, by + 30, w - 768, 40)
   if d ~= 0 then v.padOnline = not v.padOnline end
+  ui.endScroll(self.controlsScroll)
 end
 
 ---------------------------------------------------------------- gameplay
-local function weightStep(wt, d)
-  if d > 0 then
-    wt = wt < 10 and wt + 1 or wt + 5
-  else
-    wt = wt <= 10 and wt - 1 or wt - 5
-  end
-  return math.max(0, math.min(100, wt))
+local function secText(s)
+  if s == 0 then return "Off" end
+  return string.format("%d:%02d", math.floor(s / 60), s % 60)
 end
 
-function Screen:drawGameplay(x, y, w)
-  local v = Settings.values
-  local h, gap = 38, 44
-  local colW = (w - 30) / 2
-  local d
+-- The gameplay values to show: this machine's settings, or for a client the host's.
+local function viewOfRules(r)
+  local v = { roundsToWin = r.roundsToWin, matchMode = r.mode, teams = r.teams, friendlyFire = r.friendlyFire, pickFrom = r.pickFrom,
+    picksPerRound = r.picksPerRound, startCards = r.startCards, pickTimer = r.pickTimer, allowDiscard = r.allowDiscard,
+    mapVote = r.mapVote, mapVoteCount = r.mapVoteCount, cardBans = r.cardBans, hazards = r.hazards,
+    suddenDeath = r.suddenDeath, barrierClose = r.barrierClose, barrierBox = r.barrierBox, barrierDamage = r.barrierDamage }
+  for i, x in ipairs(Cards.RARITIES) do v["weight_" .. x.id] = r.weights[i] or 0 end
+  return v
+end
 
-  local lx, ly = x, y
-  d = ui.cycler("Rounds to win (local)", tostring(v.roundsToWin), lx, ly, colW, h)
+function Screen:hostRules()
+  local session = active.get()
+  if session.inLobby() and not session.isHost then return session.hostRules, true end
+  return nil, false
+end
+
+local function heading(text, x, y, w)
+  love.graphics.setFont(app.fonts.title)
+  love.graphics.setColor(ui.ACCENT)
+  love.graphics.print(text, x, y)
+  love.graphics.setColor(1, 1, 1, 0.12)
+  love.graphics.rectangle("fill", x, y + 32, w, 2)
+end
+
+function Screen:drawGameplay(x, y, w, viewH)
+  local rules, client = self:hostRules()
+  if client and not rules then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.printf("Waiting for the host's settings...", x, y + 120, w, "center")
+    return
+  end
+  local v = client and viewOfRules(rules) or Settings.values
+  local h, gap, head = 38, 44, 42
+  local colW = (w - 50) / 2
+  local contentH = head + 13 * gap
+  local top = y
+  if client then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(ui.GOLD)
+    love.graphics.printf("Host's settings (read-only)", x, y, w, "center")
+    top, viewH = y + 28, viewH - 28
+  end
+  self.scroll = self.scroll or { y = 0 }
+  local sy = ui.beginScroll(self.scroll, x - 8, top, w + 16 - 8, viewH, contentH + 12)
+  ui.readOnly = client
+  local d
+  local lx, ly = x, sy
+  heading("Match", lx, ly, colW)
+  ly = ly + head
+
+  local modeName = Settings.MODE_NAMES[v.matchMode] or "Elimination"
+  d = ui.cycler("Mode", modeName, lx, ly, colW, h)
+  if d ~= 0 then v.matchMode = Settings.MODES[cycle(indexOf(Settings.MODES, v.matchMode), #Settings.MODES, d)] end
+  ly = ly + gap
+  d = ui.cycler("Teams", v.teams and "2v2" or "Free-for-all", lx, ly, colW, h)
+  if d ~= 0 then v.teams = not v.teams end
+  ly = ly + gap
+  d = ui.cycler("Friendly fire", v.friendlyFire and "On" or "Off", lx, ly, colW, h, { disabled = not v.teams })
+  if d ~= 0 then v.friendlyFire = not v.friendlyFire end
+  ly = ly + gap
+  d = ui.cycler("Rounds to win", tostring(v.roundsToWin), lx, ly, colW, h)
   if d ~= 0 then
     local opts = Settings.ROUND_OPTIONS
     v.roundsToWin = opts[cycle(indexOf(opts, v.roundsToWin), #opts, d)]
   end
   ly = ly + gap
-
   local pf = Settings.PICK_FROM
   d = ui.cycler("Cards to choose from", tostring(v.pickFrom), lx, ly, colW, h)
   if d ~= 0 then v.pickFrom = pf.min + cycle(v.pickFrom - pf.min + 1, pf.max - pf.min + 1, d) - 1 end
   ly = ly + gap
-
   local pr = Settings.PICKS_PER_ROUND
   d = ui.cycler("Picks per round", tostring(v.picksPerRound), lx, ly, colW, h)
   if d ~= 0 then v.picksPerRound = pr.min + cycle(v.picksPerRound - pr.min + 1, pr.max - pr.min + 1, d) - 1 end
   ly = ly + gap
-
   local sc = Settings.START_CARDS
   d = ui.cycler("Starting cards", v.startCards == 0 and "None" or tostring(v.startCards), lx, ly, colW, h)
   if d ~= 0 then v.startCards = sc.min + cycle(v.startCards - sc.min + 1, sc.max - sc.min + 1, d) - 1 end
   ly = ly + gap
-
   local timers = Settings.PICK_TIMER_OPTIONS
   d = ui.cycler("Pick timer (online)", v.pickTimer == 0 and "Off" or (v.pickTimer .. "s"), lx, ly, colW, h)
   if d ~= 0 then v.pickTimer = timers[cycle(indexOf(timers, v.pickTimer), #timers, d)] end
   ly = ly + gap
-
   d = ui.cycler("Allow discarding", v.allowDiscard and "On" or "Off", lx, ly, colW, h)
   if d ~= 0 then v.allowDiscard = not v.allowDiscard end
   ly = ly + gap
-
-  local enabled = 0
-  for _, c in ipairs(Cards.list) do
-    if Settings.cardEnabled(c) then enabled = enabled + 1 end
-  end
-  if ui.button("Card Pool...  (" .. enabled .. " / " .. #Cards.list .. " enabled)", lx, ly, colW, h) then
-    app.push(require("screens.cards").new())
-  end
+  d = ui.cycler("Map vote", v.mapVote and "On" or "Off", lx, ly, colW, h)
+  if d ~= 0 then v.mapVote = not v.mapVote end
   ly = ly + gap
-
-  if ui.button("Map Pool...  (" .. Settings.enabledMapCount() .. " / " .. #Map.list .. " enabled)", lx, ly, colW, h) then
-    app.push(require("screens.maps").new())
-  end
+  local mv = Settings.MAP_VOTE_COUNT
+  d = ui.cycler("Maps in the vote", tostring(v.mapVoteCount), lx, ly, colW, h, { disabled = not v.mapVote })
+  if d ~= 0 then v.mapVoteCount = mv.min + cycle(v.mapVoteCount - mv.min + 1, mv.max - mv.min + 1, d) - 1 end
   ly = ly + gap
+  d = ui.cycler("Card bans", v.cardBans and "On" or "Off", lx, ly, colW, h)
+  if d ~= 0 then v.cardBans = not v.cardBans end
+  ly = ly + gap
+  d = ui.cycler("Map hazards", v.hazards and "On" or "Off", lx, ly, colW, h)
+  if d ~= 0 then v.hazards = not v.hazards end
 
-  if ui.button("Synergies...", lx, ly, colW / 2 - 4, h) then app.push(require("screens.synergies").new()) end
-  if ui.button("Reset", lx + colW / 2 + 4, ly, colW / 2 - 4, h) then Settings.resetGameplay() end
-
-  -- Rarity chances, then arena rules
-  local rx, ry = x + colW + 30, y
-  local total = 0
-  for _, r in ipairs(Cards.RARITIES) do total = total + v["weight_" .. r.id] end
-  for _, r in ipairs(Cards.RARITIES) do
-    local key = "weight_" .. r.id
-    local wt = v[key]
-    local pct = total > 0 and wt / total * 100 or 0
-    local text = string.format(pct < 10 and pct > 0 and "%d  (%.1f%%)" or "%d  (%d%%)", wt,
-      pct < 10 and pct > 0 and pct or math.floor(pct + 0.5))
-    d = ui.cycler(r.name .. " chance", text, rx, ry, colW, h)
-    love.graphics.setColor(r.color)
-    love.graphics.rectangle("fill", rx + 6, ry + 10, 4, h - 20, 2, 2)
-    if d ~= 0 then v[key] = weightStep(wt, d) end
+  local rx, ry = x + colW + 34, sy
+  heading("Sudden death", rx, ry, colW)
+  ry = ry + head
+  local times = Settings.SUDDEN_TIMES
+  d = ui.cycler("Timer", secText(v.suddenDeath), rx, ry, colW, h)
+  if d ~= 0 then v.suddenDeath = times[cycle(indexOf(times, v.suddenDeath), #times, d)] end
+  ry = ry + gap
+  local off = v.suddenDeath == 0
+  local rows = { { "Closing speed", "barrierClose", Settings.BARRIER_CLOSE_NAMES }, { "Final box size", "barrierBox", Settings.BARRIER_BOX_NAMES },
+    { "Barrier damage", "barrierDamage", Settings.BARRIER_DAMAGE_NAMES } }
+  for _, row in ipairs(rows) do
+    d = ui.cycler(row[1], row[3][v[row[2]]] or row[3][2], rx, ry, colW, h, { disabled = off })
+    if d ~= 0 then v[row[2]] = cycle(v[row[2]], #row[3], d) end
     ry = ry + gap
   end
-  d = ui.cycler("Map hazards", v.hazards and "On" or "Off", rx, ry, colW, h)
-  if d ~= 0 then v.hazards = not v.hazards end
+  ry = ry + 2
+  heading("Rarity chances", rx, ry, colW)
+  ry = ry + head
+  for _, r in ipairs(Cards.RARITIES) do
+    local key = "weight_" .. r.id
+    d = ui.cycler(r.name, v[key] .. "%", rx, ry, colW, h)
+    love.graphics.setColor(r.color)
+    love.graphics.rectangle("fill", rx + 6, ry + 10, 4, h - 20, 2, 2)
+    if d ~= 0 then Settings.setWeight(r.id, v[key] + d) end
+    ry = ry + gap
+  end
+  ry = ry + 2
+  heading("Content", rx, ry, colW)
+  ry = ry + head
+  local hw = (colW - 10) / 2
+  if ui.button("Card Library", rx, ry, hw, h, { font = app.fonts.med, viewOnly = true }) then
+    app.push(require("screens.library").new(client and rules or nil))
+  end
+  local enabledMaps = Settings.enabledMapCount()
+  if ui.button(client and "Map Pool" or ("Map Pool (" .. enabledMaps .. "/" .. #Map.list .. ")"), rx + hw + 10, ry, hw, h, { font = app.fonts.med, viewOnly = true }) then
+    app.push(require("screens.maps").new(client and rules or nil))
+  end
   ry = ry + gap
-  d = ui.cycler("Sudden-death barrier", v.barrier and "On" or "Off", rx, ry, colW, h)
-  if d ~= 0 then v.barrier = not v.barrier end
-  ry = ry + gap
-
-  love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.45)
-  love.graphics.printf(
-    "Online matches use the host's gameplay settings. Changes apply from the next match.\n" ..
-    "A rarity's chance is its weight out of the total. Rarities with no enabled cards are skipped.",
-    x, y + 9 * gap + 8, w, "center")
+  local session = active.get()
+  if ui.button("Editor", rx, ry, hw, h, { font = app.fonts.med, disabled = session.inLobby() }) then
+    Settings.save()
+    app.switch(require("screens.editor_hub").new())
+    ui.readOnly = false
+    ui.endScroll(self.scroll)
+    return
+  end
+  if ui.button("Reset All", rx + hw + 10, ry, hw, h, { font = app.fonts.med }) then
+    require("screens.confirm").ask("Reset gameplay settings?", "Every setting on this page goes back to its default.",
+      function() Settings.resetGameplay() end, { yes = "Reset", danger = true })
+  end
+  ui.readOnly = false
+  ui.endScroll(self.scroll)
 end
 
 ---------------------------------------------------------------- draw
@@ -462,19 +556,16 @@ function Screen:draw()
       love.graphics.rectangle("fill", tx + (i - 1) * (tw + 12) + 30, py + 70 + th + 4, tw - 60, 3, 1, 1)
     end
   end
-  love.graphics.setFont(app.fonts.tiny)
-  love.graphics.setColor(1, 1, 1, 0.35)
-  love.graphics.print("Q / E", tx + #TABS * (tw + 12), py + 84)
-
-  local cx, cy, cw = px + 40, py + 140, pw - 80
+  local cx, cy, cw = px + 40, py + 134, pw - 80
+  local viewH = ph - 134 - 76
   if self.tab == 1 then
     self:drawVideo(cx, cy, cw)
   elseif self.tab == 2 then
     self:drawAudio(cx, cy, cw)
   elseif self.tab == 3 then
-    self:drawControls(cx, cy, cw)
+    self:drawControls(cx, cy, cw, viewH)
   else
-    self:drawGameplay(cx, cy, cw)
+    self:drawGameplay(cx, cy, cw, viewH)
   end
 
   if ui.button("Back", px + pw / 2 - 110, py + ph - 64, 220, 46) then self:close() end

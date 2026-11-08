@@ -260,7 +260,7 @@ local function fall(o, world, dt)
     o.falling = false
     o.landedOnce = true
   end
-  if o.y > 900 then o.alive = false end
+  if o.y > Map.H + 180 then o.alive = false end
 end
 
 -- Physics objects (crates, barrels...) fall when nothing holds them up.
@@ -470,7 +470,7 @@ T.laser = {
     local rects = world.solids
     while len < 1500 do
       local px, py = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
-      if px < -10 or px > 1290 or py < -10 or py > 730 or Map.hit(rects, px - 2, py - 2, 4, 4) then break end
+      if px < -10 or px > Map.W + 10 or py < -10 or py > Map.H + 10 or Map.hit(rects, px - 2, py - 2, 4, 4) then break end
       len = len + 6
     end
     o.a = len
@@ -1303,7 +1303,7 @@ function Objects.update(world, dt)
         end
       end
     end
-    if e.life <= 0 or e.y > 800 then table.remove(world.effects, i) end
+    if e.life <= 0 or e.y > Map.H + 80 then table.remove(world.effects, i) end
   end
   Objects.rebuildSolids(world)
 end

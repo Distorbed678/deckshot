@@ -8,6 +8,7 @@ local Screen = {}
 Screen.__index = Screen
 
 local PAGES = { "Rules", "Keyboard", "Online / Mouse", "Gamepad", "Touch" }
+local TUTORIAL_RETURN = function() return require("screens.howtoplay").new() end
 
 function Screen.new(back)
   return setmetatable({ page = 1, back = back }, Screen)
@@ -29,7 +30,8 @@ local RULES = {
   { "Block", "Blocking stops bullets (they bounce back at the shooter), hazards and the arena edges. It has a cooldown, so time it." },
   { "Melee", "Tap for a quick light hit, hold to charge a heavy hit that lunges forward. If the other player blocks your melee, you're stunned: the harder the hit, the longer the stun." },
   { "Movement", "Double jump and air dash are built in. Wall slide and wall jump; press down + jump to drop through thin platforms. Hold down in the air to fall faster." },
-  { "The arena", "The left, right and bottom edges hurt and throw you back in; the top is open. Saws, spikes, lasers and fire hurt; crates, barrels and ropes break. With 3+ players, a red barrier closes in once it's down to two." },
+  { "King of the Hill", "An optional mode: stand alone in the moving zone to score, and first to the target wins the round. You respawn after a few seconds." },
+  { "The arena", "The screen's left, right and bottom edges hurt and throw you back in; the top is open. Saws, spikes, lasers and fire hurt; crates, barrels and ropes break. When the round timer runs out, a red barrier closes in from every side." },
 }
 
 local function kv(lines, x, y, w)
@@ -93,7 +95,7 @@ function Screen:draw()
       { "Aim", "the mouse" }, { "Fire", name(o.fire) }, { "Block", name(o.block) },
       { "Dash", name(o.dash) .. " (toward the mouse, or the way you move)" }, { "Melee", name(o.melee) .. " (hold for heavy)" },
       { "Fast fall / drop", name(o.down) .. "  (+ jump on a thin platform)" },
-      { "Scoreboard", name(o.scoreboard) }, { "Menu", "Esc" } }, x, y, w)
+      { "Scoreboard", name(o.scoreboard) }, { "Chat", name(o.chat) }, { "Menu", "Esc" } }, x, y, w)
   elseif self.page == 4 then
     kv({ { "Move", "left stick (down: fast fall / drop)" }, { "Aim", "right stick" }, { "Fire", "right trigger" },
       { "Block", "left trigger or right bumper" }, { "Jump", "A" }, { "Dash", "B or left bumper" },
@@ -106,7 +108,10 @@ function Screen:draw()
       { "Layout", "Settings > Controls > Touch layout lets you move and resize the buttons" },
       { "LAN", "Phones join a computer's LAN game by scanning the QR code in its lobby" } }, x, y, w)
   end
-  if ui.button("Back", app.W / 2 - 150, 650, 300, 46, { back = true }) then self:close() end
+  if ui.button("Start Tutorial", app.W / 2 - 310, 650, 300, 46, { color = ui.GOOD }) then
+    app.switch(require("screens.practice").new({ tutorial = true, tutorialReturn = TUTORIAL_RETURN }))
+  end
+  if ui.button("Back", app.W / 2 + 10, 650, 300, 46, { back = true }) then self:close() end
 end
 
 return Screen

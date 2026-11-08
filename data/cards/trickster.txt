@@ -1,5 +1,5 @@
 deckshot-card 1
 name Trickster
-rarity rare
+rarity uncommon
 row add bounces 1
 row add bounceDamage 0.6

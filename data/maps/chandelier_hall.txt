@@ -1,19 +1,28 @@
-deckshot-map 1
+deckshot-map 2
 name Chandelier Hall
-spawn 160 580
-spawn 1120 580
-spawn 200 380
-spawn 1080 380
-rect 60 620 580 100
-rect 640 620 580 100
-oneway 120 420 160 14
-oneway 1000 420 160 14
-oneway 440 380 140 14
-oneway 700 380 140 14
-oneway 560 520 160 14
-obj weight damage=60 r=28 x=400 y=280
-obj weight damage=60 r=28 x=880 y=280
-obj rope target=1 x=400 y=40
-obj rope target=2 x=880 y=40
-obj weight damage=80 r=34 x=640 y=200
-obj rope target=5 x=640 y=20
+theme void
+spawn 192 696
+spawn 1344 696
+spawn 240 456
+spawn 1296 456
+rect 72 744 696 120
+rect 768 744 696 120
+oneway 144 504 192 17
+oneway 1200 504 192 17
+oneway 528 456 168 17
+oneway 840 456 168 17
+oneway 672 624 192 17
+oneway 216 288 144 14
+oneway 1176 288 144 14
+oneway 504 120 120 14
+oneway 912 120 120 14
+obj weight damage=60 r=28 x=480 y=336
+obj weight damage=60 r=28 x=1056 y=336
+obj rope target=1 x=480 y=48
+obj rope target=2 x=1056 y=48
+obj weight damage=80 r=34 x=768 y=240
+obj rope target=5 x=768 y=24
+obj barrel h=48 w=36 x=474 y=696
+obj barrel h=48 w=36 x=1026 y=696
+obj wall h=96 hp=150 w=40 x=348 y=648
+obj wall h=96 hp=150 w=40 x=1148 y=648

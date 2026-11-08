@@ -1,17 +1,24 @@
-deckshot-map 1
+deckshot-map 2
 name Shattered
-spawn 140 540
-spawn 1140 540
-spawn 200 300
-spawn 1080 300
-rect 60 580 220 140
-rect 1000 580 220 140
-oneway 100 340 160 14
-oneway 1020 340 160 14
-rect 400 360 120 20
-rect 760 360 120 20
-obj acid damage=20 h=50 w=360 x=280 y=670
-obj acid damage=20 h=50 w=360 x=640 y=670
-obj glass h=16 hp=40 w=340 x=300 y=520
-obj glass h=16 hp=40 w=340 x=640 y=520
-obj glass h=16 hp=40 w=160 x=560 y=300
+theme ice
+spawn 168 648
+spawn 1368 648
+spawn 240 360
+spawn 1296 360
+rect 72 696 264 168
+rect 1200 696 264 168
+oneway 120 408 192 17
+oneway 1224 408 192 17
+rect 480 432 144 24
+rect 912 432 144 24
+oneway 384 240 168 14
+oneway 984 240 168 14
+obj acid damage=20 h=50 w=432 x=336 y=814
+obj acid damage=20 h=50 w=432 x=768 y=814
+obj glass h=16 hp=40 w=340 x=360 y=627
+obj glass h=16 hp=40 w=340 x=768 y=627
+obj glass h=16 hp=40 w=160 x=672 y=363
+obj crumble back=4 delay=0.5 h=18 w=120 x=96 y=120
+obj crumble back=4 delay=0.5 h=18 w=120 x=1320 y=120
+obj gas h=42 w=28 x=522 y=390
+obj gas h=42 w=28 x=986 y=390

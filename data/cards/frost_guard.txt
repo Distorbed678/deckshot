@@ -1,5 +1,5 @@
 deckshot-card 1
 name Frost Guard
-rarity uncommon
+rarity common
 block
 trigger block slow radius=200 time=1

@@ -1,6 +1,6 @@
 deckshot-card 1
 name Bone Breaker
-rarity rare
+rarity uncommon
 row add boneBreaker 1
 note +heavy melee hits slow nearby enemies for 0.5s
 stack +0.5s per extra copy

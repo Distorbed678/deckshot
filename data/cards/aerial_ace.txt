@@ -1,4 +1,4 @@
 deckshot-card 1
 name Aerial Ace
-rarity rare
+rarity uncommon
 row add airDamage 0.2

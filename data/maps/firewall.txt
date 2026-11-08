@@ -1,16 +1,25 @@
-deckshot-map 1
+deckshot-map 2
 name Firewall
-spawn 140 580
-spawn 1140 580
-spawn 160 340
-spawn 1120 340
-rect 60 620 580 100
-rect 640 620 580 100
-rect 600 600 80 20
-oneway 100 380 200 14
-oneway 980 380 200 14
-oneway 380 300 140 14
-oneway 760 300 140 14
-oneway 400 480 140 14
-oneway 740 480 140 14
-obj flame damage=12 length=330 off=2 on=1.6 warn=0.6 x=640 y=620
+theme neon
+spawn 168 696
+spawn 1368 696
+spawn 192 408
+spawn 1344 408
+rect 72 744 696 120
+rect 768 744 696 120
+rect 720 720 96 24
+oneway 120 456 240 17
+oneway 1176 456 240 17
+oneway 456 360 168 17
+oneway 912 360 168 17
+oneway 480 576 168 17
+oneway 888 576 168 17
+oneway 168 192 120 14
+oneway 1248 192 120 14
+oneway 456 120 168 14
+oneway 912 120 168 14
+obj flame damage=12 length=396 off=2 on=1.6 warn=0.6 x=768 y=744
+obj gas h=42 w=28 x=378 y=702
+obj gas h=42 w=28 x=1130 y=702
+obj pad h=14 power=1350 w=70 x=450 y=730
+obj pad h=14 power=1350 w=70 x=1016 y=730

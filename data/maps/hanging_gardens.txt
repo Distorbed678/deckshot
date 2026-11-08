@@ -1,20 +1,27 @@
-deckshot-map 1
+deckshot-map 2
 name Hanging Gardens
-spawn 160 580
-spawn 1120 580
-spawn 340 300
-spawn 940 300
-rect 60 620 240 60
-rect 980 620 240 60
-rect 80 400 140 20
-rect 1060 400 140 20
-oneway 300 320 100 14
-oneway 880 320 100 14
-obj acid damage=20 h=60 w=340 x=300 y=660
-obj acid damage=20 h=60 w=340 x=640 y=660
-obj plank h=14 hp=0 w=120 x=340 y=460
-obj plank h=14 hp=0 w=120 x=820 y=460
-obj rope target=3 x=400 y=140
-obj rope target=4 x=880 y=140
-obj plank h=14 hp=0 w=120 x=580 y=360
-obj rope target=7 x=640 y=60
+theme jungle
+spawn 192 696
+spawn 1344 696
+spawn 408 360
+spawn 1128 360
+rect 72 744 288 72
+rect 1176 744 288 72
+rect 96 480 168 24
+rect 1272 480 168 24
+oneway 360 384 120 17
+oneway 1056 384 120 17
+oneway 48 216 168 14
+oneway 1320 216 168 14
+oneway 552 216 168 14
+oneway 816 216 168 14
+obj acid damage=20 h=60 w=408 x=360 y=804
+obj acid damage=20 h=60 w=408 x=768 y=804
+obj plank h=14 hp=0 w=144 x=408 y=555
+obj plank h=14 hp=0 w=144 x=984 y=555
+obj rope target=3 x=480 y=168
+obj rope target=4 x=1056 y=168
+obj plank h=14 hp=0 w=144 x=696 y=435
+obj rope target=7 x=768 y=72
+obj gas h=42 w=28 x=114 y=438
+obj gas h=42 w=28 x=1394 y=438

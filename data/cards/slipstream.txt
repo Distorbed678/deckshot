@@ -1,4 +1,4 @@
 deckshot-card 1
 name Slipstream
-rarity uncommon
+rarity common
 trigger dash speed pct=20 time=1.5

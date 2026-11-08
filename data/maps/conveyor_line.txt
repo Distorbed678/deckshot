@@ -1,18 +1,23 @@
-deckshot-map 1
+deckshot-map 2
 name Conveyor Line
-spawn 160 560
-spawn 1120 560
-spawn 200 360
-spawn 1080 360
-rect 60 620 580 60
-rect 640 620 580 60
-oneway 480 460 120 14
-oneway 680 460 120 14
-oneway 540 300 100 14
-oneway 640 300 100 14
-obj conveyor h=20 speed=150 w=300 x=60 y=600
-obj conveyor h=20 speed=-150 w=300 x=920 y=600
-obj conveyor h=20 speed=150 w=280 x=360 y=600
-obj conveyor h=20 speed=-150 w=280 x=640 y=600
-obj conveyor h=20 speed=-150 w=220 x=140 y=400
-obj conveyor h=20 speed=150 w=220 x=920 y=400
+theme jungle
+spawn 192 672
+spawn 1344 672
+spawn 240 432
+spawn 1296 432
+rect 72 744 696 72
+rect 768 744 696 72
+oneway 576 552 144 17
+oneway 816 552 144 17
+oneway 648 360 120 17
+oneway 768 360 120 17
+oneway 360 192 120 14
+oneway 1056 192 120 14
+oneway 240 408 168 14
+oneway 1128 408 168 14
+obj conveyor h=20 speed=150 w=360 x=72 y=724
+obj conveyor h=20 speed=-150 w=360 x=1104 y=724
+obj conveyor h=20 speed=150 w=336 x=432 y=724
+obj conveyor h=20 speed=-150 w=336 x=768 y=724
+obj conveyor h=20 speed=-150 w=264 x=168 y=484
+obj conveyor h=20 speed=150 w=264 x=1104 y=484

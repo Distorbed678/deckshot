@@ -1,4 +1,4 @@
 deckshot-card 1
 name Wall Kicker
-rarity uncommon
+rarity common
 trigger wallJump dash

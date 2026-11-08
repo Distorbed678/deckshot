@@ -1,20 +1,25 @@
-deckshot-map 1
+deckshot-map 2
 name Barrel Roll
-spawn 140 580
-spawn 1140 580
-spawn 200 360
-spawn 1080 360
-rect 60 620 580 60
-rect 640 620 580 60
-oneway 140 400 180 14
-oneway 960 400 180 14
-oneway 500 340 140 14
-oneway 640 340 140 14
-obj conveyor h=20 speed=90 w=400 x=240 y=600
-obj conveyor h=20 speed=-90 w=400 x=640 y=600
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=300 y=552
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=944 y=552
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=520 y=260
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=724 y=260
-obj rope target=5 x=538 y=60
-obj rope target=6 x=742 y=60
+theme desert
+spawn 168 696
+spawn 1368 696
+spawn 240 432
+spawn 1296 432
+rect 72 744 696 72
+rect 768 744 696 72
+oneway 168 480 216 17
+oneway 1152 480 216 17
+oneway 600 408 168 17
+oneway 768 408 168 17
+oneway 312 240 120 14
+oneway 1104 240 120 14
+oneway 576 120 120 14
+oneway 840 120 120 14
+obj conveyor h=20 speed=90 w=480 x=288 y=724
+obj conveyor h=20 speed=-90 w=480 x=768 y=724
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=360 y=672
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=1133 y=672
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=624 y=322
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=869 y=322
+obj rope target=5 x=646 y=72
+obj rope target=6 x=890 y=72

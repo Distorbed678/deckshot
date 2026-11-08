@@ -1,6 +1,6 @@
 deckshot-card 1
 name Sticky Mines
-rarity rare
+rarity uncommon
 row add sticky 1
 note +spent bullets stick to walls as mines
 note +mines explode near the enemy

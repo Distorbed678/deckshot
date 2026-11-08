@@ -1,4 +1,4 @@
 deckshot-card 1
 name Smoke Dash
-rarity rare
+rarity uncommon
 trigger dash mine cd=1

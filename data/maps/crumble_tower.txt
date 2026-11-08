@@ -1,19 +1,28 @@
-deckshot-map 1
+deckshot-map 2
 name Crumble Tower
-spawn 160 580
-spawn 1120 580
-spawn 300 300
-spawn 980 300
-rect 80 620 300 100
-rect 900 620 300 100
-rect 240 320 120 20
-rect 920 320 120 20
-obj crumble back=4 delay=0.5 h=18 w=140 x=380 y=560
-obj crumble back=4 delay=0.5 h=18 w=140 x=760 y=560
-obj crumble back=4 delay=0.5 h=18 w=120 x=300 y=440
-obj crumble back=4 delay=0.5 h=18 w=120 x=860 y=440
-obj crumble back=4 delay=0.5 h=18 w=120 x=500 y=360
-obj crumble back=4 delay=0.5 h=18 w=120 x=660 y=360
-obj crumble back=4 delay=0.5 h=18 w=160 x=560 y=220
-obj acid damage=20 h=60 w=260 x=380 y=660
-obj acid damage=20 h=60 w=260 x=640 y=660
+theme void
+spawn 192 696
+spawn 1344 696
+spawn 360 360
+spawn 1176 360
+rect 96 744 360 120
+rect 1080 744 360 120
+rect 288 384 144 24
+rect 1104 384 144 24
+oneway 384 120 120 14
+oneway 1032 120 120 14
+obj crumble back=4 delay=0.5 h=18 w=168 x=456 y=676
+obj crumble back=4 delay=0.5 h=18 w=168 x=912 y=676
+obj crumble back=4 delay=0.5 h=18 w=144 x=360 y=532
+obj crumble back=4 delay=0.5 h=18 w=144 x=1032 y=532
+obj crumble back=4 delay=0.5 h=18 w=144 x=600 y=436
+obj crumble back=4 delay=0.5 h=18 w=144 x=792 y=436
+obj crumble back=4 delay=0.5 h=18 w=192 x=672 y=268
+obj acid damage=20 h=60 w=312 x=456 y=804
+obj acid damage=20 h=60 w=312 x=768 y=804
+obj crumble back=4 delay=0.5 h=18 w=144 x=48 y=216
+obj crumble back=4 delay=0.5 h=18 w=144 x=1344 y=216
+obj glass h=120 w=16 x=374 y=624
+obj glass h=120 w=16 x=1146 y=624
+obj wall h=96 hp=150 w=40 x=300 y=648
+obj wall h=96 hp=150 w=40 x=1196 y=648

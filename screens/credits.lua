@@ -18,7 +18,8 @@ local LINES = {
   { "Inspired by", "ROUNDS by Landfall Games. Deckshot is a fan-made game and isn't affiliated with or endorsed by Landfall." },
   { "Built with", "LÖVE 11.5 (love2d.org), LuaJIT, love.js for the browser version" },
   { "Online", "Steamworks via luasteam; LAN play over luasocket and WebSockets" },
-  { "Sound", "Every sound is synthesized in code" },
+  { "Sound and music", "Every sound and track is synthesized in code" },
+  { "Fonts", "Russo One by Jovanny Lemonad, Barlow by Jeremy Tribby (SIL Open Font License)" },
   { "Thanks", "Everyone who played, tested and asked for more cards" },
 }
 

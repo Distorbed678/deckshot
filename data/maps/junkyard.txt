@@ -1,22 +1,31 @@
-deckshot-map 1
+deckshot-map 2
 name Junkyard
-spawn 140 580
-spawn 1140 580
-spawn 220 380
-spawn 1060 380
-rect 60 620 580 100
-rect 640 620 580 100
-rect 160 420 160 20
-rect 960 420 160 20
-oneway 500 340 140 14
-oneway 640 340 140 14
-obj crate drop=0.08 h=50 hp=60 w=50 x=320 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=910 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=370 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=860 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=345 y=520
-obj crate drop=0.08 h=50 hp=60 w=50 x=885 y=520
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=520 y=572
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=724 y=572
-obj crate drop=0.08 h=50 hp=60 w=50 x=270 y=370
-obj crate drop=0.08 h=50 hp=60 w=50 x=960 y=370
+theme desert
+spawn 168 696
+spawn 1368 696
+spawn 264 456
+spawn 1272 456
+rect 72 744 696 120
+rect 768 744 696 120
+rect 192 504 192 24
+rect 1152 504 192 24
+oneway 600 408 168 17
+oneway 768 408 168 17
+oneway 312 240 144 14
+oneway 1080 240 144 14
+oneway 576 120 144 14
+oneway 816 120 144 14
+obj crate drop=0.08 h=50 hp=60 w=50 x=384 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=1092 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=444 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=1032 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=414 y=634
+obj crate drop=0.08 h=50 hp=60 w=50 x=1062 y=634
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=624 y=696
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=869 y=696
+obj crate drop=0.08 h=50 hp=60 w=50 x=324 y=454
+obj crate drop=0.08 h=50 hp=60 w=50 x=1152 y=454
+obj glass h=120 w=16 x=302 y=624
+obj glass h=120 w=16 x=1218 y=624
+obj pad h=14 power=1350 w=70 x=522 y=730
+obj pad h=14 power=1350 w=70 x=944 y=730

@@ -1,6 +1,6 @@
 deckshot-card 1
 name Shrine of Order
-rarity legendary
+rarity epic
 special shrine
 note For each rarity, all your cards of that rarity become copies of one of them
 note Card count stays the same

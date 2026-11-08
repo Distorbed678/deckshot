@@ -3,30 +3,37 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.0",
+  VERSION = "0.5.1",
   REPO = "Distorbed678/deckshot",
   NOTES = {
-    "Rounds Clone is now Deckshot.",
-    "New movement: coyote time, jump buffering, apex hang, fast fall, dash, wall jumps, one-way platforms.",
-    "Melee: tap for a light hit, hold for a heavy lunge. Blocking a melee stuns the attacker.",
-    "The arena edges hurt and throw you back in instead of killing you.",
-    "55 new maps with saws, spikes, lasers, crushers, fans, conveyors, crates, barrels, ropes and more.",
-    "150 cards (56 new), 40 synergies, and editors for maps, cards and synergies with share codes.",
-    "Bots, gamepads, Teams (2v2), player colours and a local setup screen.",
-    "Touch controls for phones and tablets; phones join LAN games by scanning a QR code.",
-    "Online: smoother movement (prediction), spectating late joiners, reconnecting, Steam lobby browser.",
-    "Sounds, particles, damage numbers, kill feed, scoreboard, codex, practice range and more.",
+    "Maps are 20% bigger, and all 55 have new platforms, hazards and breakables.",
+    "New mode: King of the Hill, in free-for-all or teams.",
+    "Every round has a timer. When it ends, a red barrier closes in from all four sides.",
+    "Map voting and card bans, both host options.",
+    "Chat in online and LAN lobbies and during matches.",
+    "Clients can open Settings in a lobby and see the host's rules and custom content.",
+    "Hats and faces to earn on the new Customize screen.",
+    "Original music, a new look and font, a logo, a versus intro and a winner's podium.",
+    "Characters are livelier and burst into chunks when they die. New impact sounds and tension audio.",
+    "Bullets drop more. Thunder God strikes much sooner.",
+    "Rarity chances always total 100%, and 51 cards moved to a better rarity.",
+    "Card Library replaces the Codex and Card Pool. Match settings all live in Settings > Gameplay.",
+    "Practice moved under Local Play, with a card menu sorted by rarity that shows what each card does.",
+    "A short tutorial, and one-click updates on Windows and Linux.",
+    "Fixed: What's New clicking the buttons behind it, and overlapping text across the menus.",
   },
-  latest = nil, -- newer release tag found online, if any
+  latest = nil,  -- newer release version found online, if any
+  release = nil, -- details of that release: { version, notes, assets = { name -> { url, size, sha256 } } }
+  API = nil,     -- overrides the GitHub URL (tests)
 }
 
 local CHECK = [[
-local channel, repo = ...
-local ok, f = pcall(io.popen, "curl -s -m 6 -H \"Accept: application/vnd.github+json\" https://api.github.com/repos/" .. repo .. "/releases/latest")
+local channel, url = ...
+local ok, f = pcall(io.popen, 'curl -s -L -m 8 -H "Accept: application/vnd.github+json" "' .. url .. '"')
 if ok and f then
   local body = f:read("*a") or ""
   f:close()
-  channel:push(body:match('"tag_name"%s*:%s*"v?([%d%.]+)"') or "")
+  channel:push(body)
 else
   channel:push("")
 end
@@ -41,24 +48,50 @@ local function newer(a, b) -- is version a newer than b?
   end
   return false
 end
+Version.newer = newer
 
 function Version.checkForUpdate()
   if platform.web or Version.thread or not love.thread then return end
   local ok = pcall(function()
     Version.channel = love.thread.newChannel()
     Version.thread = love.thread.newThread(CHECK)
-    Version.thread:start(Version.channel, Version.REPO)
+    Version.thread:start(Version.channel, Version.API or ("https://api.github.com/repos/" .. Version.REPO .. "/releases/latest"))
   end)
   if not ok then Version.thread = nil end
+end
+
+local function unescape(s)
+  return (s:gsub("\\r", ""):gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\"))
+end
+
+-- Pulls what we need out of GitHub's release JSON.
+function Version.parseRelease(body)
+  local tag = body:match('"tag_name"%s*:%s*"v?([%d%.]+)"')
+  if not tag then return nil end
+  local text = unescape(body:match('"body"%s*:%s*"(.-[^\\])"') or "")
+  local release = { version = tag, notes = (text:gsub("\n## Downloads.*$", "")), assets = {} }
+  for _, name in ipairs({ "Deckshot-x86_64.AppImage", "Deckshot-windows-x64.zip" }) do
+    local esc = name:gsub("%p", "%%%0")
+    local size, url = body:match('"name"%s*:%s*"' .. esc .. '".-"size"%s*:%s*(%d+).-"browser_download_url"%s*:%s*"([^"]+)"')
+    local sha
+    for hash, file in text:gmatch("(%x+)%s+([%w%-_%.]+)") do
+      if file == name and #hash == 64 then sha = hash:lower() end
+    end
+    if url and sha then release.assets[name] = { url = url, size = tonumber(size), sha256 = sha } end
+  end
+  return release
 end
 
 function Version.update()
   local ch = Version.channel
   if not ch then return end
-  local tag = ch:pop()
-  if tag then
+  local body = ch:pop()
+  if body then
     Version.channel = nil
-    if tag ~= "" and newer(tag, Version.VERSION) then Version.latest = tag end
+    local release = body ~= "" and Version.parseRelease(body)
+    if release and newer(release.version, Version.VERSION) then
+      Version.latest, Version.release = release.version, release
+    end
   end
 end
 

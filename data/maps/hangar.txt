@@ -1,18 +1,27 @@
-deckshot-map 1
+deckshot-map 2
 name Hangar
-spawn 220 580
-spawn 1060 580
-spawn 420 400
-spawn 860 400
-rect 60 620 580 60
-rect 640 620 580 60
-rect 60 160 580 24
-rect 640 160 580 24
-rect 60 184 24 300
-rect 1196 184 24 300
-oneway 200 460 160 14
-oneway 920 460 160 14
-oneway 380 320 160 14
-oneway 740 320 160 14
-oneway 560 470 80 14
-oneway 640 470 80 14
+theme ice
+spawn 264 696
+spawn 1272 696
+spawn 504 480
+spawn 1032 480
+rect 72 744 696 72
+rect 768 744 696 72
+rect 72 192 696 29
+rect 768 192 696 29
+rect 72 221 29 360
+rect 1435 221 29 360
+oneway 240 552 192 17
+oneway 1104 552 192 17
+oneway 456 384 192 17
+oneway 888 384 192 17
+oneway 672 564 96 17
+oneway 768 564 96 17
+oneway 144 384 144 14
+oneway 1248 384 144 14
+oneway 480 624 144 14
+oneway 912 624 144 14
+obj barrel h=48 w=36 x=618 y=696
+obj barrel h=48 w=36 x=882 y=696
+obj wall h=96 hp=150 w=40 x=468 y=648
+obj wall h=96 hp=150 w=40 x=1028 y=648

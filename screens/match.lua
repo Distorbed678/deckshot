@@ -20,6 +20,10 @@ local hud = require "gfx.hud"
 local active = require "online.active"
 local Settings = require "core.settings"
 local Profile = require "core.profile"
+local Music = require "gfx.music"
+local Atmosphere = require "gfx.atmosphere"
+local Chat = require "online.chat"
+local Cosmetics = require "core.cosmetics"
 
 local Match = {}
 Match.__index = Match
@@ -37,6 +41,10 @@ local function newMatch(role)
     toasts = {},
     pickUI = nil,   -- { slot, serial, index, delay, waiting } while this machine controls the pick
   }, Match)
+end
+
+function Match:enter()
+  Music.play("match")
 end
 
 -- Gameplay rules from this machine's settings (local play and the online host).
@@ -74,14 +82,19 @@ function Match.newLocal(winScore, opts)
   opts = opts or {}
   local m = newMatch("local")
   m.returnTo = opts.returnTo
+  if opts.tutorial then m.tutorial = { step = 1, returnTo = opts.tutorialReturn } end
   local rules = settingsRules(false)
   rules.teams = opts.teams and true or false
   if opts.practice then
-    rules.practice, rules.startCards, rules.barrier = true, 0, false
+    rules.practice, rules.startCards, rules.suddenDeath = true, 0, 0
+    rules.mapVote, rules.cardBans, rules.mode = false, false, "elim"
     m.practice = { total = 0, hits = {}, last = 0, quiet = 0, prevHp = nil }
   end
   if opts.map then rules.forceMap = opts.map end
-  if opts.test then rules.startCards = 0 end
+  if opts.test then
+    rules.startCards, rules.suddenDeath, rules.mapVote, rules.cardBans, rules.mode = 0, 0, false, false, "elim"
+  end
+  if opts.map then rules.mapVote = false end
   local setup = opts.setup or { { kind = "p1", color = 1, team = 1 }, { kind = opts.test and "dummy" or "p2", color = 2, team = 2 } }
   m.inputs = {}
   local defs, colors, keyCount, padCount = {}, {}, 0, 0
@@ -103,6 +116,7 @@ function Match.newLocal(winScore, opts)
     m.inputs[i] = inp
     colors[i] = sl.color
     defs[i] = { name = name, input = inp, team = sl.team, bot = bot and tonumber(bot) or nil }
+    if i == 1 and not bot then defs[i].hat, defs[i].face = Cosmetics.mine() end
   end
   if rules.teams then
     local teams = {}
@@ -136,7 +150,7 @@ function Match.newHost(slots, winScore, transport, opts)
   for i, s in ipairs(slots) do
     local input
     if i == 1 then input = m.myInput elseif s.bot then input = Input.bot(s.bot) else input = Input.remote() end
-    defs[i] = { name = s.name, input = input, peer = s.peer, team = s.team, bot = s.bot }
+    defs[i] = { name = s.name, input = input, peer = s.peer, team = s.team, bot = s.bot, hat = s.hat, face = s.face }
     colors[i] = s.color
     if i > 1 and not s.bot then m.peers[s.peer] = { slot = i, seq = -1 } end
   end
@@ -175,7 +189,10 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.view = { state = "countdown", timer = 0, winScore = winScore, mapIndex = 1, winner = 0,
     pick = { slot = 0, queued = {}, options = {}, flipped = {} } }
   m.proxies = {}
-  for i, s in ipairs(slots) do m.proxies[i] = m:newProxy(i, s.name) end
+  for i, s in ipairs(slots) do
+    m.proxies[i] = m:newProxy(i, s.name)
+    m.proxies[i].hat, m.proxies[i].face = s.hat, s.face
+  end
   m.bulletViews, m.bulletList, m.wellList = {}, {}, {}
   m.snapTime = love.timer.getTime()
   fx.recorder = nil
@@ -186,6 +203,10 @@ end
 function Match:leave()
   self.closed = true
   Profile.save()
+  Music.setMuffle(0)
+  Music.setIntensity(0)
+  require("gfx.sfx").muffle = nil
+  fx.solids = nil
   if self.role == "client" then -- drop the host's session map and card lists
     Map.loadAll()
     Cards.loadAll()
@@ -218,11 +239,15 @@ function Match:hookWorld()
     if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true) end
   end
   w.on.kill = function(victim, killer, kind)
+    if killer and self:isMine(killer.slot) then Profile.bump("kills") end
     self:addKill(victim.slot, killer and killer.slot, kind)
     if self.role == "host" then self:broadcast(net.encodeKill(victim.slot, killer and killer.slot, kind), true) end
   end
   w.on.matchOver = function(winner)
     ui.reset()
+    for i, p in ipairs(w.players) do
+      if (p == winner or (winner and winner.team and p.team == winner.team)) and self:isMine(i) then Profile.bump("wins") end
+    end
     if self.role == "host" then self:recordStreaks(winner) end
   end
 end
@@ -249,10 +274,12 @@ function Match:status()
     return {
       state = v.state, timer = v.timer, winScore = v.winScore,
       winner = v.winner > 0 and self.proxies[v.winner] or nil, pick = self:currentPick(),
+      suddenLeft = v.suddenLeft, mapVote = v.mapVote, cardBan = v.cardBan, hill = v.hill,
     }
   end
   local w = self.world
-  return { state = w.state, timer = w.timer, winScore = w.winScore, winner = w.roundWinner, pick = self:currentPick() }
+  return { state = w.state, timer = w.timer, winScore = w.winScore, winner = w.roundWinner, pick = self:currentPick(),
+    suddenLeft = w.suddenLeft, mapVote = w.mapVote, cardBan = w.cardBan, hill = w.hill }
 end
 
 function Match:players()
@@ -409,6 +436,8 @@ function Match:applySnapshot(v)
   local view = self.view
   view.state, view.timer, view.winScore = v.state, v.timer, v.winScore
   view.mapIndex, view.winner, view.pick = v.mapIndex, v.winner, v.pick
+  view.suddenLeft, view.mapVote, view.cardBan, view.hill = v.suddenLeft, v.mapVote, v.cardBan, v.hill
+  view.banned = v.banned
 
   for i, pv in ipairs(v.players) do
     local p = self.proxies[i]
@@ -427,6 +456,7 @@ function Match:applySnapshot(v)
     p.st = pv.st
     p.aimX, p.aimY = math.cos(pv.aim), math.sin(pv.aim)
     p.facing = pv.facing
+    if pv.ammo < (p.ammo or 0) then p.shotT = 0.12 end
     p.hp = pv.hp
     p.r = pv.r
     p.dead = pv.dead
@@ -524,6 +554,8 @@ function Match:applySnapshot(v)
       fx.kick(e[2], e[3])
     elseif e[1] == 10 then
       fx.number(e[2], e[3], e[4], e[5], e[6])
+    elseif e[1] == 11 then
+      fx.gibs(e[2], e[3], e[4], e[5], e[6])
     else
       fx.clear()
     end
@@ -665,6 +697,7 @@ function Match:clientInterpolate(dt)
       end
     end
     p.hitFlash = math.max(0, p.hitFlash - dt)
+    p.shotT = math.max(0, (p.shotT or 0) - dt)
     p.swingTimer = math.max(0, (p.swingTimer or 0) - dt)
     p.landSquash = math.max(0, (p.landSquash or 0) - dt * 2.5)
   end
@@ -725,7 +758,11 @@ function Match:clientNetwork()
           end
         end
       elseif kind == net.MSG.RULES then
-        Cards.applyRules(net.decodeRules(msg.data, Cards.RARITIES))
+        local rules = net.decodeRules(msg.data, Cards.RARITIES)
+        Cards.applyRules(rules)
+        active.get().hostRules = rules
+      elseif kind == net.MSG.CHAT then
+        Chat.handle(active.get(), msg)
       elseif kind == net.MSG.TOAST then
         self:showToast(net.decodeToast(msg.data))
       elseif kind == net.MSG.TOLOBBY then
@@ -781,6 +818,12 @@ function Match:hostNetwork(dt)
       elseif kind == net.MSG.DISCARD then
         local pos, serial = net.decodeDiscard(msg.data)
         self.world:discard(info.slot, pos, serial)
+      elseif kind == net.MSG.CHAT then
+        Chat.handle(active.get(), msg)
+      elseif kind == net.MSG.MAPVOTE then
+        self.world:castMapVote(info.slot, net.decodeByte(msg.data))
+      elseif kind == net.MSG.CARDBAN then
+        self.world:castBan(info.slot, Cards.list[net.decodeByte(msg.data)])
       end
     end
   end
@@ -789,6 +832,8 @@ function Match:hostNetwork(dt)
     if ev.type == "left" and self.peers[ev.id] and not self.peers[ev.id].gone then
       local info = self.peers[ev.id]
       info.gone = true
+      local who = self.world.players[info.slot]
+      Chat.system(active.get(), ((who and who.name) or "Someone") .. " left")
       if info.spectator then
         self.peers[ev.id] = nil
       else
@@ -803,6 +848,8 @@ function Match:hostNetwork(dt)
         end
       end
     elseif ev.type == "joined" then
+      local session = active.get()
+      Chat.system(session, (session.memberName and session.memberName(ev.id) or "Someone") .. " joined")
       self:peerJoined(ev.id)
     end
   end
@@ -939,7 +986,7 @@ function Match:drawPractice()
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.85)
   love.graphics.printf(string.format("Last hit %d   DPS %d   Total %d", pr.last, dps, pr.total), 0, 96, app.W, "center")
-  if ui.button("Cards (C)", app.W / 2 - 230, 126, 150, 34, { font = app.fonts.small }) then self.cardChooser = not self.cardChooser end
+  if ui.button("Cards", app.W / 2 - 230, 126, 150, 34, { font = app.fonts.small }) then self.cardChooser = not self.cardChooser end
   if ui.button("Reset damage", app.W / 2 - 70, 126, 150, 34, { font = app.fonts.small }) then
     pr.total, pr.last, pr.hits = 0, 0, {}
   end
@@ -959,39 +1006,72 @@ function Match:drawPractice()
   if self.cardChooser then self:drawCardChooser() end
 end
 
--- Click a card to add a copy, right click to remove one.
+-- Every card (skipping `skip(card)`), grouped under rarity headings; hovering shows the full card.
+-- onClick(card), onRight(card); label(card) and highlight(card) are optional.
+function Match:drawCardGrid(top, skip, onClick, onRight, label, highlight)
+  local cols, bw, bh, gapX, gapY = 7, 172, 18, 4, 3
+  local x0 = (app.W - (cols * (bw + gapX) - gapX)) / 2
+  local mx, my = app.mouse()
+  local y = top
+  local hovered
+  for _, r in ipairs(Cards.RARITIES) do
+    local list = {}
+    for _, c in ipairs(Cards.list) do
+      if c.rarity == r.id and not skip(c) then list[#list + 1] = c end
+    end
+    if #list > 0 then
+      love.graphics.setFont(app.fonts.tiny)
+      love.graphics.setColor(r.color)
+      love.graphics.print(r.name:upper(), x0, y)
+      y = y + 16
+      for i, c in ipairs(list) do
+        local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+        local x, cy = x0 + col * (bw + gapX), y + row * (bh + gapY)
+        local hi = highlight and highlight(c)
+        if ui.button(label and label(c) or c.name, x, cy, bw, bh, { font = app.fonts.tiny, color = hi and ui.ACCENT or r.color }) then
+          onClick(c)
+        end
+        if mx >= x and mx <= x + bw and my >= cy and my <= cy + bh then
+          hovered = c
+          if self.rightClick and onRight then onRight(c) end
+        end
+      end
+      y = y + math.ceil(#list / cols) * (bh + gapY) + 5
+    end
+  end
+  self.rightClick = nil
+  if hovered then
+    local w, h = 230, 320
+    local px = mx < app.W / 2 and mx + 24 or mx - w - 24
+    local py = math.max(10, math.min(app.H - h - 10, my - h / 2))
+    hud.drawCard(hovered, px, py, w, h, false, { 1, 1, 1 })
+  end
+end
+
+-- Click a card to add a copy, right click to remove one. Sorted by rarity.
 function Match:drawCardChooser()
   local me = self.world.players[1]
   love.graphics.setColor(0, 0, 0, 0.85)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local counts = {}
   for _, c in ipairs(me.cards) do counts[c] = (counts[c] or 0) + 1 end
-  local cols, bw, bh = 6, 200, 18
-  local mx, my = app.mouse()
-  for i, c in ipairs(Cards.list) do
-    if not c.special then
-      local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
-      local x, y = 36 + col * (bw + 4), 20 + row * (bh + 3)
-      local rc = Cards.rarity[c.rarity] and Cards.rarity[c.rarity].color or { 1, 1, 1 }
-      local label = c.name .. (counts[c] and ("  x" .. counts[c]) or "")
-      if ui.button(label, x, y, bw, bh, { font = app.fonts.tiny, color = counts[c] and ui.ACCENT or rc }) then
-        table.insert(me.cards, c)
-        me:recompute()
-      end
-      if self.rightClick and mx >= x and mx <= x + bw and my >= y and my <= y + bh and counts[c] then
-        for k = #me.cards, 1, -1 do
-          if me.cards[k] == c then table.remove(me.cards, k) break end
-        end
-        me:recompute()
+  self:drawCardGrid(14, function(c) return c.special end, function(c)
+    table.insert(me.cards, c)
+    me:recompute()
+  end, function(c)
+    for k = #me.cards, 1, -1 do
+      if me.cards[k] == c then
+        table.remove(me.cards, k)
+        break
       end
     end
-  end
-  self.rightClick = nil
+    me:recompute()
+  end, function(c) return c.name .. (counts[c] and ("  x" .. counts[c]) or "") end, function(c) return counts[c] end)
   if ui.button("Clear cards", app.W / 2 - 230, app.H - 44, 220, 34, { font = app.fonts.small }) then
     me.cards = {}
     me:recompute()
   end
-  if ui.button("Close (C)", app.W / 2 + 10, app.H - 44, 220, 34, { font = app.fonts.small, back = true }) then
+  if ui.button("Close", app.W / 2 + 10, app.H - 44, 220, 34, { font = app.fonts.small, back = true }) then
     self.cardChooser = false
   end
 end
@@ -1008,8 +1088,9 @@ function Match:update(dt, isTop)
     self.paused = not self.paused
     ui.reset()
   end
-  local suppressed = self.paused or not isTop
+  local suppressed = self.paused or not isTop or self.chatOpen
   fx.update(dt)
+  self:updateAudio()
   for i = #self.toasts, 1, -1 do
     local t = self.toasts[i]
     t.t = t.t - dt
@@ -1018,7 +1099,10 @@ function Match:update(dt, isTop)
 
   self:updatePickAnim(dt)
   self:recordRound(self:status())
+  self:updateTutorial()
+  -- Mouse aim is in world coordinates (the game view is zoomed to fit the screen).
   local mx, my = app.mouse()
+  mx, my = mx / Map.VIEW, my / Map.VIEW
   if self.role == "local" then
     for _, inp in ipairs(self.inputs) do
       if inp.kind ~= "bot" then Input.poll(inp, suppressed) end
@@ -1062,6 +1146,201 @@ function Match:update(dt, isTop)
   end
 end
 
+---------------------------------------------------------------- votes and bans
+-- Which player on this machine votes now: online you; on one screen, each player in turn.
+function Match:voterSlot(chosen)
+  if self.role ~= "local" then return (self.mySlot and self.mySlot > 0) and self.mySlot or nil end
+  for i, p in ipairs(self.world.players) do
+    if not p.isBot and not chosen[i] then return i end
+  end
+  return nil
+end
+
+function Match:castMapVote(slot, option)
+  if self.role == "client" then
+    self.transport:send(self.hostPeer, net.encodeByte(net.MSG.MAPVOTE, option), true)
+  else
+    self.world:castMapVote(slot, option)
+  end
+end
+
+function Match:drawMapVote(st)
+  local mv = st.mapVote
+  if not mv then return end
+  love.graphics.setColor(0, 0, 0, 0.82)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  local players = self:players()
+  local slot = mv.winner == 0 and self:voterSlot(mv.votes) or nil
+  local title = "VOTE FOR THE NEXT MAP"
+  if mv.winner > 0 then title = "NEXT MAP"
+  elseif self.role == "local" and slot then title = (players[slot].name or "Player"):upper() .. ": VOTE FOR THE NEXT MAP" end
+  app.centered(title, app.fonts.big, 34)
+  if mv.winner == 0 then app.centered(tostring(math.max(0, math.ceil(mv.timeLeft))), app.fonts.title, 84, { 1, 1, 1, 0.7 }) end
+  local n = #mv.options
+  local perRow = n <= 3 and n or 3
+  local rows = math.ceil(n / perRow)
+  local w, h = n <= 3 and 370 or 330, rows == 1 and 300 or 240
+  local gap = 22
+  local top = rows == 1 and 170 or 130
+  for i, idx in ipairs(mv.options) do
+    local col, row = (i - 1) % perRow, math.floor((i - 1) / perRow)
+    local inRow = row == rows - 1 and (n - (rows - 1) * perRow) or perRow
+    local rowW = inRow * w + (inRow - 1) * gap
+    local x, y = (app.W - rowW) / 2 + col * (w + gap), top + row * (h + gap)
+    local map = Map.list[idx]
+    local mine = slot and mv.votes[slot] == i
+    local won = mv.winner == i
+    local color = won and ui.GOOD or (mine and ui.ACCENT or nil)
+    if ui.button("", x, y, w, h, { color = color }) and slot then self:castMapVote(slot, i) end
+    if map then
+      local thumbH = h - 62
+      require("screens.editor_hub").drawThumb(map, x + 10, y + 10, w - 20, thumbH)
+      love.graphics.setColor(1, 1, 1)
+      ui.printFit(map.name, app.fonts.med, x + 14, y + h - 46, w - 28, "center")
+    end
+    local dotX = x + w / 2 - (#players - 1) * 11
+    for k, p in ipairs(players) do
+      if mv.votes[k] == i then
+        love.graphics.setColor(p.color)
+        love.graphics.circle("fill", dotX + (k - 1) * 22, y + h - 14, 7)
+      end
+    end
+  end
+end
+
+function Match:drawCardBan(st)
+  local cb = st.cardBan
+  if not cb then return end
+  love.graphics.setColor(0, 0, 0, 0.88)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  local players = self:players()
+  local slot = self:voterSlot(cb.picks)
+  local title = "BAN A CARD"
+  if self.role == "local" and slot then title = (players[slot].name or "Player"):upper() .. ": BAN A CARD"
+  elseif not slot then title = "WAITING FOR THE OTHERS" end
+  app.centered(title .. "   " .. math.max(0, math.ceil(cb.timeLeft)), app.fonts.title, 12)
+  local function pickedCard(c)
+    for _, v in pairs(cb.picks) do
+      if v == c or v == c.index then return true end
+    end
+    return false
+  end
+  self:drawCardGrid(50, function(c) return c.disabled end, function(c)
+    if not slot then return end
+    if self.role == "client" then
+      self.transport:send(self.hostPeer, net.encodeByte(net.MSG.CARDBAN, c.index), true)
+    else
+      self.world:castBan(slot, c)
+    end
+  end, nil, nil, pickedCard)
+end
+
+---------------------------------------------------------------- chat
+function Match:drawChat(st)
+  if self.role == "local" then return end
+  local session = active.get()
+  local x, y, w = 16, app.H - 62, 430
+  if self.chatOpen then
+    love.graphics.setColor(0, 0, 0, 0.55)
+    love.graphics.rectangle("fill", x - 8, y - 190, w + 16, 234, 8, 8)
+    Chat.draw(x, y - 4, w, 11)
+    if self.chatFresh then
+      ui.text = ""
+      self.chatFresh = false
+    end
+    local text, submitted = ui.textField(self.chatText or "", x, y, w, 36, { font = app.fonts.small, maxLength = 240,
+      forceFocus = true, align = "left", placeholder = "Say something" })
+    self.chatText = text
+    if submitted then
+      Chat.send(session, text)
+      self.chatOpen = false
+    end
+  else
+    Chat.draw(x, y + 28, w, 6, 8)
+    if self:usesTouch() and ui.button("Chat", app.W - 110, 62, 90, 34, { font = app.fonts.small }) then self:openChat() end
+  end
+end
+
+---------------------------------------------------------------- first-run tutorial
+local TUTORIAL = {
+  { id = "move", text = "Move left and right", key = function(n, b) return n(b.left) .. " / " .. n(b.right) end, pad = "Left stick", touch = "Drag on the left side" },
+  { id = "jump", text = "Jump", key = function(n, b) return n(b.up) end, pad = "A", touch = "Jump button" },
+  { id = "double", text = "Jump again in the air", key = function(n, b) return n(b.up) .. " twice" end, pad = "A twice", touch = "Jump button twice" },
+  { id = "fire", text = "Shoot", key = function(n, b) return n(b.fire) end, pad = "RT", touch = "Drag on the right side" },
+  { id = "block", text = "Block: it reflects bullets", key = function(n, b) return n(b.block) end, pad = "LT", touch = "Block button" },
+  { id = "dash", text = "Dash", key = function(n, b) return n(b.dash) end, pad = "B", touch = "Dash button" },
+  { id = "melee", text = "Melee: tap, or hold for a heavy hit", key = function(n, b) return n(b.melee) end, pad = "X", touch = "Melee button" },
+  { id = "hit", text = "Land a shot on the dummy", key = function() return "" end, pad = "", touch = "" },
+}
+
+function Match:updateTutorial()
+  local tu = self.tutorial
+  if not tu or tu.done then return end
+  local w = self.world
+  local me = w and w.players[1]
+  if not me or w.state ~= "playing" then return end
+  local inp = me.input
+  local step = TUTORIAL[tu.step]
+  if not step then
+    tu.done = true
+    return
+  end
+  tu.base = tu.base or { x = me.x, jump = inp.jumpCount or 0, shots = me.st.shots or 0, block = inp.blockCount or 0,
+    dash = inp.dashCount or 0, melee = inp.meleeCount or 0, dmg = me.st.dmg or 0 }
+  local b, ok = tu.base, false
+  if me.onGround then tu.airJumps = 0 end
+  if (inp.jumpCount or 0) ~= (tu.lastJump or 0) then
+    if not me.onGround then tu.airJumps = (tu.airJumps or 0) + 1 end
+    tu.lastJump = inp.jumpCount or 0
+  end
+  if step.id == "move" then ok = math.abs(me.x - b.x) > 120
+  elseif step.id == "jump" then ok = (inp.jumpCount or 0) > b.jump
+  elseif step.id == "double" then ok = (tu.airJumps or 0) >= 1
+  elseif step.id == "fire" then ok = (me.st.shots or 0) > b.shots
+  elseif step.id == "block" then ok = (inp.blockCount or 0) > b.block
+  elseif step.id == "dash" then ok = (inp.dashCount or 0) > b.dash
+  elseif step.id == "melee" then ok = (inp.meleeCount or 0) > b.melee
+  elseif step.id == "hit" then ok = (me.st.dmg or 0) > b.dmg end
+  if ok then
+    tu.step, tu.base = tu.step + 1, nil
+    sfx.ui("uiClick")
+    if not TUTORIAL[tu.step] then tu.done = true end
+  end
+end
+
+function Match:drawTutorial()
+  local tu = self.tutorial
+  if not tu or self.paused or self.cardChooser then return end
+  local x, y, w, h = app.W / 2 - 300, 170, 600, 104
+  ui.panel(x, y, w, h, 0.92)
+  if tu.done then
+    love.graphics.setFont(app.fonts.title)
+    love.graphics.setColor(ui.GOOD)
+    love.graphics.printf("You're ready!", x, y + 14, w, "center")
+    if ui.button("Finish", x + 180, y + 54, 240, 40, { color = ui.GOOD }) then
+      app.switch(tu.returnTo and tu.returnTo() or require("screens.menu").new())
+    end
+    return
+  end
+  local step = TUTORIAL[tu.step]
+  local me = self.world.players[1]
+  local kind = me.input.kind
+  local hint
+  if kind == "pad" then hint = step.pad
+  elseif kind == "touch" then hint = step.touch
+  else hint = step.key(Input.keyName, me.input.controls or Settings.values.binds.p1) end
+  love.graphics.setFont(app.fonts.tiny)
+  love.graphics.setColor(1, 1, 1, 0.5)
+  love.graphics.print("Step " .. tu.step .. " of " .. #TUTORIAL, x + 18, y + 12)
+  love.graphics.setColor(1, 1, 1)
+  ui.printFit(step.text, app.fonts.title, x + 20, y + 28, w - 160, "left")
+  love.graphics.setColor(ui.GOLD)
+  ui.printFit(hint, app.fonts.med, x + 20, y + 68, w - 160, "left")
+  if ui.button("Skip", x + w - 120, y + 32, 100, 40, { font = app.fonts.small, back = true }) then
+    app.switch(tu.returnTo and tu.returnTo() or require("screens.menu").new())
+  end
+end
+
 ---------------------------------------------------------------- input
 function Match:scoreboardVisible()
   if self.showScores then return true end
@@ -1073,7 +1352,52 @@ function Match:scoreboardVisible()
   return false
 end
 
+-- Music follows sudden death; sound muffles when you're nearly or just dead; the background shifts.
+function Match:updateAudio()
+  local st = self:status()
+  Music.setIntensity((st.suddenLeft and st.suddenLeft <= 0) and 1 or 0)
+  local _, _, _, map = self:scene()
+  fx.solids = map and map.rects or nil
+  local players = self:players()
+  local cx, cy, n = 0, 0, 0
+  for _, p in ipairs(players) do
+    if not p.dead and p.x > -500 then cx, cy, n = cx + p.x, cy + p.y, n + 1 end
+  end
+  if n > 0 then
+    local tx, ty = (cx / n) / (Map.W / 2) - 1, (cy / n) / (Map.H / 2) - 1
+    Atmosphere.camX = Atmosphere.camX + (tx - Atmosphere.camX) * 0.06
+    Atmosphere.camY = Atmosphere.camY + (ty - Atmosphere.camY) * 0.06
+  end
+  local mine = self:myPlayers()
+  local level = 0
+  if #mine == 1 and (st.state == "playing" or st.state == "roundOver") then
+    local p = mine[1]
+    if p.dead then level = 0.75
+    elseif p.hp < p.stats.maxHp * 0.25 then level = 0.5 end
+  end
+  if st.state == "roundOver" then level = math.max(level, 0.35) end
+  self.muffle = (self.muffle or 0) + (level - (self.muffle or 0)) * 0.12
+  Music.setMuffle(self.muffle)
+  sfx.muffle = self.muffle > 0.03 and { type = "lowpass", volume = 1, highgain = 1 - self.muffle * 0.85 } or nil
+end
+
+function Match:openChat()
+  if self.role == "local" or self.chatOpen then return end
+  self.chatOpen, self.chatText, self.chatFresh = true, "", true
+  ui.key = nil
+end
+
 function Match:keypressed(key)
+  if self.chatOpen then
+    if key == "escape" then self.chatOpen = false end
+    return
+  end
+  if self.role ~= "local" and key == Settings.values.binds.online.chat and not self.paused then
+    self:openChat()
+    return
+  end
+  local stateNow = self:status().state
+  if (stateNow == "mapVote" or stateNow == "cardBan") and key ~= "escape" then return end
   if self.practice and key == "c" then
     self.cardChooser = not self.cardChooser
     return
@@ -1155,7 +1479,7 @@ function Match:gamepadpressed(j, button)
   end
   if self.paused then return false end
   local st = self:status().state
-  if st == "matchOver" then return false end
+  if st == "matchOver" or st == "mapVote" or st == "cardBan" then return false end
   local pu = self.pickUI
   if pu then
     -- Only the picker's own pad (local) or any pad (online, it's your pick) steers the pick.
@@ -1202,7 +1526,9 @@ function Match:pickKeys(slot)
 end
 
 function Match:mousepressed(x, y, button)
-  if self.paused then return end
+  if self.paused or self.chatOpen then return end
+  local stateNow = self:status().state
+  if stateNow == "mapVote" or stateNow == "cardBan" then return end
   if self.cardChooser and button == 2 then self.rightClick = true end
   if self.cardChooser then return end
   local pu = self.pickUI
@@ -1210,7 +1536,7 @@ function Match:mousepressed(x, y, button)
     local cp = self:currentPick()
     if self.discardMode then return end -- the discard panel's buttons handle clicks
     if button == 1 and cp then
-      for i, r in ipairs(hud.cardRects(#cp.options, pu.index)) do
+      for i, r in ipairs(hud.cardRects(#cp.options, 0)) do
         if x >= r[1] and x <= r[1] + r[3] and y >= r[2] and y <= r[2] + r[4] then
           self:choosePick(i)
           return
@@ -1227,7 +1553,8 @@ end
 
 ---------------------------------------------------------------- drawing
 ---------------------------------------------------------------- card pick animation
-local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.07, 0.28, 0.2
+local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.07, 0.28, 0.32
+local LIFT_SPEED = 14 -- how fast the hovered card slides up
 local REVEAL_SOUND = { rare = "revealRare", epic = "revealEpic", legendary = "revealLegendary" }
 
 local function ease(t)
@@ -1242,7 +1569,7 @@ function Match:updatePickAnim(dt)
   local a = self.pickAnim
   if cp then
     if not a or a.serial ~= cp.serial or a.slot ~= cp.slot then
-      a = { serial = cp.serial, slot = cp.slot, t = 0, flip = {}, sparkles = {} }
+      a = { serial = cp.serial, slot = cp.slot, t = 0, flip = {}, sparkles = {}, lift = {} }
       self.pickAnim = a
       sfx.play("cardDeal", nil, 1, 1, true)
       if self:isMine(cp.slot) then
@@ -1250,6 +1577,15 @@ function Match:updatePickAnim(dt)
       end
     end
     a.t = a.t + dt
+    -- The hovered card slides up; a change of hover ticks like hovering a menu button.
+    local pu = self.pickUI
+    local hovered = pu and pu.index or cp.hover
+    for i = 1, #cp.options do
+      local target = i == hovered and 1 or 0
+      a.lift[i] = (a.lift[i] or 0) + (target - (a.lift[i] or 0)) * math.min(1, dt * LIFT_SPEED)
+    end
+    if a.lastHover and a.lastHover ~= hovered and pu then sfx.ui("uiHover") end
+    a.lastHover = hovered
     for i, card in ipairs(cp.options) do
       local arrived = a.t > (i - 1) * DEAL_STAGGER + DEAL_TIME
       if cp.flipped[i] and arrived then
@@ -1300,7 +1636,10 @@ function Match:updatePickAnim(dt)
     if before and n > before and p.cards[n] then
       self.flyers[#self.flyers + 1] = { card = p.cards[n], slot = i, t = 0 }
       sfx.play("cardPick", nil, 1, 1, true)
-      if self:isMine(i) then Profile.add(p.cards[n].id, "picked") end
+      if self:isMine(i) then
+        Profile.add(p.cards[n].id, "picked")
+        Profile.bump("picks")
+      end
     end
     self.cardCounts[i] = n
   end
@@ -1323,11 +1662,20 @@ end
 -- A round ended: count a win for every card the winner holds (if the winner is ours).
 function Match:recordRound(st)
   local entered = st.state == "roundOver" and self.prevState ~= "roundOver"
+  if self.role == "client" and st.state == "matchOver" and self.prevState ~= "matchOver" and st.winner then
+    local me = self.proxies[self.mySlot]
+    if me and (me == st.winner or (st.winner.team and me.team == st.winner.team)) then Profile.bump("wins") end
+  end
   self.prevState = st.state
   if not entered or not st.winner then return end
   for i, p in ipairs(self:players()) do
-    if p == st.winner and self:isMine(i) then
-      for _, c in ipairs(p.cards) do Profile.add(c.id, "wins") end
+    local won = p == st.winner or (st.winner.team and p.team == st.winner.team)
+    if won and self:isMine(i) then
+      if p == st.winner then
+        for _, c in ipairs(p.cards) do Profile.add(c.id, "wins") end
+      end
+      Profile.bump("rounds")
+      if st.hill then Profile.bump("hillWins") end
       Profile.save()
     end
   end
@@ -1337,8 +1685,8 @@ end
 function Match:panelPos(slot)
   local n = #self:players()
   if n <= 2 then return slot == 1 and 140 or app.W - 140, 60 end
-  local pw = math.floor((app.W - 48 - (n - 1) * 16) / n)
-  return 24 + (slot - 1) * (pw + 16) + pw / 2, 60
+  local pw = hud.chipWidth(n)
+  return hud.chipX(slot, n, pw) + pw / 2, 60
 end
 
 function Match:drawFlyers()
@@ -1384,26 +1732,13 @@ function Match:drawCardPick(st)
   app.centered(title, app.fonts.big, 80, color)
 
   local hint
-  local pickInput = self.role == "local" and pu and self.world.players[pu.slot].input
-  local b = (pickInput and pickInput.kind == "keys" and pickInput.controls) or Settings.values.binds.online
-  local padPick = pickInput and pickInput.kind == "pad"
   if pu then
-    if self.discardMode then
-      hint = "Choose a card to throw away  -  " .. Input.keyName(b.down) .. " to go back"
-    elseif padPick then
-      hint = "D-pad to turn over and choose, A to take, D-pad down to discard instead"
-    elseif self.role == "local" then
-      hint = Input.keyName(b.left) .. " / " .. Input.keyName(b.right) .. " to turn over and choose, " ..
-        Input.keyName(b.fire) .. " to take"
-    else
-      hint = "Hover to turn a card over, click to take  -  or " .. Input.keyName(b.left) .. " / " ..
-        Input.keyName(b.right) .. " and " .. Input.keyName(b.jump)
-    end
+    if self.discardMode then hint = "Choose a card to throw away" end
     if pu.waiting then hint = "Waiting for the host..." end
   else
     hint = "Watching " .. (p and p.name or "them") .. " choose"
   end
-  app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 })
+  if hint then app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 }) end
 
   -- Pick timer
   if cp.timeLeft then
@@ -1433,13 +1768,13 @@ function Match:drawCardPick(st)
   -- Mouse hover selects for whoever controls the pick (local player 1 can use the mouse too).
   if pu and not pu.waiting and ui.mouseMoved then
     local mx, my = app.mouse()
-    for i, r in ipairs(hud.cardRects(#cp.options, index)) do
+    for i, r in ipairs(hud.cardRects(#cp.options, 0)) do
       if mx >= r[1] and mx <= r[1] + r[3] and my >= r[2] and my <= r[2] + r[4] then pu.index = i end
     end
     index = pu.index
   end
   local a = self.pickAnim
-  local rects = hud.cardRects(#cp.options, index)
+  local rects = hud.cardRects(#cp.options, index, a and a.lift)
   for i, card in ipairs(cp.options) do
     local r = rects[i]
     local appear = a and (a.t - (i - 1) * DEAL_STAGGER) / DEAL_TIME or 1
@@ -1471,7 +1806,7 @@ function Match:drawCardPick(st)
   end
 
   if pu and not pu.waiting and self:canDiscard(pu.slot) then
-    local label = "Discard a card instead  (" .. Input.keyName(b.down) .. ")"
+    local label = "Discard a card instead"
     if ui.button(label, app.W / 2 - 180, 612, 360, 44, { font = app.fonts.med }) then
       self.discardMode, self.discardIndex = true, 1
     end
@@ -1581,7 +1916,7 @@ end
 function Match:drawOffscreen(players)
   for _, p in ipairs(players) do
     if not p.dead and p.y < -p.r then
-      local x = math.max(20, math.min(app.W - 20, p.x))
+      local x = math.max(20, math.min(Map.W - 20, p.x))
       local c = p.color
       love.graphics.setColor(c[1], c[2], c[3], 0.9)
       love.graphics.polygon("fill", x, 4, x - 12, 22, x + 12, 22)
@@ -1722,16 +2057,115 @@ function Match:drawVotes(y)
   end
 end
 
+-- Everyone's names sliding in before the first round.
+function Match:drawVersus(players, k)
+  local e = ease(k * 2.5)
+  local out = math.max(0, math.min(1, (1 - k) * 6))
+  local h = 210 * out
+  love.graphics.setColor(0, 0, 0, 0.75)
+  love.graphics.rectangle("fill", 0, 360 - h / 2, app.W, h)
+  if out < 1 then return end
+  local n = #players
+  local slide = (1 - e) * 500
+  local font = app.fonts.big
+  if n == 2 then
+    local a, b = players[1], players[2]
+    love.graphics.setColor(a.color)
+    ui.printFit((a.name or "Player"):upper(), font, 80 - slide, 340, 460, "right")
+    love.graphics.setColor(b.color)
+    ui.printFit((b.name or "Player"):upper(), font, 740 + slide, 340, 460, "left")
+    love.graphics.setColor(1, 1, 1)
+    ui.printFit("VS", app.fonts.big, app.W / 2 - 60, 340, 120, "center")
+    return
+  end
+  local cellW = 1120 / n
+  for i, p in ipairs(players) do
+    local x = 80 + (i - 1) * cellW + (i % 2 == 0 and slide or -slide)
+    love.graphics.setColor(p.color)
+    ui.printFit((p.name or "Player"):upper(), app.fonts.title, x + 10, 345, cellW - 20, "center")
+  end
+end
+
+function Match:drawRoundBanner(st)
+  local t = self.roundT or 0
+  local k = ease(t / 0.3)
+  local c = st.winner and st.winner.color or { 1, 1, 1 }
+  local text = st.winner and ((st.winner.name or "Player"):upper() .. " WINS THE ROUND") or "DRAW"
+  love.graphics.setColor(0, 0, 0, 0.6)
+  love.graphics.rectangle("fill", app.W / 2 - app.W / 2 * k, 262, app.W * k, 92)
+  love.graphics.setColor(c)
+  love.graphics.rectangle("fill", app.W / 2 - app.W / 2 * k, 262, app.W * k, 4)
+  love.graphics.rectangle("fill", app.W / 2 - app.W / 2 * k, 350, app.W * k, 4)
+  if k > 0.6 then
+    love.graphics.setColor(c)
+    ui.printFit(text, app.fonts.big, 100, 287, app.W - 200, "center")
+  end
+end
+
+-- The winner's podium and final build.
+function Match:drawPodium(st)
+  local ranked = {}
+  for i, p in ipairs(self:players()) do ranked[i] = p end
+  table.sort(ranked, function(a, b)
+    if a.score ~= b.score then return a.score > b.score end
+    return (a.slot or a.id or 0) < (b.slot or b.id or 0)
+  end)
+  local heights = { 130, 104, 84, 68 }
+  local order = { { 3, 1, 2, 4 }, { 2, 1, 3 }, { 1, 2 } }
+  local slots = #ranked == 4 and order[1] or #ranked == 3 and order[2] or order[3]
+  local colW = 180
+  local x0 = (app.W - #slots * colW) / 2
+  local baseY = 312
+  for i, rank in ipairs(slots) do
+    local p = ranked[rank]
+    if p then
+      local x = x0 + (i - 1) * colW
+      local h = heights[rank]
+      love.graphics.setColor(0.2, 0.2, 0.26, 0.95)
+      love.graphics.rectangle("fill", x + 8, baseY - h, colW - 16, h, 8, 8)
+      love.graphics.setColor(p.color)
+      love.graphics.rectangle("fill", x + 8, baseY - h, colW - 16, 4)
+      local look = { math.sin(love.timer.getTime() * 0.9 + i) * 0.6, 0 }
+      Cosmetics.drawPreview(x + colW / 2, baseY - h - 34, 30, p.color, p.hat, p.face, look)
+      love.graphics.setColor(1, 1, 1, 0.9)
+      ui.printFit(tostring(p.score), app.fonts.title, x + 8, baseY - h + 8, colW - 16, "center")
+      love.graphics.setColor(1, 1, 1, 0.75)
+      ui.printFit(p.name or "Player", app.fonts.small, x + 14, baseY - 22, colW - 28, "center")
+    end
+  end
+  local winner = st.winner
+  if winner and #winner.cards > 0 then
+    local names, seen = {}, {}
+    for _, c in ipairs(winner.cards) do
+      if not seen[c] then
+        seen[c] = 0
+        names[#names + 1] = c
+      end
+      seen[c] = seen[c] + 1
+    end
+    local parts = {}
+    for i, c in ipairs(names) do
+      if i > 14 then
+        parts[#parts + 1] = "+" .. (#names - 14) .. " more"
+        break
+      end
+      parts[#parts + 1] = c.name .. (seen[c] > 1 and (" x" .. seen[c]) or "")
+    end
+    love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(1, 1, 1, 0.65)
+    love.graphics.printf("Final build: " .. table.concat(parts, ", "), 100, 322, app.W - 200, "center")
+  end
+end
+
 function Match:drawMatchOver(st)
-  love.graphics.setColor(0, 0, 0, 0.7)
+  love.graphics.setColor(0, 0, 0, 0.72)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local winner = st.winner
   if winner then
-    app.centered((winner.name or "Player"):upper() .. " WINS!", app.fonts.huge, 150, winner.color)
+    love.graphics.setColor(winner.color)
+    ui.printFit((winner.name or "Player"):upper() .. " WINS!", app.fonts.huge, 80, 8, app.W - 160, "center")
   end
-  local scores = {}
-  for _, p in ipairs(self:players()) do scores[#scores + 1] = tostring(p.score) end
-  app.centered(table.concat(scores, "  -  "), app.fonts.big, 280)
+  self:drawPodium(st)
 
   local x, w, h = app.W / 2 - 280, 560, 52
   local nextScore = st.winScore + World.CONTINUE_ROUNDS
@@ -1802,18 +2236,30 @@ function Match:drawPause()
   if ui.button("Settings", bx, y, bw, bh) then app.push(require("screens.settings").new()) end
   y = y + 62
   if self.role == "local" then
-    if ui.button("Main Menu", bx, y, bw, bh) then app.switch(require("screens.menu").new()) end
+    if ui.button("Main Menu", bx, y, bw, bh) then
+      require("screens.confirm").ask("Leave this match?", "The match in progress will end.", function()
+        app.switch(require("screens.menu").new())
+      end, { yes = "Leave", danger = true })
+    end
   elseif self.role == "host" then
-    if ui.button("Back to Lobby (everyone)", bx, y, bw, bh) then self:backToLobby() end
+    if ui.button("Back to Lobby (everyone)", bx, y, bw, bh) then
+      require("screens.confirm").ask("Back to the lobby?", "This ends the match for everyone.", function()
+        self:backToLobby()
+      end, { yes = "Back to Lobby", danger = true })
+    end
     y = y + 62
     if ui.button("Leave Lobby", bx, y, bw, bh) then
-      active.get().leave()
-      app.switch(require("screens.menu").new())
+      require("screens.confirm").ask("Close this lobby?", "You're the host, so everyone will be disconnected.", function()
+        active.get().leave()
+        app.switch(require("screens.menu").new())
+      end, { yes = "Close Lobby", danger = true })
     end
   else
     if ui.button("Leave Lobby", bx, y, bw, bh) then
-      active.get().leave()
-      app.switch(require("screens.menu").new())
+      require("screens.confirm").ask("Leave this match?", "You'll leave the match and the lobby.", function()
+        active.get().leave()
+        app.switch(require("screens.menu").new())
+      end, { yes = "Leave", danger = true })
     end
   end
 end
@@ -1828,7 +2274,9 @@ function Match:draw()
   local objs, effects, barrier = self:sceneObjects()
   love.graphics.push()
   love.graphics.translate(sx, sy)
+  love.graphics.scale(Map.VIEW)
   Map.draw(map)
+  if st.hill then hud.drawHill(st.hill, players, World.HILL) end
   Objects.draw(objs, effects)
   hud.drawWells(wells)
   for _, b in ipairs(bullets) do b:draw() end
@@ -1836,12 +2284,12 @@ function Match:draw()
   fx.draw()
   self:drawOffscreen(players)
   fx.drawNumbers()
-  love.graphics.pop()
-
   if barrier then hud.drawBarrier(barrier) end
+  love.graphics.pop()
 
   Bloom.draw(function()
     love.graphics.translate(sx, sy)
+    love.graphics.scale(Map.VIEW)
     Objects.drawGlow(objs, effects)
     if barrier then hud.drawBarrier(barrier, true) end
     for _, b in ipairs(bullets) do b:draw() end
@@ -1850,6 +2298,14 @@ function Match:draw()
   end, app.canvas)
 
   local cardItems = hud.drawScores(players, st.winScore)
+  if st.state == "playing" or st.state == "countdown" or st.state == "roundOver" then hud.drawTimer(st.suddenLeft) end
+  if st.hill then
+    local function scoreOf(i)
+      if self.role == "client" then return st.hill.scores[i] or 0 end
+      return players[i].hillScore or 0
+    end
+    hud.drawHillScores(players, World.HILL.target, scoreOf)
+  end
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.3)
   love.graphics.printf(map.name .. "   -   First to " .. st.winScore, 0, app.H - 24, app.W, "center")
@@ -1862,24 +2318,30 @@ function Match:draw()
   self:drawVignette(players)
   self:drawKillFeed()
   if st.state == "countdown" then
-    -- 3, 2, 1: each number pops in big and settles.
-    local n = math.max(1, math.ceil(st.timer / 0.8))
-    local k = 1 - ((st.timer / 0.8) % 1)
-    self:drawPop(tostring(n), k, { 1, 1, 1 })
+    if st.timer > World.COUNTDOWN then
+      self:drawVersus(players, 1 - (st.timer - World.COUNTDOWN) / World.INTRO_TIME)
+    else
+      -- 3, 2, 1: each number pops in big and settles.
+      local n = math.max(1, math.ceil(st.timer / 0.8))
+      local k = 1 - ((st.timer / 0.8) % 1)
+      self:drawPop(tostring(n), k, { 1, 1, 1 })
+    end
     self.fightT = 0
+    self.roundT = 0
   elseif st.state == "playing" and (self.fightT or 1) < 0.7 then
     self.fightT = (self.fightT or 0) + love.timer.getDelta()
     self:drawPop("FIGHT!", self.fightT / 0.7, { 1, 0.85, 0.3 })
   elseif st.state == "roundOver" then
-    if st.winner then
-      app.centered((st.winner.name or "Player"):upper() .. " WINS THE ROUND", app.fonts.big, 280, st.winner.color)
-    else
-      app.centered("DRAW", app.fonts.big, 280)
-    end
+    self.roundT = (self.roundT or 0) + love.timer.getDelta()
+    self:drawRoundBanner(st)
   elseif st.state == "cardPick" then
     self:drawCardPick(st)
+  elseif st.state == "mapVote" then
+    self:drawMapVote(st)
+  elseif st.state == "cardBan" then
+    self:drawCardBan(st)
   end
-  self:drawFlyers()
+  if st.state ~= "mapVote" then self:drawFlyers() end
   if st.state == "matchOver" then self:drawMatchOver(st) end
 
   -- Hovering a card name in someone's score panel shows what it does.
@@ -1910,6 +2372,8 @@ function Match:draw()
   end
 
   if self.practice and not self.paused then self:drawPractice() end
+  self:drawTutorial()
+  self:drawChat(st)
   if self:scoreboardVisible() then self:drawScoreboard() end
 
   if self.paused then

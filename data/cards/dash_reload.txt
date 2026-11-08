@@ -1,4 +1,4 @@
 deckshot-card 1
 name Dash Reload
-rarity uncommon
+rarity common
 trigger dash ammo amount=1

@@ -1,5 +1,5 @@
 deckshot-card 1
 name Repulsor
-rarity epic
+rarity rare
 row add repel 1
 note +enemy bullets curve away from you

@@ -1,16 +1,25 @@
-deckshot-map 1
+deckshot-map 2
 name Tiers
-spawn 200 580
-spawn 1080 580
-spawn 340 380
-spawn 940 380
-rect 100 620 540 60
-rect 640 620 540 60
-oneway 280 500 160 14
-oneway 840 500 160 14
-oneway 420 380 160 14
-oneway 700 380 160 14
-oneway 560 260 80 14
-oneway 640 260 80 14
-oneway 120 300 120 14
-oneway 1040 300 120 14
+theme desert
+spawn 240 696
+spawn 1296 696
+spawn 408 456
+spawn 1128 456
+rect 120 744 648 72
+rect 768 744 648 72
+oneway 336 600 192 17
+oneway 1008 600 192 17
+oneway 504 456 192 17
+oneway 840 456 192 17
+oneway 672 312 96 17
+oneway 768 312 96 17
+oneway 144 360 144 17
+oneway 1248 360 144 17
+oneway 360 144 144 14
+oneway 1032 144 144 14
+obj crumble back=4 delay=0.5 h=18 w=168 x=48 y=528
+obj crumble back=4 delay=0.5 h=18 w=168 x=1320 y=528
+obj glass h=120 w=16 x=422 y=624
+obj glass h=120 w=16 x=1098 y=624
+obj wall h=96 hp=150 w=40 x=684 y=648
+obj wall h=96 hp=150 w=40 x=812 y=648

@@ -1,5 +1,5 @@
 deckshot-card 1
 name Deadeye
-rarity rare
+rarity uncommon
 row add crit 0.1
 row mul bulletSpeed 1.25

@@ -1,4 +1,4 @@
 deckshot-card 1
 name Retaliate
-rarity rare
+rarity uncommon
 trigger hurt nova count=3 cd=1

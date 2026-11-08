@@ -28,7 +28,7 @@ Stats.LIST = {
   { "backShot", 0, "Gun", "count", "high", "back shots" },
   -- Bullets
   { "bulletSpeed", 950, "Bullets", "pct", "high", "bullet speed" },
-  { "bulletGravity", 0.25, "Bullets", "pct", "low", "bullet drop" },
+  { "bulletGravity", 0.45, "Bullets", "pct", "low", "bullet drop" },
   { "bulletSize", 5, "Bullets", "pct", "high", "bullet size" },
   { "bounces", 0, "Bullets", "flat", "high", "bullet bounces" },
   { "bounceDamage", 0, "Bullets", "pct", "high", "damage per bounce" },

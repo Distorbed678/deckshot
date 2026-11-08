@@ -1,16 +1,25 @@
-deckshot-map 1
+deckshot-map 2
 name Watchtower
-spawn 140 580
-spawn 1140 580
-spawn 200 400
-spawn 1080 400
-rect 60 620 580 100
-rect 640 620 580 100
-rect 600 300 80 320
-oneway 140 440 180 14
-oneway 960 440 180 14
-oneway 400 320 120 14
-oneway 760 320 120 14
-obj turret damage=18 hp=90 rate=2.4 x=640 y=280
-obj wall h=120 hp=140 w=30 x=520 y=500
-obj wall h=120 hp=140 w=30 x=730 y=500
+theme void
+spawn 168 696
+spawn 1368 696
+spawn 240 480
+spawn 1296 480
+rect 72 744 696 120
+rect 768 744 696 120
+rect 720 360 96 384
+oneway 168 528 216 17
+oneway 1152 528 216 17
+oneway 480 384 144 17
+oneway 912 384 144 17
+oneway 144 216 168 14
+oneway 1224 216 168 14
+obj turret damage=18 hp=90 rate=2.4 x=768 y=336
+obj wall h=120 hp=140 w=30 x=624 y=624
+obj wall h=120 hp=140 w=30 x=876 y=624
+obj crumble back=4 delay=0.5 h=18 w=168 x=480 y=144
+obj crumble back=4 delay=0.5 h=18 w=168 x=888 y=144
+obj gas h=42 w=28 x=450 y=702
+obj gas h=42 w=28 x=1058 y=702
+obj pad h=14 power=1350 w=70 x=330 y=730
+obj pad h=14 power=1350 w=70 x=1136 y=730

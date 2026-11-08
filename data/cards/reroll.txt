@@ -1,5 +1,5 @@
 deckshot-card 1
 name Reroll
-rarity legendary
+rarity epic
 special reroll
 note Reroll these cards

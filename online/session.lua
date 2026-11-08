@@ -23,7 +23,7 @@ local session = {
 }
 
 session.GAME_TAG = "deckshot"
-session.PROTOCOL = "5"
+session.PROTOCOL = "6"
 session.MAX_PLAYERS = 4
 
 local CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

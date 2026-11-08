@@ -5,6 +5,7 @@ local sfx = require "gfx.sfx"
 local Triggers = require "game.triggers"
 local Synergies = require "game.synergies"
 local CardData = require "game.carddata"
+local Cosmetics = require "core.cosmetics"
 
 local Player = {}
 Player.__index = Player
@@ -47,7 +48,7 @@ local ORB_SIZE = 9
 local SHOCKWAVE_RADIUS = 170
 local STATIC_RADIUS = 130
 local SENTRY_DELAY = 0.9
-local ARENA_W, ARENA_H = 1280, 720
+local ARENA_W, ARENA_H = Map.W, Map.H
 
 local Stats = require "game.stats"
 local BASE = Stats.BASE -- base stats; cards change copies of these (see game/stats.lua)
@@ -229,6 +230,7 @@ function Player:update(dt, frozen)
   self.blockCd = math.max(0, self.blockCd - dt)
   self.controlLock = math.max(0, self.controlLock - dt)
   self.hitFlash = math.max(0, self.hitFlash - dt)
+  self.shotT = math.max(0, (self.shotT or 0) - dt)
   self.invuln = math.max(0, self.invuln - dt)
   self.slowTimer = math.max(0, self.slowTimer - dt)
   self.cloakTimer = math.max(0, self.cloakTimer - dt)
@@ -433,7 +435,7 @@ function Player:update(dt, frozen)
     fx.spray(self.x, self.y + self.r, self.vx > 0 and math.pi * 1.15 or -math.pi * 0.15, 0.5,
       { 0.7, 0.7, 0.75 }, 2, 90, 2.5, 0.15)
   end
-  if self.wallDir ~= 0 and not self.onGround and self.vy >= MOVE.wallSlide - 1 and love.math.random() < dt * 14 then
+  if self.wallDir ~= 0 and not self.onGround and self.vy >= MOVE.wallSlide - 1 and love.math.random() < dt * 28 then
     fx.spray(self.x + self.wallDir * self.r, self.y + self.r * 0.5, self.wallDir > 0 and math.pi or 0, 1.2,
       { 1, 0.85, 0.5 }, 1, 120, 2, 0.6)
   end
@@ -552,7 +554,8 @@ function Player:checkEdges()
 end
 
 -- Damaging bounds (arena edges, the sudden-death barrier). top: the top edge counts too.
-function Player:checkBounds(x0, y0, x1, y1, top)
+-- damageMul: scales the damage (the barrier's strength setting).
+function Player:checkBounds(x0, y0, x1, y1, top, damageMul)
   local r = self.r
   local side
   if self.x - r < x0 then
@@ -594,7 +597,7 @@ function Player:checkBounds(x0, y0, x1, y1, top)
   end
   fx.burst(ex, ey, { 1, 0.25, 0.2 }, 14, 320, 4)
   self:emitSound("edge")
-  self:hit(EDGE.damage * (self.stats.edgeTaken or 1), 0, 0, 0, nil, "edge")
+  self:hit(EDGE.damage * (self.stats.edgeTaken or 1) * (damageMul or 1), 0, 0, 0, nil, "edge")
 end
 
 function Player:emitSound(name, volume, pitch)
@@ -781,6 +784,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x, self.y + self.r, { 0.8, 0.8, 0.85 }, 5, 110, 3)
     self:emitSound("jump")
+    fx.spray(self.x, self.y + self.r, math.pi / 2, 2.6, { 0.75, 0.75, 0.8 }, 6, 150, 2.5, 0.15)
     self:trigger("jump")
   elseif self.wallDir ~= 0 or self.wallCoyote > 0 then
     local wall = self.wallDir ~= 0 and self.wallDir or self.lastWallDir
@@ -794,6 +798,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x + wall * self.r, self.y, { 0.8, 0.8, 0.8 }, 5, 120, 3)
     self:emitSound("wallJump")
+    fx.spray(self.x, self.y, 0, 6.2, { 1, 0.85, 0.5 }, 7, 170, 2.5, 0.3)
     self:trigger("wallJump")
   elseif self.jumpsLeft > 0 and not fromBuffer then
     self.jumpsLeft = self.jumpsLeft - 1
@@ -802,6 +807,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x, self.y + self.r, self.color, 6, 150, 3)
     self:emitSound("doubleJump")
+    fx.ring(self.x, self.y + self.r, 36, self.color)
     self:trigger("jump")
   elseif not fromBuffer then
     self.jumpBuffer = MOVE.jumpBuffer -- try again on landing
@@ -837,6 +843,7 @@ function Player:dashPressed()
   self.jumping = false
   if math.abs(dx) > 0.2 then self.facing = dx > 0 and 1 or -1 end
   fx.burst(self.x, self.y, self.color, 8, 180, 3)
+  fx.spray(self.x, self.y, math.atan2(-dy, -dx), 0.8, self.color, 12, 340, 3, 0)
   self:emitSound("dash")
   self:trigger("dash")
 end
@@ -1095,6 +1102,7 @@ function Player:volley(primary, mult)
   local mx, my = self.x + self.aimX * (self.r + 12), self.y + self.aimY * (self.r + 12)
   fx.spray(mx, my, base, 0.5, { 1, 0.95, 0.7 }, 5, 260, 2.5, 0.1)
   fx.kick(-self.aimX * 1.5, -self.aimY * 1.5)
+  self.shotT = 0.12
   local size = s.bulletSize / 5
   if s.laser > 0 then
     self:emitSound("laser")
@@ -1222,7 +1230,9 @@ function Player:hit(amount, dx, dy, knock, source, kind)
   fx.number(self.x, self.y - self.r, amount, self.slot or 0, kind == "crit")
   self:trigger("hurt", { target = source })
   self.hitFlash = 0.1
-  if kind ~= "melee" and kind ~= "edge" then self:emitSound("hit", math.min(1, 0.5 + taken / 60)) end
+  if kind ~= "melee" and kind ~= "edge" then
+    self:emitSound(taken >= 40 and "hitHeavy" or "hit", math.min(1, 0.5 + taken / 60))
+  end
   fx.burst(self.x, self.y, self.color, 10, 220, 4)
   fx.addShake(4)
   local len = math.sqrt(dx * dx + dy * dy)
@@ -1290,8 +1300,9 @@ function Player:die(outOfBounds)
   if killer and killer ~= self and killer.st then killer.st.kills = killer.st.kills + 1 end
   if self.game and self.game.emit then self.game:emit("kill", self, killer ~= self and killer or nil, self.lastHitKind) end
   fx.burst(self.x, self.y, { 1, 1, 1 }, 15, 300, 4)
-  fx.debris(self.x, self.y, self.color, 8, 9)
+  fx.gibs(self.x, self.y, self.color, 12, 11)
   self:emitSound("death")
+  self:emitSound("gibs")
 
   if self.stats.martyr > 0 then
     local radius = 200
@@ -1456,11 +1467,13 @@ function Player:draw()
     love.graphics.circle("line", self.x, self.y, r + 2)
   end
 
-  -- Eyes
-  love.graphics.setColor(0.1, 0.1, 0.12, A)
-  local ex = self.x + self.facing * r * 0.3
-  love.graphics.circle("fill", ex - 5, by0 - r * 0.25 * sy, r * 0.13)
-  love.graphics.circle("fill", ex + 5, by0 - r * 0.25 * sy, r * 0.13)
+  -- Face and hat. The eyes follow your aim, blink, and react to shooting and getting hurt.
+  local blink = (love.timer.getTime() * 0.31 + (self.slot or 1) * 0.37) % 1 < 0.045
+  local lookY = self.aimY + ((self.vy or 0) < -250 and -0.4 or (self.vy or 0) > 350 and 0.4 or 0)
+  Cosmetics.drawFace(self.x + self.facing * r * 0.14, by0 - r * 0.22 * sy, r, self.face,
+    { self.aimX, math.max(-1, math.min(1, lookY)) },
+    { blink = blink, hurt = self.hitFlash > 0, firing = (self.shotT or 0) > 0 }, A)
+  if A > 0.3 then Cosmetics.drawHat(self.x, by0 - r * 0.92 * sy, r, self.hat, c) end
 
   -- HP bar (pending Decay damage shown faded)
   local pending = 0

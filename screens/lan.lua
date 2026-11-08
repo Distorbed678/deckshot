@@ -159,7 +159,7 @@ function Lan:drawDesktop(busy)
 end
 
 function Lan:draw()
-  app.centered("LAN", app.fonts.huge, 30)
+  app.centered("LAN", app.fonts.big, 60)
 
   local busy = lan.busy
   love.graphics.setFont(app.fonts.small)
@@ -182,7 +182,6 @@ function Lan:draw()
   end
 
   if ui.button(busy and "Cancel" or "Back", (app.W - 420) / 2, 600, 420, 50) then back() end
-  note("LAN games use the Online controls (mouse aim). Change them in Settings > Controls.", 670, 0.4)
 end
 
 return Lan

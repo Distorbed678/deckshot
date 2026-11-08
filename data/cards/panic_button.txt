@@ -1,4 +1,4 @@
 deckshot-card 1
 name Panic Button
-rarity rare
+rarity uncommon
 trigger lowHp speed pct=30 time=2

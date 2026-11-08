@@ -1,4 +1,4 @@
 deckshot-card 1
 name Pickpocket
-rarity uncommon
+rarity common
 trigger meleeHit ammo amount=1

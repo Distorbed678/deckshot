@@ -1,13 +1,22 @@
-deckshot-map 1
+deckshot-map 2
 name Trapdoor
-spawn 140 580
-spawn 1140 580
-spawn 220 380
-spawn 1060 380
-rect 60 620 380 60
-rect 840 620 380 60
-oneway 160 420 160 14
-oneway 960 420 160 14
-oneway 520 360 240 14
-obj acid damage=20 h=50 w=400 x=440 y=670
-obj crumble back=5 delay=0.8 h=20 w=400 x=440 y=620
+theme desert
+spawn 168 696
+spawn 1368 696
+spawn 264 456
+spawn 1272 456
+rect 72 744 456 72
+rect 1008 744 456 72
+oneway 192 504 192 17
+oneway 1152 504 192 17
+oneway 624 432 288 17
+oneway 336 264 144 14
+oneway 1056 264 144 14
+oneway 48 120 120 14
+oneway 1368 120 120 14
+obj acid damage=20 h=50 w=480 x=528 y=814
+obj crumble back=5 delay=0.8 h=20 w=480 x=528 y=748
+obj gas h=42 w=28 x=402 y=702
+obj gas h=42 w=28 x=1106 y=702
+obj wall h=96 hp=150 w=40 x=324 y=648
+obj wall h=96 hp=150 w=40 x=1172 y=648

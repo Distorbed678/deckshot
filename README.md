@@ -1,38 +1,54 @@
-# Deckshot
+<p align="center">
+  <img src="docs/media/banner.png" alt="Deckshot" width="720">
+</p>
 
-A fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/) by Landfall Games, built with [LÖVE](https://love2d.org/) 11.5. It's a 2D side-view shooter for 2 to 4 players: when you lose a round, you pick an upgrade card. Cards stack, builds get silly, and the first player to the target score wins.
+<h3 align="center">Lose a round. Pick a card. Come back stronger.</h3>
 
-- **Local play:** 2 to 4 players on one computer: keyboard, up to 4 gamepads, touch screen, and bots (easy, normal, hard). Free-for-all or Teams (2v2).
-- **Online play:** up to 4 players over Steam (lobby codes, invites or the public lobby browser), with bots filling empty seats.
-- **LAN play:** up to 4 players on the same network, no Steam needed. Browsers and phones on the network join a desktop host by scanning a QR code.
-- **Platforms:** Windows and Linux (64-bit), plus a browser version that also works on phones and tablets.
+<p align="center">
+  A chaotic 2-4 player arena shooter where every loss makes you weirder and more dangerous.<br>
+  Couch play, bots, Steam, LAN, and phones in the same match.
+</p>
 
-**▶ Play in your browser: https://distorbed678.github.io/deckshot/** (against bots or friends on one device; Steam play needs the desktop version)
+<p align="center">
+  <a href="https://distorbed678.github.io/deckshot/"><img src="https://img.shields.io/badge/PLAY%20IN%20YOUR%20BROWSER-ff8c26?style=for-the-badge" alt="Play in your browser"></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/badge/DOWNLOAD-Windows%20%7C%20Linux-3f9bff?style=for-the-badge" alt="Download for Windows or Linux"></a>
+</p>
 
-> Deckshot started life as "Rounds Clone". It is not affiliated with or endorsed by Landfall Games, the makers of ROUNDS.
+<p align="center">
+  <img src="docs/media/gameplay.gif" alt="A chaotic four-player round" width="720">
+</p>
 
-## Features
+## Why you'll keep saying "one more round"
 
-- **150 upgrade cards** across five rarities (40 common, 44 uncommon, 33 rare, 19 epic, 14 legendary): bouncing and exploding bullets, homing, lasers, black holes, orbiting shields, revives, a turret, railgun bolts, mirrored shots, melee and dash cards, trigger cards ("on block: lightning strikes every enemy") and plenty of block abilities.
-- **Every card stacks**, and **40 synergies** unlock bonuses when you own the right pair (Explosive + Bouncy: every bounce explodes).
-- **Cards are dealt face down:** hover one to turn it over. Rare, epic and legendary reveals sparkle.
-- **Movement that feels good:** coyote time, jump buffering, variable jump height, apex hang, fast fall, a double jump and an air dash, wall slides and wall jumps, one-way platforms and corner correction.
-- **Melee:** tap for a light hit, hold for a heavy lunge. Blocking a melee stuns the attacker.
-- **Blocking** reflects bullets and bounces you off hazards and the arena edges (which hurt and throw you back in; the top is open).
-- **55 arenas** with saws, spikes, lasers, crushers, flame jets, acid, turrets, conveyors, bounce pads, fans, crumbling and moving platforms, and breakable crates, glass, barrels, gas canisters, walls, bridges and things hanging from ropes.
-- **Editors** for maps, cards and synergies, with share codes. Built-in maps and cards can be edited too (and reset). Online, the host's custom content is sent to everyone.
-- **Bots** that navigate every map, lob shots over cover, block, dash and pick cards with synergies in mind.
-- **Match flow:** starting cards, a pick timer online, discarding a card instead of picking, a sudden-death barrier in 3-4 player games, first to N rounds, Continue or New Match.
-- **Juice:** synthesized sound effects, particles, squash and stretch, damage numbers, a kill feed, a scoreboard (Tab), a low-HP warning and slide transitions.
-- **Practice range** with a dummy and any cards, a **codex** of every card and synergy with your pick statistics, and **How to Play**.
-- **Custom rules:** cards offered, picks per round, starting cards, rarity chances, the card, map and synergy pools, map hazards on/off, teams and friendly fire. **Online, the host's rules are used.**
-- **Settings:** window mode, monitor, resolution, VSync, FPS cap, bloom, screen shake, particles, text size, volumes, touch layout and fully rebindable controls.
+- **150 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
+- **40 hidden synergies.** The right pair unlocks a bonus: Explosive + Bouncy makes every bounce explode.
+- **Losers get stronger.** Everyone who loses a round picks a card, so no match is over until it's over.
+- **55 hand-tuned arenas** with saws, lasers, crushers, acid, ropes and breakable everything.
+- **Elimination or King of the Hill**, free-for-all or 2v2, with a sudden-death barrier that ends the stalling.
+- **Vote on the next map, ban the card you hate, chat with your friends.**
+- **Earn hats and faces** just by playing.
+- **Make your own** maps, cards and synergies in the built-in editors, then share them with a code.
 
-## Download and install
+<table>
+  <tr>
+    <td><img src="docs/media/card-pick.png" alt="Picking an upgrade card"></td>
+    <td><img src="docs/media/arena-1.png" alt="A fight in an arena"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/arena-2.png" alt="Bullets everywhere"></td>
+    <td><img src="docs/media/arena-3.png" alt="King of the Hill"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/editor.png" alt="The map editor"></td>
+    <td><img src="docs/media/lobby.png" alt="The lobby with QR code join"></td>
+  </tr>
+</table>
+
+## Play it
 
 ### Linux (AppImage)
 
-1. Download `Deckshot-x86_64.AppImage` (see [Releases](../../releases), or [build it yourself](#building-releases)).
+1. Download `Deckshot-x86_64.AppImage` (see [Releases](../../releases), or [build it yourself](#for-developers)).
 2. Make it executable and run it:
    ```sh
    chmod +x Deckshot-x86_64.AppImage
@@ -42,22 +58,14 @@ A fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/
 
 ### Windows
 
-1. Download `Deckshot-windows-x64.zip` (see [Releases](../../releases), or [build it yourself](#building-releases)).
+1. Download `Deckshot-windows-x64.zip` (see [Releases](../../releases), or [build it yourself](#for-developers)).
 2. Unzip it anywhere and run `Deckshot\Deckshot.exe`. Keep the DLLs next to the exe.
 
 ### Browser
 
 Open **https://distorbed678.github.io/deckshot/**. Nothing to install. Play against bots, or share the keyboard. Gamepads work, and on a phone or tablet the touch controls appear when you touch the screen (turn it sideways; "Add to Home Screen" gives a full-screen app). Settings are saved in your browser. Steam play isn't available in the browser. To join a LAN game from a browser or phone, open the address (or scan the QR code) the desktop host's lobby shows (see [LAN play](#lan-play)).
 
-### Run from source
-
-Install [LÖVE 11.5](https://love2d.org/), then from the repository root:
-
-```sh
-love .
-```
-
-On Windows, use `lovec.exe .` if you want a console window for log output.
+On Windows and Linux the game checks for new versions and offers a one-click update from the main menu.
 
 ## Controls
 
@@ -71,11 +79,16 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
 - Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.
-- **Tab** (gamepad **Back**) shows the scoreboard. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
+- **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
 - **Touch:** drag on the left half to move (push up to jump), drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
 - **Card picks:** left/right (or hover) to turn cards over and choose, fire (or click / A) to take, down to discard a card instead.
 
-## Online play (Steam)
+## Play with friends
+
+**Same computer:** Local Play → Versus. 2 to 4 players on keyboard, gamepads or touch, with bots in any empty seat.
+
+<details>
+<summary><b>Over the internet (Steam)</b></summary>
 
 Online play runs on Steam's networking. It uses Steam's public test app, **Spacewar (App ID 480)**, so nobody needs to own or install anything extra.
 
@@ -89,13 +102,16 @@ Online play runs on Steam's networking. It uses Steam's public test app, **Space
 **Hosting and joining**
 1. The host picks **Online Play → Steam → Host Lobby** (public, friends only, or code only) and shares the 6-character lobby code. The **Copy Code** button helps.
 2. Other players type the code, pick the lobby from **Public lobbies**, or accept an invite.
-3. Everyone picks a colour. The host can add bots, chooses *Rounds*, and presses **Start Match** once at least 2 players (or bots) are in.
+3. Everyone picks a colour. The host can add bots, sets the match up in **Settings → Gameplay**, and presses **Start Match** once at least 2 players (or bots) are in.
 
 People who join during a match watch until the next one. If someone drops out, their slot is kept for 60 seconds so they can rejoin.
 
 Steam invites also work, but only if the friend already has the game open. The game runs as Spacewar, so Steam can't launch it for them.
 
-## LAN play
+</details>
+
+<details>
+<summary><b>On the same network (LAN, phones and browsers)</b></summary>
 
 **Online Play → LAN** plays with computers on the same network, without Steam or accounts. Set your name at the top of the LAN screen.
 
@@ -110,7 +126,40 @@ Notes:
 - Everyone needs the **same game version** as the host.
 - Only desktop players can host. Browsers can only join.
 
-## Building releases
+</details>
+
+## Credits
+
+Deckshot is a fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/) by Landfall Games, and isn't affiliated with or endorsed by them. Built with [LÖVE](https://love2d.org/). Fonts: Russo One and Barlow (SIL Open Font License). Every sound and track is synthesized in code.
+
+This project's source code is released under the [MIT License](LICENSE).
+
+Bundled third-party components keep their own licenses:
+- [LÖVE](https://love2d.org/) (included in the packaged builds) is under the zlib license.
+- [luasteam](https://github.com/uspgamedev/luasteam) is under the MIT license.
+- The Steamworks API libraries (`steam_api64.dll`, `libsteam_api.so`) are Valve redistributables covered by the [Steamworks SDK Access Agreement](https://partner.steamgames.com/documentation/sdk_access_agreement).
+
+ROUNDS is a trademark of Landfall Games. This is an unofficial fan project.
+
+---
+
+## For developers
+
+<details>
+<summary><b>Run from source</b></summary>
+
+Install [LÖVE 11.5](https://love2d.org/), then from the repository root:
+
+```sh
+love .
+```
+
+On Windows, use `lovec.exe .` if you want a console window for log output.
+
+</details>
+
+<details>
+<summary><b>Building releases</b></summary>
 
 `build.sh` builds release packages on Linux. It needs `curl`, `zip` and `unzip`, plus [Node.js](https://nodejs.org/) for the browser version.
 
@@ -135,7 +184,10 @@ Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git 
 
 The LÖVE 11.5 runtimes and `appimagetool` are downloaded once from their official GitHub releases into `build/cache/`.
 
-## Technical details
+</details>
+
+<details>
+<summary><b>Technical details</b></summary>
 
 ### Project layout
 
@@ -205,13 +257,4 @@ Settings from the old "Rounds Clone" save folder are copied over the first time 
 
 The game runs on LuaJIT (Lua 5.1 semantics), and the browser version on plain Lua 5.1. Use `core/bit.lua` rather than Lua 5.3+ operators. [`CLAUDE.md`](CLAUDE.md) has more detailed contributor notes, including the rules for keeping the network protocol in sync and how to write headless test harnesses.
 
-## License
-
-This project's source code is released under the [MIT License](LICENSE).
-
-Bundled third-party components keep their own licenses:
-- [LÖVE](https://love2d.org/) (included in the packaged builds) is under the zlib license.
-- [luasteam](https://github.com/uspgamedev/luasteam) is under the MIT license.
-- The Steamworks API libraries (`steam_api64.dll`, `libsteam_api.so`) are Valve redistributables covered by the [Steamworks SDK Access Agreement](https://partner.steamgames.com/documentation/sdk_access_agreement).
-
-ROUNDS is a trademark of Landfall Games. This is an unofficial fan project.
+</details>

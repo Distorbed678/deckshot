@@ -60,6 +60,7 @@ function World.teamColorIndices(teams)
   return out
 end
 World.CONTINUE_ROUNDS = 3
+World.COUNTDOWN, World.INTRO_TIME = 2.4, 1.4
 
 -- Match-over votes (a suggestion to the host): 0 none, 1 continue, 2 new match.
 World.VOTE_CONTINUE, World.VOTE_NEW = 1, 2
@@ -87,8 +88,9 @@ function World.new(defs, winScore, rules)
     votes = {},       -- slot -> World.VOTE_* while the match is over
     objects = {}, effects = {}, pendingBlasts = {},
     time = 0,         -- seconds of play (drives hazard cycles)
-    duelTime = 0,     -- seconds since only two players are left (sudden-death barrier)
-    barrier = nil,    -- { x0, y0, x1, y1 } while the barrier is closing in
+    suddenLeft = nil, -- seconds until sudden death (nil = no timer this match)
+    barrierT = 0,     -- seconds since the barrier started closing
+    barrier = nil,    -- { x0, y0, x1, y1 } once the barrier is closing in
     on = {},
   }, World)
   for i, d in ipairs(defs) do
@@ -98,6 +100,7 @@ function World.new(defs, winScore, rules)
     p.peer = d.peer
     p.team = (w.rules.teams and (d.team or ((i - 1) % 2 + 1))) or nil
     p.isBot = d.bot
+    p.hat, p.face = d.hat, d.face
     w.players[i] = p
   end
   w.startPlayers = #defs
@@ -151,6 +154,9 @@ end
 function World:loadMap()
   if self.rules.forceMap then
     self.map, self.mapIndex = self.rules.forceMap, self.rules.forceMap.index or 0
+  elseif self.nextMap and Map.list[self.nextMap] then
+    self.map, self.mapIndex = Map.list[self.nextMap], self.nextMap
+    self.nextMap = nil
   else
     self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
   end
@@ -162,22 +168,37 @@ function World:loadMap()
     end
   end
   self.effects, self.pendingBlasts = {}, {}
-  self.barrier, self.duelTime, self.barrierWarned = nil, 0, false
+  self.barrier, self.barrierT, self.barrierStart = nil, 0, nil
+  local sd = self.rules.suddenDeath
+  self.suddenLeft = (sd and sd > 0) and sd or nil
   -- Everything players and bullets collide with: the map's rects plus solid objects.
   Objects.rebuildSolids(self)
 end
 
--- Start of a match: everyone picks their starting cards (rules.startCards, slot order), then round 1.
-function World:beginMatch()
-  local n = self.rules.startCards or 0
-  if n <= 0 then return self:startRound() end
-  self:loadMap()
+-- Put everyone on the current map's spawns (for screens that show the arena behind them).
+function World:placePlayers()
   self.bullets, self.pending, self.wells = {}, {}, {}
   for i, p in ipairs(self.players) do
     local s = self.map.spawns[i]
-    p:spawn(s[1], s[2], s[1] < 640 and 1 or -1, self)
+    p:spawn(s[1], s[2], s[1] < Map.W / 2 and 1 or -1, self)
     if p.disconnected then p.dead, p.hp = true, 0 end
   end
+end
+
+-- Start of a match: card bans (if the host turned them on), starting cards, then round 1.
+function World:beginMatch()
+  self.roundCount = 0
+  self:clearBans()
+  if self.rules.cardBans and not self.rules.practice then return self:openCardBan() end
+  self:afterBans()
+end
+
+-- Everyone picks their starting cards (rules.startCards, slot order), then round 1.
+function World:afterBans()
+  local n = self.rules.startCards or 0
+  if n <= 0 then return self:startRound() end
+  self:loadMap()
+  self:placePlayers()
   self.roundWinner = nil
   self.pickQueue = {}
   for _, p in ipairs(self.players) do
@@ -192,7 +213,14 @@ function World:beginMatch()
   self:nextPick()
 end
 
+-- The next round: through the map vote when the host has it on.
 function World:startRound()
+  if self.rules.mapVote and not self.rules.forceMap and #Map.list > 1 then return self:openMapVote() end
+  self:beginRound()
+end
+
+function World:beginRound()
+  self.mapVote = nil
   self:loadMap()
   self.bullets = {}
   self.pending = {}
@@ -200,7 +228,7 @@ function World:startRound()
   fx.clear()
   for i, p in ipairs(self.players) do
     local s = self.map.spawns[i]
-    p:spawn(s[1], s[2], s[1] < 640 and 1 or -1, self)
+    p:spawn(s[1], s[2], s[1] < Map.W / 2 and 1 or -1, self)
     if p.disconnected then
       p.dead = true
       p.hp = 0
@@ -208,15 +236,255 @@ function World:startRound()
   end
   self.pick = nil
   self.pickQueue = {}
-  self.barrierCenter = nil
   self.roundWinner = nil
   self.state = "countdown"
-  self.timer = 2.4
+  self.roundCount = (self.roundCount or 0) + 1
+  -- The first round opens with the versus intro (World.INTRO_TIME before the 3-2-1).
+  self.timer = World.COUNTDOWN + ((self.roundCount == 1 and not self.rules.practice) and World.INTRO_TIME or 0)
+  self:setupHill()
+  self:announceMatchPoint()
   self:emit("roster")
 end
 
+function World:announceMatchPoint()
+  if self.rules.practice then return end
+  local names = {}
+  for _, p in ipairs(self.players) do
+    if not p.disconnected and p.score == self.winScore - 1 then
+      names[#names + 1] = (self.rules.teams and p.team) and World.TEAM_NAMES[p.team] or (p.name or "Player")
+    end
+  end
+  if #names == 0 then return end
+  local seen, list = {}, {}
+  for _, n in ipairs(names) do
+    if not seen[n] then seen[n] = true; list[#list + 1] = n end
+  end
+  self:toast("MATCH POINT: " .. table.concat(list, ", "), 5)
+  sfx.play("stingerMatchPoint")
+end
+
+---------------------------------------------------------------- map vote
+World.MAP_VOTE_TIME, World.MAP_VOTE_SHOW = 10, 1.1
+
+function World:openMapVote()
+  if not self.map then
+    self:loadMap()
+    self:placePlayers()
+  end
+  local pool = {}
+  for i in ipairs(Map.list) do
+    if not (self.rules.maps and self.rules.maps[i]) and i ~= self.mapIndex then pool[#pool + 1] = i end
+  end
+  if #pool == 0 then return self:beginRound() end
+  local options = {}
+  for _ = 1, math.min(self.rules.mapVoteCount or 3, #pool) do
+    options[#options + 1] = table.remove(pool, love.math.random(#pool))
+  end
+  self.mapVote = { options = options, votes = {}, timeLeft = World.MAP_VOTE_TIME, t = 0, winner = 0 }
+  self.pick = nil
+  self.state = "mapVote"
+end
+
+function World:castMapVote(slot, option)
+  local mv = self.mapVote
+  local p = self.players[slot]
+  if self.state ~= "mapVote" or not mv or mv.winner > 0 or not p or p.disconnected or not mv.options[option] then return end
+  mv.votes[slot] = option
+end
+
+function World:updateMapVote(dt)
+  local mv = self.mapVote
+  mv.t = mv.t + dt
+  if mv.winner > 0 then
+    mv.show = mv.show - dt
+    if mv.show <= 0 then
+      self.nextMap = mv.options[mv.winner]
+      self:beginRound()
+    end
+    return
+  end
+  mv.timeLeft = mv.timeLeft - dt
+  local allIn = true
+  for _, p in ipairs(self.players) do
+    if not p.disconnected and not mv.votes[p.slot] then
+      if p.isBot and mv.t > 0.5 + p.slot * 0.35 then
+        mv.votes[p.slot] = love.math.random(#mv.options)
+      else
+        allIn = false
+      end
+    end
+  end
+  if mv.timeLeft > 0 and not allIn then return end
+  -- Most votes wins; ties (and no votes at all) are random.
+  local counts, best = {}, 0
+  for _, o in pairs(mv.votes) do
+    counts[o] = (counts[o] or 0) + 1
+    best = math.max(best, counts[o])
+  end
+  local top = {}
+  for i in ipairs(mv.options) do
+    if best == 0 or counts[i] == best then top[#top + 1] = i end
+  end
+  mv.winner = top[love.math.random(#top)]
+  mv.show = World.MAP_VOTE_SHOW
+  sfx.play("cardPick")
+end
+
+---------------------------------------------------------------- card bans
+World.BAN_TIME = 30
+
+function World:clearBans()
+  self.banned = {}
+  for _, c in ipairs(Cards.list) do c.banned = nil end
+end
+
+function World:openCardBan()
+  self.cardBan = { picks = {}, timeLeft = World.BAN_TIME, t = 0 }
+  if not self.map then
+    self:loadMap()
+    self:placePlayers()
+  end
+  self.state = "cardBan"
+end
+
+function World:castBan(slot, card)
+  local cb = self.cardBan
+  local p = self.players[slot]
+  if self.state ~= "cardBan" or not cb or not p or p.disconnected or not card or card.disabled then return end
+  cb.picks[slot] = card
+end
+
+function World:updateCardBan(dt)
+  local cb = self.cardBan
+  cb.t = cb.t + dt
+  cb.timeLeft = cb.timeLeft - dt
+  local allIn = true
+  for _, p in ipairs(self.players) do
+    if not p.disconnected and not cb.picks[p.slot] then
+      if p.isBot and cb.t > 0.6 + p.slot * 0.4 then
+        cb.picks[p.slot] = Bot.banChoice(self)
+      else
+        allIn = false
+      end
+    end
+  end
+  if cb.timeLeft > 0 and not allIn then return end
+  local names, seen = {}, {}
+  self.banned = {}
+  for _, p in ipairs(self.players) do
+    local c = cb.picks[p.slot]
+    if c and not seen[c] then
+      seen[c] = true
+      c.banned = true
+      self.banned[#self.banned + 1] = c
+      names[#names + 1] = c.name
+    end
+  end
+  self.cardBan = nil
+  if #names > 0 then self:toast("Banned: " .. table.concat(names, ", ")) end
+  self:afterBans()
+end
+
+---------------------------------------------------------------- king of the hill
+World.HILL = { w = 280, h = 200, target = 30, move = 20, respawn = 3 }
+
+function World:isKoth()
+  return self.rules.mode == "koth" and not self.rules.practice
+end
+
+function World:setupHill()
+  self.hill = nil
+  for _, p in ipairs(self.players) do p.hillScore, p.respawnT = 0, nil end
+  if not self:isKoth() then return end
+  self.hillPoints = Map.hillPoints(self.map)
+  local pt = self.hillPoints[love.math.random(#self.hillPoints)]
+  self.hill = { x = pt[1], y = pt[2], t = World.HILL.move, owner = 0 }
+end
+
+function World:moveHill()
+  local h = self.hill
+  local options = {}
+  for _, pt in ipairs(self.hillPoints) do
+    if pt[1] ~= h.x or pt[2] ~= h.y then options[#options + 1] = pt end
+  end
+  if #options == 0 then options = self.hillPoints end
+  local pt = options[love.math.random(#options)]
+  h.x, h.y, h.t = pt[1], pt[2], World.HILL.move
+  sfx.play("barrier", h.x, 0.5, 1.4)
+end
+
+function World:updateHill(dt)
+  local h = self.hill
+  if not h or self.state ~= "playing" then return end
+  local H = World.HILL
+  if self.suddenLeft and self.suddenLeft <= 0 then
+    -- Sudden death: the hill goes to the arena centre and stays there.
+    h.x, h.y, h.t = Map.W / 2, Map.H / 2, 0
+  else
+    h.t = h.t - dt
+    if h.t <= 0 then self:moveHill() end
+  end
+
+  -- Scoring: one side alone on the hill.
+  local sides, inside, count = {}, {}, 0
+  for _, p in ipairs(self.players) do
+    if not p.dead and not p.disconnected and math.abs(p.x - h.x) <= H.w / 2 and math.abs(p.y - h.y) <= H.h / 2 then
+      local side = p.team or -p.slot
+      if not sides[side] then
+        sides[side] = true
+        count = count + 1
+      end
+      inside[#inside + 1] = p
+    end
+  end
+  if count == 0 then
+    h.owner = 0
+  elseif count > 1 then
+    h.owner = 255
+  else
+    local first = inside[1]
+    h.owner = first.slot
+    for _, p in ipairs(self.players) do
+      if p == first or (first.team and p.team == first.team) then
+        p.hillScore = (p.hillScore or 0) + dt
+      end
+    end
+    if first.hillScore >= H.target then return self:endRound(first) end
+  end
+
+  -- Respawns (not in sudden death).
+  if self.suddenLeft and self.suddenLeft <= 0 then return end
+  for _, p in ipairs(self.players) do
+    if p.dead and not p.disconnected then
+      p.respawnT = (p.respawnT or H.respawn) - dt
+      if p.respawnT <= 0 then
+        p.respawnT = nil
+        local score = p.hillScore
+        local best, bestD
+        for _, s in ipairs(self.map.spawns) do
+          local d = math.huge
+          for _, e in ipairs(self:enemiesOf(p)) do d = math.min(d, (e.x - s[1]) ^ 2 + (e.y - s[2]) ^ 2) end
+          if not bestD or d > bestD then best, bestD = s, d end
+        end
+        p:spawn(best[1], best[2], best[1] < Map.W / 2 and 1 or -1, self)
+        p.hillScore = score
+        p.invuln = math.max(p.invuln or 0, 1)
+        if self.barrier then
+          local b = self.barrier
+          p.x = math.max(b[1] + p.r + 4, math.min(b[3] - p.r - 4, p.x))
+          p.y = math.max(b[2] + p.r + 4, math.min(b[4] - p.r - 4, p.y))
+        end
+      end
+    end
+  end
+end
+
 function World:update(dt)
-  if self.state == "countdown" then
+  if self.state == "mapVote" then
+    self:updateMapVote(dt)
+  elseif self.state == "cardBan" then
+    self:updateCardBan(dt)
+  elseif self.state == "countdown" then
     local before = math.ceil(self.timer / 0.8)
     self.timer = self.timer - dt
     for _, p in ipairs(self.players) do p:update(dt, true) end
@@ -224,7 +492,7 @@ function World:update(dt)
     if self.timer <= 0 then
       self.state = "playing"
       sfx.play("fight")
-    elseif now ~= before then
+    elseif now ~= before and self.timer <= World.COUNTDOWN then
       sfx.play("beep")
     end
   elseif self.state == "cardPick" then
@@ -249,6 +517,7 @@ function World:update(dt)
     end
     for _, p in ipairs(self.players) do p:update(sdt, false) end
     self:updateBarrier(sdt)
+    self:updateHill(sdt)
     for i = #self.bullets, 1, -1 do
       local b = self.bullets[i]
       if not b.dead then b:update(sdt, self) end
@@ -275,39 +544,47 @@ function World:meleeObjects(p, reach, heavy, power)
   Objects.melee(self, p, reach, heavy, power)
 end
 
--- Sudden death: in matches that started with 3+ players, a red barrier closes in once the
--- round has been a 1v1 for BARRIER_DELAY seconds (host setting rules.barrier).
-World.BARRIER_DELAY, World.BARRIER_TIME = 30, 20
-World.BARRIER_SIZE = { 420, 320 }
+-- Sudden death: a countdown runs through every round (host setting rules.suddenDeath, seconds).
+-- At zero a red barrier closes in from all four sides toward the arena centre and stops at a
+-- small box. The settings pick how fast it closes, the box size and how much it hurts.
+World.BARRIER_TIMES = { 40, 20, 10 }                          -- Slow, Normal, Fast
+World.BARRIER_BOXES = { { 360, 264 }, { 504, 384 }, { 768, 528 } } -- Small, Medium, Large
+World.BARRIER_DAMAGE = { 0.5, 1, 2 }                          -- Low, Normal, High
 function World:updateBarrier(dt)
-  if self.state ~= "playing" or self.rules.barrier == false or self.startPlayers < 3 then return end
+  if self.state ~= "playing" or not self.suddenLeft then return end
   local alive = {}
   for _, p in ipairs(self.players) do
     if not p.dead and not p.disconnected then alive[#alive + 1] = p end
   end
-  if #alive ~= 2 then return end
-  self.duelTime = self.duelTime + dt
-  if self.duelTime >= World.BARRIER_DELAY - 3 and not self.barrierWarned then
-    self.barrierWarned = true
+  if self.suddenLeft > 0 then
+    local before = math.ceil(self.suddenLeft)
+    self.suddenLeft = math.max(0, self.suddenLeft - dt)
+    local now = math.ceil(self.suddenLeft)
+    if now ~= before and now > 0 and now <= 10 then sfx.play("beep") end
+    if self.suddenLeft > 0 then return end
     sfx.play("barrier")
     self:toast("SUDDEN DEATH - the walls are closing in!", 5)
+    -- The top edge starts above anyone who is in the air, so nobody is snapped down by it.
+    local top = 0
+    for _, p in ipairs(alive) do top = math.min(top, p.y - p.r - 30) end
+    self.barrierStart = top
   end
-  if self.duelTime < World.BARRIER_DELAY then return end
-  if not self.barrierCenter then
-    local cx = (alive[1].x + alive[2].x) / 2
-    local cy = (alive[1].y + alive[2].y) / 2
-    local hw, hh = World.BARRIER_SIZE[1] / 2, World.BARRIER_SIZE[2] / 2
-    self.barrierCenter = { math.max(hw, math.min(1280 - hw, cx)), math.max(hh, math.min(720 - hh, cy)) }
-  end
-  local t = math.min(1, (self.duelTime - World.BARRIER_DELAY) / World.BARRIER_TIME)
-  t = t * t * (3 - 2 * t)
-  local c = self.barrierCenter
-  local hw, hh = World.BARRIER_SIZE[1] / 2, World.BARRIER_SIZE[2] / 2
+  local r = self.rules
+  self.barrierT = self.barrierT + dt
+  local k = math.min(1, self.barrierT / (World.BARRIER_TIMES[r.barrierClose or 2] or 20))
+  local t = k * k * (3 - 2 * k)
+  local box = World.BARRIER_BOXES[r.barrierBox or 2] or World.BARRIER_BOXES[2]
+  local cx, cy = Map.W / 2, Map.H / 2
+  local hw, hh = box[1] / 2, box[2] / 2
+  local top = self.barrierStart or 0
   self.barrier = {
-    0 + (c[1] - hw) * t, 0 + (c[2] - hh) * t,
-    1280 + (c[1] + hw - 1280) * t, 720 + (c[2] + hh - 720) * t,
+    (cx - hw) * t, top + (cy - hh - top) * t,
+    Map.W + (cx + hw - Map.W) * t, Map.H + (cy + hh - Map.H) * t,
   }
-  for _, p in ipairs(alive) do p:checkBounds(self.barrier[1], self.barrier[2], self.barrier[3], self.barrier[4], true) end
+  local damage = World.BARRIER_DAMAGE[r.barrierDamage or 2] or 1
+  for _, p in ipairs(alive) do
+    p:checkBounds(self.barrier[1], self.barrier[2], self.barrier[3], self.barrier[4], true, damage)
+  end
 end
 
 function World:connectedCount()
@@ -319,7 +596,20 @@ function World:connectedCount()
 end
 
 function World:checkRoundEnd()
-  if self.rules.practice then return end -- the practice range never ends a round
+  if self.rules.practice or self.state ~= "playing" then return end -- the practice range never ends a round
+  if self:isKoth() then
+    -- Decided by holding the hill, unless everyone else has left.
+    local connected, last = 0, nil
+    for _, p in ipairs(self.players) do
+      if not p.disconnected then
+        connected = connected + 1
+        last = p
+      end
+    end
+    if connected <= 1 then return self:endRound(last) end
+    -- Once sudden death starts nobody respawns, so the last side standing wins.
+    if not (self.suddenLeft and self.suddenLeft <= 0) then return end
+  end
   local alive, last, teams = 0, nil, {}
   for _, p in ipairs(self.players) do
     if not p.dead and not p.disconnected then
@@ -335,6 +625,10 @@ function World:checkRoundEnd()
   elseif alive > 1 then
     return
   end
+  self:endRound(last)
+end
+
+function World:endRound(last)
   self.roundWinner = last
   self.history = self.history or {}
   self.history[#self.history + 1] = last and last.slot or 0
@@ -347,7 +641,7 @@ function World:checkRoundEnd()
       last.score = last.score + 1
     end
   end
-  sfx.play("roundWin")
+  sfx.play("stingerRound")
   self.state = "roundOver"
   self.timer = 1.6
 end
@@ -517,6 +811,7 @@ end
 
 function World:newMatch()
   self.votes = {}
+  self.nextMap = nil
   for _, p in ipairs(self.players) do
     p.cards = {}
     p.score = 0

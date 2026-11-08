@@ -30,7 +30,7 @@ function Hub:update(dt)
 end
 
 function Hub:keypressed(key)
-  if key == "escape" then app.switch(require("screens.menu").new()) end
+  if key == "escape" then require("screens.settings").reopen() end
 end
 
 function Hub:wheelmoved(_, dy)
@@ -47,8 +47,8 @@ function Hub.drawThumb(map, x, y, w, h)
   love.graphics.rectangle("fill", x, y, w, h, 6, 6)
   love.graphics.push()
   love.graphics.translate(x, y)
-  love.graphics.scale(w / 1280, h / 720)
-  Map.draw(map)
+  love.graphics.scale(w / Map.W, h / Map.H)
+  Map.draw(map, true)
   local ok, list = pcall(require("game.objects").build, map)
   if ok then pcall(require("game.objects").draw, list, {}) end
   love.graphics.pop()
@@ -155,7 +155,7 @@ function Hub:draw()
       ui.reset()
     end
   end
-  if ui.button("Back", app.W - 180, 24, 140, 40, { back = true }) then app.switch(require("screens.menu").new()) end
+  if ui.button("Back", app.W - 180, 24, 140, 40, { back = true }) then require("screens.settings").reopen() end
 
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)

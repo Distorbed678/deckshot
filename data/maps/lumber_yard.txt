@@ -1,20 +1,29 @@
-deckshot-map 1
+deckshot-map 2
 name Lumber Yard
-spawn 140 580
-spawn 1140 580
-spawn 160 340
-spawn 1120 340
-rect 60 620 580 100
-rect 640 620 580 100
-oneway 100 380 180 14
-oneway 1000 380 180 14
-obj crate drop=0.08 h=50 hp=60 w=50 x=380 y=280
-obj crate drop=0.08 h=50 hp=60 w=50 x=850 y=280
-obj rope target=1 x=405 y=60
-obj rope target=2 x=875 y=60
-obj plank h=14 hp=0 w=120 x=520 y=400
-obj plank h=14 hp=0 w=120 x=640 y=400
-obj rope target=5 x=580 y=120
-obj rope target=6 x=700 y=120
-obj crate drop=0.08 h=50 hp=60 w=50 x=260 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=970 y=570
+theme foundry
+spawn 168 696
+spawn 1368 696
+spawn 192 408
+spawn 1344 408
+rect 72 744 696 120
+rect 768 744 696 120
+oneway 120 456 216 17
+oneway 1200 456 216 17
+oneway 264 288 144 14
+oneway 1128 288 144 14
+obj crate drop=0.08 h=50 hp=60 w=50 x=456 y=346
+obj crate drop=0.08 h=50 hp=60 w=50 x=1020 y=346
+obj rope target=1 x=486 y=72
+obj rope target=2 x=1050 y=72
+obj plank h=14 hp=0 w=144 x=624 y=483
+obj plank h=14 hp=0 w=144 x=768 y=483
+obj rope target=5 x=696 y=144
+obj rope target=6 x=840 y=144
+obj crate drop=0.08 h=50 hp=60 w=50 x=312 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=1164 y=694
+obj platform h=18 speed=90 w=120 x=552 y=120 path=552,120;552,24
+obj platform h=18 speed=90 w=120 x=864 y=120 path=864,120;864,24
+obj crate h=50 w=50 x=378 y=694
+obj crate h=50 w=50 x=1108 y=694
+obj saw damage=25 r=24 speed=0 x=488 y=738
+obj saw damage=25 r=24 speed=0 x=1048 y=738

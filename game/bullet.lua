@@ -259,6 +259,7 @@ function Bullet:step(dt, game)
   self.x = self.x + mx
   local hx = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
   if hx then
+    self.lastSolid = hx
     if hx.isObject and not self.ghost then objects().bulletHitSolid(game, hx, self) end
     if self.ghost then
       self.phased = true -- passed through a wall (Ghost Bullets bonus)
@@ -272,6 +273,7 @@ function Bullet:step(dt, game)
   self.y = self.y + my
   local hy = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
   if hy then
+    self.lastSolid = hy
     if hy.isObject and not self.ghost then objects().bulletHitSolid(game, hy, self) end
     if self.ghost then
       self.phased = true
@@ -282,7 +284,7 @@ function Bullet:step(dt, game)
     end
   end
 
-  if self.x < -200 or self.x > 1480 or self.y > 900 or self.y < -600 then
+  if self.x < -200 or self.x > Map.W + 200 or self.y > Map.H + 180 or self.y < -600 then
     self.dead = true
     return
   end
@@ -309,6 +311,14 @@ function Bullet:step(dt, game)
   end
 end
 
+local IMPACT_SOUNDS = { crate = "impactWood", plank = "impactWood", barrel = "impactWood", wall = "impactWood",
+  glass = "impactGlass", platform = "impactMetal", conveyor = "impactMetal", crusher = "impactMetal", gas = "impactMetal" }
+
+function Bullet:impactSound()
+  local s = self.lastSolid
+  return s and s.type and IMPACT_SOUNDS[s.type] or "impact"
+end
+
 -- Returns false if the bullet stops (dies or turns into a mine).
 -- normal: direction (radians) pointing away from the surface that was hit.
 function Bullet:bounce(game, normal)
@@ -328,7 +338,7 @@ function Bullet:bounce(game, normal)
       self:becomeMine()
     else
       self.dead = true
-      if not self.laser and not self.isChild then sfx.play("impact", self.x, 0.5) end
+      if not self.laser and not self.isChild then sfx.play(self:impactSound(), self.x, 0.5) end
       self:impact(game)
     end
     return false

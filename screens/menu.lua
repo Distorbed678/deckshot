@@ -13,22 +13,19 @@ end
 
 function Menu:enter()
   love.mouse.setVisible(true)
-  require("core.version").checkForUpdate()
-  require("online.presence").set("In the menus")
-end
-
--- One line per control scheme, built from the current key bindings.
-function Menu.controlsText()
-  local name = require("core.input").keyName
-  local b = Settings.values.binds
-  local function scheme(s)
-    return string.format("%s/%s/%s/%s, %s fire, %s block", name(s.left), name(s.up), name(s.down), name(s.right),
-      name(s.fire), name(s.block))
+  require("gfx.music").play("menu")
+  require("online.chat").reset()
+  -- Back from an online session: drop the host's map, card and synergy lists.
+  local Map = require "game.map"
+  if Map.session then
+    Map.loadAll()
+    require("game.cards").loadAll()
+    require("game.synergies").loadAll()
+    require("game.cards").applyRules(Settings.cardRules())
   end
-  local o = b.online
-  return "Local:  P1 " .. scheme(b.p1) .. "   |   P2 " .. scheme(b.p2) .. "\n" ..
-    string.format("Online:  %s/%s move, %s or %s jump, %s fast-fall, mouse aim, %s fire, %s block   |   Esc: menu",
-      name(o.left), name(o.right), name(o.jump), name(o.jump2), name(o.down), name(o.fire), name(o.block))
+  require("online.active").get().hostRules = nil
+  if Settings.values.checkUpdates then require("core.version").checkForUpdate() end
+  require("online.presence").set("In the menus")
 end
 
 -- Bots fighting on a random map behind the menu.
@@ -44,7 +41,7 @@ function Menu:background(dt)
     local Cards = require "game.cards"
     World.setSlotColors({ 1, 2, 3, 4 })
     self.bg = World.new(defs, 999, { pickFrom = 3, picksPerRound = 1, weights = Cards.DEFAULT_RULES.weights,
-      rarity = {}, disabled = {}, startCards = 0, barrier = false })
+      rarity = {}, disabled = {}, startCards = 0 })
     self.bg:startRound()
   end
   local w = self.bg
@@ -56,13 +53,23 @@ function Menu:background(dt)
   fx.update(dt)
 end
 
-function Menu:keypressed(key)
-  if key == "escape" and self.notes then self.notes = false end
-end
-
 function Menu:update(dt)
-  require("core.version").update()
+  local Version = require "core.version"
+  Version.update()
   self:background(dt)
+  if app.top() ~= self then return end
+  -- First launch: offer the tutorial. Later: offer a new version once per run.
+  local v = Settings.values
+  if not v.tutorialOffered then
+    v.tutorialOffered = true
+    Settings.save()
+    require("screens.confirm").ask("New to Deckshot?", "A short tutorial covers the basics in about a minute.", function()
+      app.switch(require("screens.practice").new({ tutorial = true }))
+    end, { yes = "Start Tutorial", no = "Skip" })
+  elseif Version.release and not Version.prompted then
+    Version.prompted = true
+    app.push(require("screens.update").new())
+  end
 end
 
 function Menu:drawBackground()
@@ -71,67 +78,54 @@ function Menu:drawBackground()
   local Map = require "game.map"
   local Objects = require "game.objects"
   local fx = require "gfx.fx"
+  love.graphics.push()
+  love.graphics.scale(Map.VIEW)
   Map.draw(w.map)
   Objects.draw(w.objects, w.effects)
   for _, b in ipairs(w.bullets) do b:draw() end
   for _, p in ipairs(w.players) do p:draw() end
   fx.draw()
-  love.graphics.setColor(0.07, 0.07, 0.1, 0.78)
+  love.graphics.pop()
+  love.graphics.setColor(0.07, 0.07, 0.1, 0.72)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
 end
 
 function Menu:draw()
   self:drawBackground()
   local Version = require "core.version"
-  app.centered("DECKSHOT", app.fonts.huge, 60)
-  app.centered("Lose a round, pick a card. Up to 4 players, bots, online and LAN.", app.fonts.med, 172, { 1, 1, 1, 0.55 })
+  require("gfx.logo").draw(app.W / 2, 112, 1)
 
   local w, h = 360, 54
   local x = (app.W - w) / 2
-  local y = 230
-  if self.message then app.centered(self.message, app.fonts.med, 204, { 1, 0.6, 0.45 }) end
-  if ui.button("Local Play", x, y, w, h) then app.switch(require("screens.localsetup").new()) end
+  local y = 214
+  if self.message then app.centered(self.message, app.fonts.med, 188, ui.BAD) end
+  if ui.button("Local Play", x, y, w, h) then app.switch(require("screens.localmenu").new()) end
   y = y + 64
   if ui.button("Online Play", x, y, w, h) then app.switch(require("screens.online").new()) end
   y = y + 64
-  if ui.button("Practice", x, y, w, h) then app.switch(require("screens.practice").new()) end
+  if ui.button("Customize", x, y, w, h) then app.switch(require("screens.customize").new()) end
+  y = y + 64
+  if ui.button("How to Play", x, y, w, h) then app.switch(require("screens.howtoplay").new()) end
+  y = y + 64
+  if ui.button("Settings", x, y, w, h) then app.push(require("screens.settings").new()) end
   y = y + 64
   local half = w / 2 - 5
-  if ui.button("Editor", x, y, half, h) then app.switch(require("screens.editor_hub").new()) end
-  if ui.button("Codex", x + half + 10, y, half, h) then app.switch(require("screens.codex").new()) end
-  y = y + 64
-  if ui.button("How to Play", x, y, half, h) then app.switch(require("screens.howtoplay").new()) end
-  if ui.button("Settings", x + half + 10, y, half, h) then app.push(require("screens.settings").new()) end
-  y = y + 64
   if ui.button("Credits", x, y, platform.web and w or half, h) then app.switch(require("screens.credits").new()) end
-  if not platform.web and ui.button("Quit", x + half + 10, y, half, h) then love.event.quit() end
+  if not platform.web and ui.button("Quit", x + half + 10, y, half, h) then
+    require("screens.confirm").ask("Quit Deckshot?", "See you next round.", function() love.event.quit() end, { yes = "Quit", danger = true })
+  end
 
   -- Version, what's new, update notice
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.4)
   love.graphics.printf("v" .. Version.VERSION, 0, app.H - 30, app.W - 20, "right")
-  if ui.button("What's new", app.W - 170, app.H - 66, 150, 30, { font = app.fonts.small }) then self.notes = not self.notes end
-  if Version.latest then
-    love.graphics.setColor(0.5, 1, 0.6)
-    love.graphics.printf("Version " .. Version.latest .. " is out: github.com/" .. Version.REPO .. "/releases", 20,
-      app.H - 30, app.W, "left")
+  if ui.button("What's new", app.W - 170, app.H - 70, 150, 32, { font = app.fonts.small }) then
+    app.push(require("screens.whatsnew").new())
   end
-  if self.notes then
-    ui.panel(160, 120, 960, 480)
-    love.graphics.setFont(app.fonts.title)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("What's new in v" .. Version.VERSION, 160, 140, 960, "center")
-    love.graphics.setFont(app.fonts.med)
-    local yy = 196
-    for _, line in ipairs(Version.NOTES) do
-      love.graphics.setColor(1, 0.8, 0.35)
-      love.graphics.print("-", 200, yy)
-      love.graphics.setColor(1, 1, 1, 0.85)
-      love.graphics.printf(line, 222, yy, 860, "left")
-      local _, wr = app.fonts.med:getWrap(line, 860)
-      yy = yy + #wr * app.fonts.med:getHeight() + 8
-    end
-    if ui.button("Close", app.W / 2 - 100, 548, 200, 40, { back = true }) then self.notes = false end
+  if Version.latest then
+    love.graphics.setColor(ui.GOOD)
+    love.graphics.printf("Version " .. Version.latest .. " is out: github.com/" .. Version.REPO .. "/releases", 20,
+      app.H - 30, 800, "left")
   end
 end
 

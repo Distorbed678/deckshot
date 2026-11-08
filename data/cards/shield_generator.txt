@@ -1,5 +1,5 @@
 deckshot-card 1
 name Shield Generator
-rarity epic
+rarity rare
 row add shieldMax 60
 stack +60 shield per copy

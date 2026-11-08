@@ -1,6 +1,6 @@
 deckshot-card 1
 name Swap Shot
-rarity epic
+rarity rare
 row add swap 1
 note +hitting an enemy swaps your places
 note 1.5s cooldown

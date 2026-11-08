@@ -1,6 +1,6 @@
 deckshot-card 1
 name Table Flip
-rarity legendary
+rarity epic
 special tableflip
 note Rerolls every card you own
 note Rarities stay the same

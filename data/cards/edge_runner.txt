@@ -1,5 +1,5 @@
 deckshot-card 1
 name Edge Runner
-rarity uncommon
+rarity common
 row mul edgeTaken 0.6
 row mul edgeLaunch 1.3

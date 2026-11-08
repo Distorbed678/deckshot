@@ -1,6 +1,6 @@
 deckshot-card 1
 name Counter Puncher
-rarity epic
+rarity rare
 block
 trigger meleeBlocked melee
 trigger meleeBlocked invuln time=0.4

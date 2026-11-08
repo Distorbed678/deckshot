@@ -1,5 +1,5 @@
 deckshot-card 1
 name Glass Fists
-rarity uncommon
+rarity common
 row mul meleeDamage 1.4
 row add maxHp -20

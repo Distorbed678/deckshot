@@ -63,7 +63,7 @@ function Setup.new()
 end
 
 function Setup:keypressed(key)
-  if key == "escape" then app.switch(require("screens.menu").new()) end
+  if key == "escape" then app.switch(require("screens.localmenu").new()) end
 end
 
 -- Problems that stop the match from starting.
@@ -117,23 +117,11 @@ function Setup:draw()
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   app.centered("LOCAL PLAY", app.fonts.big, 30)
 
-  local x, w = 160, 960
-  local y = 100
-  local d = ui.cycler("Mode", v.teams and "Teams (2v2)" or "Free-for-all", x, y, 470, 44)
-  if d ~= 0 then v.teams = not v.teams end
-  d = ui.cycler("Rounds to win", tostring(v.roundsToWin), x + 490, y, 470, 44)
-  if d ~= 0 then
-    local opts = Settings.ROUND_OPTIONS
-    local idx = 1
-    for k, o in ipairs(opts) do if o == v.roundsToWin then idx = k end end
-    v.roundsToWin = opts[(idx - 1 + d) % #opts + 1]
-  end
-  y = y + 54
-  if v.teams then
-    d = ui.cycler("Friendly fire", v.friendlyFire and "On" or "Off", x, y, 470, 44)
-    if d ~= 0 then v.friendlyFire = not v.friendlyFire end
-  end
-  y = y + 66
+  local x = 160
+  local y = 170
+  local d
+  local mode = Settings.MODE_NAMES[v.matchMode] or "Elimination"
+  app.centered(mode .. (v.teams and ", Teams" or ", Free-for-all") .. ", first to " .. v.roundsToWin, app.fonts.title, 104, { 1, 1, 1, 0.8 })
 
   local list = kinds()
   for i, s in ipairs(self.slots) do
@@ -164,16 +152,13 @@ function Setup:draw()
   end
 
   local problem = self:problem()
-  if problem then app.centered(problem, app.fonts.med, 540, { 1, 0.55, 0.45 }) end
-  love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.45)
-  love.graphics.printf("Gamepads: left stick move, right stick aim, RT fire, LT / RB block, A jump, B dash, X melee (hold for heavy), Start pause.",
-    0, 576, app.W, "center")
-  if ui.button("Start", app.W / 2 - 330, 630, 320, 54, { disabled = problem ~= nil }) then self:start() end
-  if ui.button("Back", app.W / 2 + 10, 630, 320, 54, { back = true }) then
+  if problem then app.centered(problem, app.fonts.med, 568, { 1, 0.55, 0.45 }) end
+  if ui.button("Start", app.W / 2 - 470, 630, 300, 54, { disabled = problem ~= nil, color = ui.GOOD }) then self:start() end
+  if ui.button("Settings", app.W / 2 - 150, 630, 300, 54) then app.push(require("screens.settings").new(4)) end
+  if ui.button("Back", app.W / 2 + 170, 630, 300, 54, { back = true }) then
     Settings.values.localSetup = Setup.encode(self.slots)
     Settings.save()
-    app.switch(require("screens.menu").new())
+    app.switch(require("screens.localmenu").new())
   end
 end
 

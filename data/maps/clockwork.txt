@@ -1,16 +1,25 @@
-deckshot-map 1
+deckshot-map 2
 name Clockwork
-spawn 140 580
-spawn 1140 580
-spawn 160 340
-spawn 1120 340
-rect 60 620 580 100
-rect 640 620 580 100
-oneway 100 380 160 14
-oneway 1020 380 160 14
-rect 340 320 80 40
-rect 860 320 80 40
-obj arm count=1 damage=25 length=100 r=22 spin=1.2 x=380 y=340
-obj arm count=1 damage=25 length=100 r=22 spin=-1.2 x=900 y=340
-obj platform h=16 speed=80 w=100 x=540 y=480 path=590,488;590,300
-obj platform h=16 speed=80 w=100 x=640 y=480 path=690,488;690,300
+theme foundry
+spawn 168 696
+spawn 1368 696
+spawn 192 408
+spawn 1344 408
+rect 72 744 696 120
+rect 768 744 696 120
+oneway 120 456 192 17
+oneway 1224 456 192 17
+rect 408 384 96 48
+rect 1032 384 96 48
+oneway 120 216 144 14
+oneway 1272 216 144 14
+obj arm count=1 damage=25 length=100 r=22 spin=1.2 x=456 y=408
+obj arm count=1 damage=25 length=100 r=22 spin=-1.2 x=1080 y=408
+obj platform h=16 speed=80 w=120 x=648 y=579 path=708,586;708,360
+obj platform h=16 speed=80 w=120 x=768 y=579 path=828,586;828,360
+obj platform h=18 speed=90 w=120 x=600 y=216 path=600,216;600,120
+obj platform h=18 speed=90 w=120 x=816 y=216 path=816,216;816,120
+obj glass h=120 w=16 x=374 y=624
+obj glass h=120 w=16 x=1146 y=624
+obj pad h=14 power=1350 w=70 x=618 y=730
+obj pad h=14 power=1350 w=70 x=848 y=730

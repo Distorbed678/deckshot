@@ -1,16 +1,23 @@
-deckshot-map 1
+deckshot-map 2
 name Twin Peaks
-spawn 160 580
-spawn 1120 580
-spawn 380 420
-spawn 900 420
-rect 80 620 560 60
-rect 640 620 560 60
-rect 300 560 160 60
-rect 820 560 160 60
-rect 340 460 80 100
-rect 860 460 80 100
-oneway 520 380 120 14
-oneway 640 380 120 14
-oneway 120 420 120 14
-oneway 1040 420 120 14
+theme foundry
+spawn 192 696
+spawn 1344 696
+spawn 456 504
+spawn 1080 504
+rect 96 744 672 72
+rect 768 744 672 72
+rect 360 672 192 72
+rect 984 672 192 72
+rect 408 552 96 120
+rect 1032 552 96 120
+oneway 624 456 144 17
+oneway 768 456 144 17
+oneway 144 504 144 17
+oneway 1248 504 144 17
+oneway 312 288 168 14
+oneway 1056 288 168 14
+obj platform h=18 speed=90 w=120 x=600 y=120 path=600,120;600,24
+obj platform h=18 speed=90 w=120 x=816 y=120 path=816,120;816,24
+obj crate h=50 w=50 x=618 y=694
+obj crate h=50 w=50 x=868 y=694

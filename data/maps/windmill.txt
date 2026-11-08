@@ -1,15 +1,22 @@
-deckshot-map 1
+deckshot-map 2
 name Windmill
-spawn 180 580
-spawn 1100 580
-spawn 160 300
-spawn 1120 300
-rect 80 620 280 60
-rect 920 620 280 60
-rect 80 340 140 20
-rect 1060 340 140 20
-oneway 580 560 120 14
-obj fan dir=up force=3200 h=300 w=100 x=400 y=380
-obj fan dir=up force=3200 h=300 w=100 x=780 y=380
-obj platform h=16 speed=90 w=100 x=500 y=420 path=550,428;550,260
-obj platform h=16 speed=90 w=100 x=680 y=420 path=730,428;730,260
+theme foundry
+spawn 216 696
+spawn 1320 696
+spawn 192 360
+spawn 1344 360
+rect 96 744 336 72
+rect 1104 744 336 72
+rect 96 408 168 24
+rect 1272 408 168 24
+oneway 696 672 144 17
+oneway 432 240 120 14
+oneway 984 240 120 14
+obj fan dir=up force=3200 h=360 w=100 x=480 y=456
+obj fan dir=up force=3200 h=360 w=100 x=936 y=456
+obj platform h=16 speed=90 w=120 x=600 y=507 path=660,514;660,312
+obj platform h=16 speed=90 w=120 x=816 y=507 path=876,514;876,312
+obj crumble back=4 delay=0.5 h=18 w=144 x=120 y=120
+obj crumble back=4 delay=0.5 h=18 w=144 x=1272 y=120
+obj gas h=42 w=28 x=306 y=702
+obj gas h=42 w=28 x=1202 y=702

@@ -1,4 +1,4 @@
 deckshot-card 1
 name Hazard Proof
-rarity uncommon
+rarity common
 row mul hazardTaken 0.6

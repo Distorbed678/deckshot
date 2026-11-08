@@ -49,10 +49,6 @@ function Online:drawChoice()
     if ui.button(o.label, x, y, w, h, { font = app.fonts.title }) then o.go() end
     app.centered(o.text, app.fonts.small, y + h + 10, { 1, 1, 1, 0.55 })
   end
-  love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.45)
-  love.graphics.printf("Online games use the Online controls (mouse aim). Change them in Settings > Controls.",
-    0, 500, app.W, "center")
   if ui.button("Back", (app.W - 420) / 2, 560, 420, 54) then toMenu() end
 end
 

@@ -1,6 +1,6 @@
 deckshot-card 1
 name Momentum
-rarity rare
+rarity uncommon
 row add momentum 1
 note +up to +50% damage while you're moving fast
 stack +50% per copy

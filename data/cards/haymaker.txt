@@ -1,5 +1,5 @@
 deckshot-card 1
 name Haymaker
-rarity uncommon
+rarity common
 row mul heavyCharge 0.75
 row mul meleeDamage 1.15

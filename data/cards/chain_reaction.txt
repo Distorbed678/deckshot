@@ -1,4 +1,4 @@
 deckshot-card 1
 name Chain Reaction
-rarity epic
+rarity rare
 trigger kill explode damage=35 radius=170

@@ -1,6 +1,6 @@
 deckshot-card 1
 name Time Warp
-rarity epic
+rarity rare
 block
 row add timeWarp 1
 note +blocking slows every enemy bullet for 1.5s

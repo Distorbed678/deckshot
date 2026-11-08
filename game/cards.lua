@@ -5,11 +5,11 @@
 local Cards = {}
 
 Cards.RARITIES = {
-  { id = "common",    name = "Common",    color = { 0.75, 0.75, 0.8 }, weight = 46 },
-  { id = "uncommon",  name = "Uncommon",  color = { 0.35, 0.9, 0.45 }, weight = 30 },
-  { id = "rare",      name = "Rare",      color = { 0.3, 0.6, 1 },     weight = 15 },
-  { id = "epic",      name = "Epic",      color = { 0.75, 0.35, 1 },   weight = 6 },
-  { id = "legendary", name = "Legendary", color = { 1, 0.78, 0.2 },    weight = 3 },
+  { id = "common",    name = "Common",    color = { 0.75, 0.75, 0.8 }, weight = 55 },
+  { id = "uncommon",  name = "Uncommon",  color = { 0.35, 0.9, 0.45 }, weight = 28 },
+  { id = "rare",      name = "Rare",      color = { 0.3, 0.6, 1 },     weight = 12 },
+  { id = "epic",      name = "Epic",      color = { 0.75, 0.35, 1 },   weight = 4 },
+  { id = "legendary", name = "Legendary", color = { 1, 0.78, 0.2 },    weight = 1 },
 }
 Cards.rarity = {}
 for _, r in ipairs(Cards.RARITIES) do Cards.rarity[r.id] = r end
@@ -156,7 +156,7 @@ end
 -- Can this card be offered to the player right now?
 -- Table Flip / Shrine are only offered to a player who already owns cards.
 local function offerable(c, player, used)
-  if c.disabled or used[c] then return false end
+  if c.disabled or c.banned or used[c] then return false end
   if c.special and c.special ~= "reroll" and #player.cards == 0 then return false end
   return true
 end
@@ -213,7 +213,7 @@ end
 function Cards.randomOfRarity(rarity, exclude)
   local pool = {}
   for _, c in ipairs(Cards.list) do
-    if c.rarity == rarity and not c.special and not c.disabled and c ~= exclude then pool[#pool + 1] = c end
+    if c.rarity == rarity and not c.special and not c.disabled and not c.banned and c ~= exclude then pool[#pool + 1] = c end
   end
   if #pool == 0 then return exclude end
   return pool[love.math.random(#pool)]

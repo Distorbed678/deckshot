@@ -1,18 +1,23 @@
-deckshot-map 1
+deckshot-map 2
 name Toxic Tower
-spawn 140 540
-spawn 1140 540
-spawn 200 340
-spawn 1080 340
-rect 60 580 220 140
-rect 1000 580 220 140
-rect 580 400 120 320
-oneway 320 480 140 14
-oneway 820 480 140 14
-rect 100 380 160 20
-rect 1020 380 160 20
-obj acid damage=20 h=60 w=360 x=280 y=660
-obj acid damage=20 h=60 w=360 x=640 y=660
-obj gas h=42 hp=20 radius=110 w=28 x=626 y=358
-obj gas h=42 hp=20 radius=110 w=28 x=110 y=338
-obj gas h=42 hp=20 radius=110 w=28 x=1142 y=338
+theme jungle
+spawn 168 648
+spawn 1368 648
+spawn 240 408
+spawn 1296 408
+rect 72 696 264 168
+rect 1200 696 264 168
+rect 696 480 144 384
+oneway 384 576 168 17
+oneway 984 576 168 17
+rect 120 456 192 24
+rect 1224 456 192 24
+oneway 432 288 144 14
+oneway 960 288 144 14
+oneway 96 144 168 14
+oneway 1272 144 168 14
+obj acid damage=20 h=60 w=432 x=336 y=804
+obj acid damage=20 h=60 w=432 x=768 y=804
+obj gas h=42 hp=20 radius=110 w=28 x=751 y=438
+obj gas h=42 hp=20 radius=110 w=28 x=132 y=414
+obj gas h=42 hp=20 radius=110 w=28 x=1370 y=414

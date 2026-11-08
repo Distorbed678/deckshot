@@ -59,7 +59,7 @@ local function lobAngle(w, p, tx, ty)
       local vx, vy = math.cos(a) * speed, math.sin(a) * speed
       for _ = 1, 60 do
         x, y, vy = x + vx * 0.02, y + vy * 0.02, vy + g * 0.02
-        if x < 0 or x > 1280 or y > 720 or solidAt(w, x - 2, y - 2, 4, 4) then break end
+        if x < 0 or x > Map.W or y > Map.H or solidAt(w, x - 2, y - 2, 4, 4) then break end
         local d = (x - tx) ^ 2 + (y - ty) ^ 2
         if d < 30 * 30 and (not bestD or d < bestD) then best, bestD = a, d end
       end
@@ -154,7 +154,7 @@ function Bot.update(p, w, dt)
   local L = LEVEL[inp.difficulty or 2] or LEVEL[2]
   local b = inp.brain
   if not b then
-    b = { react = 0, noise = 0, noiseT = 0, jumpHold = 0, blockCd = 0, seen = nil, wander = 640, holdMelee = 0 }
+    b = { react = 0, noise = 0, noiseT = 0, jumpHold = 0, blockCd = 0, seen = nil, wander = Map.W / 2, holdMelee = 0 }
     inp.brain = b
   end
   inp.left, inp.right, inp.up, inp.down, inp.fire = false, false, false, false, false
@@ -195,9 +195,9 @@ function Bot.update(p, w, dt)
     if b.blind > 1 then range = math.max(40, range * math.max(0, 1 - (b.blind - 1) * 0.5)) end
     local side = (p.x < t.x) and -1 or 1
     goalX = t.x + side * range
-    if goalX < 90 or goalX > 1190 then goalX = t.x - side * range end
+    if goalX < 90 or goalX > Map.W - 90 then goalX = t.x - side * range end
   else
-    if math.abs(p.x - b.wander) < 40 then b.wander = 200 + love.math.random() * 880 end
+    if math.abs(p.x - b.wander) < 40 then b.wander = 200 + love.math.random() * (Map.W - 400) end
   end
   -- Stalemate: nobody's been hurt for a while, so go to them even if we can see them.
   local hpSum = p.hp + (t and t.p.hp or 0)
@@ -206,14 +206,18 @@ function Bot.update(p, w, dt)
 
   -- Can't see them (or stalemate): follow the platform graph toward their platform.
   local route
-  if t and (b.blind > 0.8 or stale) then
+  -- King of the Hill: head for the hill first, fight on it.
+  local hill = w.hill and w.state == "playing" and w.hill
+  local hillFar = hill and (math.abs(p.x - hill.x) > 110 or math.abs(p.y - hill.y) > 100)
+  local dest = hillFar and { x = hill.x, y = hill.y + 50 } or t
+  if dest and (hillFar or b.blind > 0.8 or stale) then
     if not w.botGraph or w.botGraphMap ~= w.map then
       w.botGraph, w.botGraphMap = buildGraph(w), w.map
     end
     local g = w.botGraph
     local here = p.onGround and surfaceUnder(g, p.x, p.y + p.r - 2) or b.lastSurface
     if p.onGround then b.lastSurface = here end
-    local there = surfaceUnder(g, t.x, t.y + 10)
+    local there = surfaceUnder(g, dest.x, dest.y + 10)
     route = here and there and nextSurface(here, there)
     if route then
       if route.y < (here and here.y or p.y) - 10 then
@@ -232,7 +236,9 @@ function Bot.update(p, w, dt)
   else
     b.climb = nil
   end
-  goalX = math.max(70, math.min(1210, goalX))
+  if hillFar and not route then goalX = hill.x end
+  if hill and not hillFar then goalX = math.max(hill.x - 100, math.min(hill.x + 100, goalX)) end
+  goalX = math.max(70, math.min(Map.W - 70, goalX))
   local dir = 0
   if goalX > p.x + 30 then dir = 1 elseif goalX < p.x - 30 then dir = -1 end
   -- Climbing: jump when lined up, steer onto the platform, double jump near the apex.
@@ -285,7 +291,7 @@ function Bot.update(p, w, dt)
     if p.onGround then wantJump = true else dir = -dir end
   end
   -- Edges of the arena hurt: don't walk into them.
-  if (p.x < 80 and dir < 0) or (p.x > 1200 and dir > 0) then dir = 0 end
+  if (p.x < 80 and dir < 0) or (p.x > Map.W - 80 and dir > 0) then dir = 0 end
 
   -- Chasing someone above: jump toward platforms. Someone below on a one-way: drop through.
   if t and t.y < p.y - 110 and p.onGround and love.math.random() < dt * 3 then wantJump = true end
@@ -301,13 +307,19 @@ function Bot.update(p, w, dt)
       press(inp, "jumpCount")
       b.jumpHold = 0.25
     elseif p.dashesLeft > 0 and p.dashCd <= 0 and love.math.random() < dt * 6 then
-      dir = p.x < 640 and 1 or -1
+      dir = p.x < Map.W / 2 and 1 or -1
       inp.up = true
       press(inp, "dashCount")
     end
-    dir = p.x < 640 and 1 or -1
+    dir = p.x < Map.W / 2 and 1 or -1
   end
-  if p.y > 640 and not p.onGround then dir = p.x < 640 and 1 or -1 end
+  if p.y > Map.H - 80 and not p.onGround then dir = p.x < Map.W / 2 and 1 or -1 end
+  -- Sudden death: stay inside the barrier.
+  if w.barrier then
+    local margin = 110
+    if p.x - w.barrier[1] < margin then dir = 1 elseif w.barrier[3] - p.x < margin then dir = -1 end
+    if w.barrier[4] - p.y < margin and p.onGround then wantJump = true end
+  end
 
   if wantJump and p.onGround then
     press(inp, "jumpCount")
@@ -403,6 +415,21 @@ function Bot.scoreCard(p, card, difficulty)
 end
 
 -- The world asks a bot to pick: hover over a few cards (so watchers see flips), then take the best.
+-- Which card a bot bans before a match: a strong one, with some variety.
+function Bot.banChoice()
+  local Cards = require "game.cards"
+  local best, bestScore
+  for _, c in ipairs(Cards.list) do
+    if not c.special and not c.disabled and not c.banned then
+      local r = 1
+      for i, x in ipairs(Cards.RARITIES) do if x.id == c.rarity then r = i end end
+      local sc = r + love.math.random() * 2
+      if not bestScore or sc > bestScore then best, bestScore = c, sc end
+    end
+  end
+  return best
+end
+
 function Bot.pick(w, pk, dt)
   local p = w.players[pk.slot]
   pk.botTimer = (pk.botTimer or 0) + dt

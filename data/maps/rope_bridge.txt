@@ -1,29 +1,34 @@
-deckshot-map 1
+deckshot-map 2
 name Rope Bridge
-spawn 140 540
-spawn 1140 540
-spawn 200 360
-spawn 1080 360
-rect 40 580 200 140
-rect 1040 580 200 140
-oneway 120 400 120 14
-oneway 1040 400 120 14
-oneway 540 360 200 14
-obj acid damage=20 h=60 w=400 x=240 y=660
-obj acid damage=20 h=60 w=400 x=640 y=660
-obj plank h=14 hp=0 w=90 x=260 y=540
-obj plank h=14 hp=0 w=90 x=930 y=540
-obj rope target=3 x=305 y=300
-obj rope target=4 x=975 y=300
-obj plank h=14 hp=0 w=90 x=355 y=540
-obj plank h=14 hp=0 w=90 x=835 y=540
-obj rope target=7 x=400 y=300
-obj rope target=8 x=880 y=300
-obj plank h=14 hp=0 w=90 x=450 y=540
-obj plank h=14 hp=0 w=90 x=740 y=540
-obj rope target=11 x=495 y=300
-obj rope target=12 x=785 y=300
-obj plank h=14 hp=0 w=90 x=545 y=540
-obj plank h=14 hp=0 w=90 x=645 y=540
-obj rope target=15 x=590 y=300
-obj rope target=16 x=690 y=300
+theme jungle
+spawn 168 648
+spawn 1368 648
+spawn 240 432
+spawn 1296 432
+rect 48 696 240 168
+rect 1248 696 240 168
+oneway 144 480 144 17
+oneway 1248 480 144 17
+oneway 648 432 240 17
+oneway 360 264 168 14
+oneway 1008 264 168 14
+obj acid damage=20 h=60 w=480 x=288 y=804
+obj acid damage=20 h=60 w=480 x=768 y=804
+obj plank h=14 hp=0 w=108 x=312 y=651
+obj plank h=14 hp=0 w=108 x=1116 y=651
+obj rope target=3 x=366 y=360
+obj rope target=4 x=1170 y=360
+obj plank h=14 hp=0 w=108 x=426 y=651
+obj plank h=14 hp=0 w=108 x=1002 y=651
+obj rope target=7 x=480 y=360
+obj rope target=8 x=1056 y=360
+obj plank h=14 hp=0 w=108 x=540 y=651
+obj plank h=14 hp=0 w=108 x=888 y=651
+obj rope target=11 x=594 y=360
+obj rope target=12 x=942 y=360
+obj plank h=14 hp=0 w=108 x=654 y=651
+obj plank h=14 hp=0 w=108 x=774 y=651
+obj rope target=15 x=708 y=360
+obj rope target=16 x=828 y=360
+obj platform h=18 speed=90 w=120 x=96 y=120 path=96,120;96,24
+obj platform h=18 speed=90 w=120 x=1320 y=120 path=1320,120;1320,24

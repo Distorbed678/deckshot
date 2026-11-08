@@ -18,7 +18,7 @@ fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
--- 10 damage number.
+-- 10 damage number, 11 death chunks.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -80,6 +80,24 @@ function fx.debris(x, y, color, count, size)
       vx = math.cos(a) * s, vy = math.sin(a) * s, rot = love.math.random() * 6, spin = (love.math.random() - 0.5) * 20,
       w = size * (0.4 + love.math.random() * 0.6), h = size * (0.3 + love.math.random() * 0.4),
       life = life, max = life, color = color,
+    })
+  end
+end
+
+-- A body bursting into chunks that bounce off the map (fx.solids), plus the face.
+function fx.gibs(x, y, color, count, size)
+  record({ 11, x, y, color, count, size })
+  if fx.mute then return end
+  count = math.max(4, math.floor(count * fx.particleScale + 0.5))
+  for i = 1, count do
+    local a = love.math.random() * math.pi * 2
+    local s = 180 + love.math.random() * 420
+    local life = 1.6 + love.math.random() * 0.9
+    table.insert(fx.chunks, {
+      x = x, y = y, vx = math.cos(a) * s, vy = math.sin(a) * s - 180,
+      rot = love.math.random() * 6, spin = (love.math.random() - 0.5) * 16,
+      w = i == 1 and 2 or size * (0.5 + love.math.random() * 0.8), h = i == 1 and 2 or size * (0.4 + love.math.random() * 0.6),
+      life = life, max = life, color = color, bounce = true, face = i == 1 and size or nil,
     })
   end
 end
@@ -171,6 +189,19 @@ function fx.update(dt)
       d.vy = d.vy + 1400 * dt
       d.x, d.y = d.x + d.vx * dt, d.y + d.vy * dt
       d.rot = d.rot + d.spin * dt
+      if d.bounce and fx.solids then
+        for _, b in ipairs(fx.solids) do
+          if not b.oneway and d.x > b.x and d.x < b.x + b.w and d.y > b.y and d.y < b.y + b.h then
+            if d.vy > 0 and d.y - d.vy * dt <= b.y then
+              d.y, d.vy, d.vx, d.spin = b.y, -d.vy * 0.45, d.vx * 0.7, d.spin * 0.6
+            else
+              d.vx = -d.vx * 0.5
+              d.x = d.x + d.vx * dt * 2
+            end
+            break
+          end
+        end
+      end
     end
   end
   for i = #fx.numbers, 1, -1 do
@@ -190,6 +221,20 @@ function fx.draw()
     love.graphics.circle("fill", g.x, g.y, g.r)
   end
   for _, d in ipairs(fx.chunks) do
+    if d.face then
+      love.graphics.push()
+      love.graphics.translate(d.x, d.y)
+      love.graphics.rotate(d.rot)
+      love.graphics.setColor(d.color[1], d.color[2], d.color[3], math.min(1, d.life * 2))
+      love.graphics.circle("fill", 0, 0, d.face)
+      love.graphics.setColor(0.1, 0.1, 0.12, math.min(1, d.life * 2))
+      love.graphics.setLineWidth(2)
+      for _, s in ipairs({ -1, 1 }) do
+        love.graphics.line(s * 4 - 2, -2, s * 4 + 2, 2)
+        love.graphics.line(s * 4 + 2, -2, s * 4 - 2, 2)
+      end
+      love.graphics.pop()
+    end
     local c = d.color
     love.graphics.setColor(c[1], c[2], c[3], math.min(1, 2 * d.life / d.max))
     love.graphics.push()

@@ -4,9 +4,10 @@
 -- can be dropped in later by name.
 -- On the online host, sounds are recorded with the fx events and replayed on clients.
 local fx = require "gfx.fx"
+local Map = require "game.map"
 
 local sfx = {
-  volumes = { master = 0.8, sfx = 1, ui = 0.8 },
+  volumes = { master = 0.8, sfx = 1, ui = 0.8, music = 0.7 },
   enabled = true,
 }
 
@@ -43,6 +44,18 @@ local DEFS = {
     L { wave = "square", dur = 0.12, f0 = 300, f1 = 90, vol = 0.3, lp = 0.4 } },
   laser = { L { wave = "saw", dur = 0.25, f0 = 1800, f1 = 500, vol = 0.25, lp = 0.6 },
     L { wave = "sine", dur = 0.2, f0 = 2400, f1 = 1200, vol = 0.2 } },
+  impactWood = { L { wave = "noise", dur = 0.07, vol = 0.32, lp = 0.2 },
+    L { wave = "tri", dur = 0.06, f0 = 240, f1 = 130, vol = 0.3 } },
+  impactMetal = { L { wave = "square", dur = 0.09, f0 = 1500, f1 = 1050, vol = 0.14, lp = 0.7 },
+    L { wave = "sine", dur = 0.14, f0 = 2300, f1 = 1900, vol = 0.12 } },
+  impactGlass = { L { wave = "sine", dur = 0.06, f0 = 3100, f1 = 3600, vol = 0.15 },
+    L { wave = "noise", dur = 0.04, vol = 0.14, lp = 0.8 } },
+  hitHeavy = { L { wave = "square", dur = 0.18, f0 = 220, f1 = 55, vol = 0.5, lp = 0.35 },
+    L { wave = "noise", dur = 0.14, vol = 0.5, lp = 0.25 } },
+  gibs = { L { wave = "noise", dur = 0.22, vol = 0.45, lp = 0.2, decay = 2 },
+    L { wave = "sine", dur = 0.2, f0 = 300, f1 = 70, vol = 0.4 } },
+  stingerRound = join(arp("square", { 523, 659, 784 }, 0.08, 0.26, 0.17, 0.5), arp("tri", { 262, 330, 392 }, 0.08, 0.3, 0.22)),
+  stingerMatchPoint = join(arp("saw", { 440, 440, 659, 880 }, 0.14, 0.32, 0.16, 0.5), arp("tri", { 220, 220, 330, 440 }, 0.14, 0.34, 0.24)),
   bounce = { L { wave = "sine", dur = 0.05, f0 = 1200, f1 = 1700, vol = 0.18 } },
   impact = { L { wave = "noise", dur = 0.06, vol = 0.3, lp = 0.4 },
     L { wave = "square", dur = 0.04, f0 = 400, f1 = 200, vol = 0.15, lp = 0.4 } },
@@ -132,6 +145,7 @@ sfx.NAMES = {
   "death", "revive", "explosion", "explosionSmall", "mineArm", "blackhole", "beep", "fight",
   "roundWin", "matchWin", "cardDeal", "cardFlip", "revealRare", "revealEpic", "revealLegendary",
   "cardPick", "heartbeat", "uiHover", "uiClick", "uiBack",
+  "impactWood", "impactMetal", "impactGlass", "hitHeavy", "gibs", "stingerRound", "stingerMatchPoint",
 }
 sfx.ID = {}
 for i, n in ipairs(sfx.NAMES) do sfx.ID[n] = i end
@@ -245,7 +259,7 @@ end
 function sfx.play(name, x, volume, pitch, noRecord)
   if sfx.silent then return end
   if not noRecord and fx.recorder and sfx.ID[name] and not (DEFS[name] and DEFS[name].ui) then
-    fx.record({ 5, sfx.ID[name], x or 640, volume or 1, pitch or 1 })
+    fx.record({ 5, sfx.ID[name], x or (Map.W / 2), volume or 1, pitch or 1 })
   end
   if not sfx.enabled or not DEFS[name] then return end
   local now = love.timer.getTime()
@@ -272,8 +286,9 @@ function sfx.play(name, x, volume, pitch, noRecord)
     end
   end
   src:setVolume(math.min(1, vol))
+  if not snd.ui then pcall(src.setFilter, src, sfx.muffle) end
   src:setPitch((pitch or 1) * (0.94 + random() * 0.12))
-  local pan = x and math.max(-1, math.min(1, (x / 640 - 1) * 0.7)) or 0
+  local pan = x and math.max(-1, math.min(1, (x / (Map.W / 2) - 1) * 0.7)) or 0
   pcall(src.setPosition, src, pan, 0, 0.6)
   src:play()
 end

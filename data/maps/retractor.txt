@@ -1,16 +1,21 @@
-deckshot-map 1
+deckshot-map 2
 name Retractor
-spawn 140 580
-spawn 1140 580
-spawn 220 400
-spawn 1060 400
-rect 60 620 580 100
-rect 640 620 580 100
-oneway 160 460 160 14
-oneway 960 460 160 14
-oneway 420 380 140 14
-oneway 720 380 140 14
-oneway 560 260 160 14
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=120 warn=0.6 x=300 y=604
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=120 warn=0.6 x=860 y=604
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=1.6 w=160 warn=0.6 x=560 y=604
+theme neon
+spawn 168 696
+spawn 1368 696
+spawn 264 480
+spawn 1272 480
+rect 72 744 696 120
+rect 768 744 696 120
+oneway 192 552 192 17
+oneway 1152 552 192 17
+oneway 504 456 168 17
+oneway 864 456 168 17
+oneway 672 312 192 17
+oneway 360 144 144 14
+oneway 1032 144 144 14
+oneway 216 360 144 14
+oneway 1176 360 144 14
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=144 warn=0.6 x=360 y=728
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=144 warn=0.6 x=1032 y=728
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=1.6 w=192 warn=0.6 x=672 y=728

@@ -97,7 +97,7 @@ function love.load(args)
     app.switch(require("screens.lobby").new())
   end
 
-  app.switch(require("screens.menu").new())
+  app.switch(require("screens.splash").new())
 
   -- Launched from a Steam invite: "+connect_lobby <id>"
   for i, a in ipairs(args or {}) do
@@ -112,6 +112,7 @@ function love.update(dt)
   lan.update()
   Settings.update()
   sfx.update()
+  require("gfx.music").update(dt)
   require("core.webkeyboard").update()
   app.update(dt)
   lan.flush()

@@ -1,17 +1,22 @@
-deckshot-map 1
+deckshot-map 2
 name Acid Bath
-spawn 140 540
-spawn 1140 540
-spawn 340 380
-spawn 940 380
-rect 60 580 180 140
-rect 1040 580 180 140
-oneway 300 520 100 14
-oneway 880 520 100 14
-oneway 560 480 160 14
-oneway 300 420 120 14
-oneway 860 420 120 14
-oneway 460 320 120 14
-oneway 700 320 120 14
-obj acid damage=20 h=80 w=400 x=240 y=640
-obj acid damage=20 h=80 w=400 x=640 y=640
+theme jungle
+spawn 168 648
+spawn 1368 648
+spawn 408 456
+spawn 1128 456
+rect 72 696 216 168
+rect 1248 696 216 168
+oneway 360 624 120 17
+oneway 1056 624 120 17
+oneway 672 576 192 17
+oneway 360 504 144 17
+oneway 1032 504 144 17
+oneway 552 384 144 17
+oneway 840 384 144 17
+oneway 48 336 144 14
+oneway 1344 336 144 14
+oneway 336 168 120 14
+oneway 1080 168 120 14
+obj acid damage=20 h=80 w=480 x=288 y=784
+obj acid damage=20 h=80 w=480 x=768 y=784

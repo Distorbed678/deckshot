@@ -26,6 +26,13 @@ Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
 Settings.START_CARDS = { min = 0, max = 5 }
 Settings.TEXT_SIZES = { { "Small", 0.9 }, { "Normal", 1 }, { "Large", 1.15 } }
 Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
+Settings.SUDDEN_TIMES = { 0, 60, 90, 120, 180, 240, 300, 420, 600 } -- seconds; 0 = off
+Settings.BARRIER_CLOSE_NAMES = { "Slow (40s)", "Normal (20s)", "Fast (10s)" }
+Settings.BARRIER_BOX_NAMES = { "Small", "Medium", "Large" }
+Settings.BARRIER_DAMAGE_NAMES = { "Low", "Normal", "High" }
+Settings.MAP_VOTE_COUNT = { min = 2, max = 6 }
+Settings.MODES = { "elim", "koth" }
+Settings.MODE_NAMES = { elim = "Elimination", koth = "King of the Hill" }
 
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
 Settings.BIND_SCHEMES = {
@@ -34,18 +41,18 @@ Settings.BIND_SCHEMES = {
   { id = "p2", name = "Player 2 (local)", group = "keyboard",
     actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
   { id = "online", name = "Online", group = "online",
-    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "scoreboard" } },
+    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "scoreboard", "chat" } },
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)", chat = "Chat",
 }
 Settings.DEFAULT_BINDS = {
   p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q" },
   p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift",
     dash = "/", melee = "." },
   online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2",
-    dash = "lshift", melee = "f", scoreboard = "tab" },
+    dash = "lshift", melee = "f", scoreboard = "tab", chat = "return" },
 }
 -- Keys that can't be bound (menu / fullscreen toggle).
 Settings.RESERVED_KEYS = { escape = true, f11 = true }
@@ -69,7 +76,14 @@ local defaults = {
   pickTimer = 45,        -- seconds per pick online (0 = off); local play has no timer
   allowDiscard = true,   -- "discard a card instead" on the pick screen
   hazards = true,        -- map hazards on (breakables always stay)
-  barrier = true,        -- sudden-death barrier in 3-4 player matches
+  suddenDeath = 180,     -- seconds per round before the barrier closes in (0 = off)
+  barrierClose = 2,      -- Settings.BARRIER_CLOSE_NAMES
+  barrierBox = 2,        -- Settings.BARRIER_BOX_NAMES
+  barrierDamage = 2,     -- Settings.BARRIER_DAMAGE_NAMES
+  matchMode = "elim",    -- elim / koth
+  mapVote = true,        -- players vote for the next map
+  mapVoteCount = 3,      -- maps on the ballot
+  cardBans = false,      -- everyone bans a card before the match
   synergiesOn = true,    -- card synergies (individual ones can be turned off)
   teams = false,         -- 2v2 teams (local setup / host)
   friendlyFire = false,  -- teams: bullets and explosions hurt teammates
@@ -86,11 +100,16 @@ local defaults = {
   textSize = 2,          -- 1 small, 2 normal, 3 large (Settings.TEXT_SIZES)
   lastLanAddress = "",   -- the last LAN address you typed
   scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
-  settingsVersion = 2,
+  settingsVersion = 3,
+  checkUpdates = true,   -- look for a new version on the main menu (desktop)
+  tutorialOffered = false, -- the first-run tutorial has been offered
+  hat = "none",          -- cosmetics (core/cosmetics.lua)
+  face = "classic",
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
   volSfx = 10,
   volUi = 8,
+  volMusic = 7,
   muteUnfocused = true,
 }
 for _, r in ipairs(Cards.RARITIES) do defaults["weight_" .. r.id] = r.weight end
@@ -141,7 +160,7 @@ function Settings.load()
   if not love.filesystem.getInfo(FILE) then return end
   local v = Settings.values
   v.settingsVersion = 1 -- files written before versioning have no settingsVersion line
-  local legacyVsync, legacyRes
+  local legacyVsync, legacyRes, legacyBarrierOff
   for line in love.filesystem.lines(FILE) do
     local scheme, action, b = line:match("^bind%.([%w_]+)%.([%w_]+)=(.*)$")
     local cardId, cardVal = line:match("^card%.([%w_]+)=(.*)$")
@@ -164,6 +183,8 @@ function Settings.load()
         entry.disabled = state == "off"
         v.cards[cardId] = entry
       end
+    elseif k == "barrier" then
+      legacyBarrierOff = val == "false"
     elseif k == "vsync" then
       legacyVsync = val
     elseif k == "resolution" and tonumber(val) then
@@ -187,6 +208,19 @@ function Settings.load()
   if (v.settingsVersion or 1) < 2 then
     if v.pickFrom == 3 then v.pickFrom = 5 end
     v.settingsVersion = 2
+  end
+  if v.settingsVersion < 3 then
+    -- v0.5.1: rarity chances are percentages with new defaults; the barrier became a timer.
+    local old = { 46, 30, 15, 6, 3 }
+    local isOld = true
+    for i, r in ipairs(Cards.RARITIES) do
+      if v["weight_" .. r.id] ~= old[i] then isOld = false end
+    end
+    if isOld then
+      for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
+    end
+    if legacyBarrierOff then v.suddenDeath = 0 end
+    v.settingsVersion = 3
   end
 
   -- Older settings files: vsync=true/false and resolution=<index>.
@@ -212,6 +246,13 @@ function Settings.load()
     local key = "weight_" .. r.id
     v[key] = clamp(math.floor(v[key]), 0, 1000)
   end
+  Settings.normalizeWeights()
+  v.barrierClose = clamp(math.floor(v.barrierClose), 1, 3)
+  v.barrierBox = clamp(math.floor(v.barrierBox), 1, 3)
+  v.barrierDamage = clamp(math.floor(v.barrierDamage), 1, 3)
+  v.mapVoteCount = clamp(math.floor(v.mapVoteCount), Settings.MAP_VOTE_COUNT.min, Settings.MAP_VOTE_COUNT.max)
+  v.volMusic = clamp(math.floor(v.volMusic), 0, 10)
+  if not Settings.MODE_NAMES[v.matchMode] then v.matchMode = "elim" end
   if not Settings.WINDOW_MODE_NAMES[v.windowMode] then v.windowMode = "windowed" end
   if v.lastFullscreen ~= "borderless" and v.lastFullscreen ~= "fullscreen" then v.lastFullscreen = "borderless" end
 end
@@ -299,9 +340,59 @@ function Settings.setCard(card, rarity, enabled)
   end
 end
 
+-- Rarity chances are whole percentages that always total exactly 100.
+-- Distributes `total` over list items in proportion to their `w`, largest remainders first.
+local function apportion(items, total)
+  local sum = 0
+  for _, it in ipairs(items) do sum = sum + it.w end
+  if sum <= 0 then
+    for _, it in ipairs(items) do it.w = 1 end
+    sum = #items
+  end
+  local left = total
+  for _, it in ipairs(items) do
+    local exact = it.w / sum * total
+    it.value = math.floor(exact)
+    it.rem = exact - it.value
+    left = left - it.value
+  end
+  local order = {}
+  for i, it in ipairs(items) do order[i] = it end
+  table.sort(order, function(a, b)
+    if a.rem ~= b.rem then return a.rem > b.rem end
+    return a.index < b.index
+  end)
+  for i = 1, left do order[i].value = order[i].value + 1 end
+end
+
+function Settings.normalizeWeights()
+  local v = Settings.values
+  local items = {}
+  for i, r in ipairs(Cards.RARITIES) do items[i] = { key = "weight_" .. r.id, w = v["weight_" .. r.id], index = i } end
+  apportion(items, 100)
+  for _, it in ipairs(items) do v[it.key] = it.value end
+end
+
+-- Sets one rarity's chance; the others change in proportion so the total stays 100.
+function Settings.setWeight(rarityId, value)
+  local v = Settings.values
+  value = clamp(math.floor(value), 0, 100)
+  local items = {}
+  for i, r in ipairs(Cards.RARITIES) do
+    if r.id ~= rarityId then items[#items + 1] = { key = "weight_" .. r.id, w = v["weight_" .. r.id], index = i } end
+  end
+  apportion(items, 100 - value)
+  for _, it in ipairs(items) do v[it.key] = it.value end
+  v["weight_" .. rarityId] = value
+end
+
 function Settings.resetGameplay()
   local v = Settings.values
   v.roundsToWin = defaults.roundsToWin
+  v.matchMode, v.teams, v.friendlyFire = defaults.matchMode, defaults.teams, defaults.friendlyFire
+  v.suddenDeath, v.barrierClose = defaults.suddenDeath, defaults.barrierClose
+  v.barrierBox, v.barrierDamage = defaults.barrierBox, defaults.barrierDamage
+  v.mapVote, v.mapVoteCount, v.cardBans = defaults.mapVote, defaults.mapVoteCount, defaults.cardBans
   v.pickFrom = defaults.pickFrom
   v.picksPerRound = defaults.picksPerRound
   v.startCards = defaults.startCards
@@ -310,7 +401,6 @@ function Settings.resetGameplay()
   v.hazards = defaults.hazards
   v.synergiesOn = defaults.synergiesOn
   v.synergies = {}
-  v.barrier = defaults.barrier
   for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
   v.cards = {}
   v.maps = {}
@@ -339,8 +429,11 @@ function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
     startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
-    hazards = v.hazards, barrier = v.barrier, synergies = v.synergiesOn, synergyOff = {},
-    teams = v.teams, friendlyFire = v.friendlyFire }
+    hazards = v.hazards, synergies = v.synergiesOn, synergyOff = {},
+    teams = v.teams, friendlyFire = v.friendlyFire, roundsToWin = v.roundsToWin,
+    suddenDeath = v.suddenDeath, barrierClose = v.barrierClose, barrierBox = v.barrierBox,
+    barrierDamage = v.barrierDamage, mode = v.matchMode, mapVote = v.mapVote, mapVoteCount = v.mapVoteCount,
+    cardBans = v.cardBans }
   for _, syn in ipairs(require("game.synergies").list) do
     if v.synergies[syn.id] then rules.synergyOff[syn.index] = true end
   end
@@ -424,6 +517,7 @@ function Settings.applyEffects()
   sfx.volumes.master = clamp(v.volMaster, 0, 10) / 10
   sfx.volumes.sfx = clamp(v.volSfx, 0, 10) / 10
   sfx.volumes.ui = clamp(v.volUi, 0, 10) / 10
+  sfx.volumes.music = clamp(v.volMusic, 0, 10) / 10
 end
 
 -- love.window.setMode can't run while a canvas is active (e.g. from a screen's draw, where

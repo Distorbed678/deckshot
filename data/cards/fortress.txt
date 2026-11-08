@@ -1,6 +1,6 @@
 deckshot-card 1
 name Fortress
-rarity legendary
+rarity rare
 block
 row mul blockTime 2
 row mul blockCooldown 0.6

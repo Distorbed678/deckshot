@@ -1,20 +1,29 @@
-deckshot-map 1
+deckshot-map 2
 name Laser Grid
-spawn 160 580
-spawn 1120 580
-spawn 240 380
-spawn 1040 380
-rect 60 620 580 100
-rect 640 620 580 100
-rect 380 100 80 20
-rect 820 100 80 20
-rect 600 100 80 20
-oneway 180 420 160 14
-oneway 940 420 160 14
-oneway 480 300 100 14
-oneway 700 300 100 14
-obj laser damage=40 dir=down off=2.2 on=1 phase=0 warn=0.8 x=420 y=120
-obj laser damage=40 dir=down off=2.2 on=1 phase=0 warn=0.8 x=860 y=120
-obj laser damage=40 dir=down off=2.2 on=1 phase=1.5 warn=0.8 x=640 y=120
-obj crate drop=0.08 h=50 hp=60 w=50 x=520 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=710 y=570
+theme neon
+spawn 192 696
+spawn 1344 696
+spawn 288 456
+spawn 1248 456
+rect 72 744 696 120
+rect 768 744 696 120
+rect 456 120 96 24
+rect 984 120 96 24
+rect 720 120 96 24
+oneway 216 504 192 17
+oneway 1128 504 192 17
+oneway 576 360 120 17
+oneway 840 360 120 17
+oneway 288 288 120 14
+oneway 1128 288 120 14
+obj laser damage=40 dir=down off=2.2 on=1 phase=0 warn=0.8 x=504 y=144
+obj laser damage=40 dir=down off=2.2 on=1 phase=0 warn=0.8 x=1032 y=144
+obj laser damage=40 dir=down off=2.2 on=1 phase=1.5 warn=0.8 x=768 y=144
+obj crate drop=0.08 h=50 hp=60 w=50 x=624 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=852 y=694
+obj platform h=18 speed=90 w=120 x=48 y=120 path=48,120;48,24
+obj platform h=18 speed=90 w=120 x=1368 y=120 path=1368,120;1368,24
+obj crate h=50 w=50 x=474 y=694
+obj crate h=50 w=50 x=1012 y=694
+obj wall h=96 hp=150 w=40 x=348 y=648
+obj wall h=96 hp=150 w=40 x=1148 y=648

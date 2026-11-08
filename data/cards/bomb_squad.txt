@@ -1,5 +1,5 @@
 deckshot-card 1
 name Bomb Squad
-rarity rare
+rarity uncommon
 row mul explosionSize 1.4
 row mul gunDamage 1.1

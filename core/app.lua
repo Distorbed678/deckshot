@@ -15,12 +15,24 @@ local app = {
 }
 
 local FONT_SIZES = { tiny = 12, small = 14, med = 18, button = 22, title = 26, big = 36, huge = 96 }
+-- Headings and buttons use the display face; everything you read in sentences uses the body face.
+local BODY_FILE, DISPLAY_FILE = "assets/fonts/Barlow-Medium.ttf", "assets/fonts/RussoOne-Regular.ttf"
+local DISPLAY = { button = true, title = true, big = true, huge = true }
+
+local function newFont(name, size, s)
+  local file = DISPLAY[name] and DISPLAY_FILE or BODY_FILE
+  if love.filesystem.getInfo(file) then
+    local ok, font = pcall(love.graphics.newFont, file, size, "normal", s)
+    if ok then return font end
+  end
+  return love.graphics.newFont(size, "normal", s)
+end
 
 -- (Re)create the canvas and fonts for a render scale. Must not run while a canvas is active.
 local function buildTargets(s)
   app.renderScale = s
   for name, size in pairs(FONT_SIZES) do
-    app.fonts[name] = love.graphics.newFont(math.floor(size * app.textScale + 0.5), "normal", s)
+    app.fonts[name] = newFont(name, math.floor(size * app.textScale + 0.5), s)
   end
   if app.canvas then app.canvas:release() end
   local ok, canvas = pcall(love.graphics.newCanvas, app.W, app.H, { msaa = 4, dpiscale = s })

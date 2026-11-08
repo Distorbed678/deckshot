@@ -1,22 +1,31 @@
-deckshot-map 1
+deckshot-map 2
 name Powder Keg
-spawn 160 580
-spawn 1120 580
-spawn 320 380
-spawn 960 380
-rect 80 620 560 100
-rect 640 620 560 100
-oneway 260 420 160 14
-oneway 860 420 160 14
-oneway 520 300 120 14
-oneway 640 300 120 14
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=420 y=572
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=824 y=572
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=460 y=572
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=784 y=572
-obj crate drop=0.08 h=50 hp=60 w=50 x=380 y=570
-obj crate drop=0.08 h=50 hp=60 w=50 x=850 y=570
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=380 y=372
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=864 y=372
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=600 y=572
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=644 y=572
+theme desert
+spawn 192 696
+spawn 1344 696
+spawn 384 456
+spawn 1152 456
+rect 96 744 672 120
+rect 768 744 672 120
+oneway 312 504 192 17
+oneway 1032 504 192 17
+oneway 624 360 144 17
+oneway 768 360 144 17
+oneway 312 192 144 14
+oneway 1080 192 144 14
+oneway 48 360 120 14
+oneway 1368 360 120 14
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=504 y=696
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=989 y=696
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=552 y=696
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=941 y=696
+obj crate drop=0.08 h=50 hp=60 w=50 x=456 y=694
+obj crate drop=0.08 h=50 hp=60 w=50 x=1020 y=694
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=456 y=456
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=1037 y=456
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=720 y=696
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=773 y=696
+obj crate h=50 w=50 x=354 y=694
+obj crate h=50 w=50 x=1132 y=694
+obj pad h=14 power=1350 w=70 x=618 y=730
+obj pad h=14 power=1350 w=70 x=848 y=730

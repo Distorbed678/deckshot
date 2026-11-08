@@ -7,7 +7,7 @@ local pack, unpack = love.data.pack, love.data.unpack
 
 local Snap = {}
 
-Snap.STATES = { "countdown", "playing", "roundOver", "cardPick", "matchOver" }
+Snap.STATES = { "countdown", "playing", "roundOver", "cardPick", "matchOver", "mapVote", "cardBan" }
 local STATE_CODE = {}
 for i, s in ipairs(Snap.STATES) do STATE_CODE[s] = i end
 
@@ -63,6 +63,33 @@ function Snap.encode(world, events)
     add("<BB", mask, pk.timeLeft and u8(math.ceil(pk.timeLeft)) or 255)
   else
     add("<BBBBBBBBB", 0, 0, 0, 0, 0, 0, 0, 0, 255)
+  end
+
+  -- Round timer, map vote, card bans, the hill.
+  add("<H", world.suddenLeft and math.min(65534, math.ceil(world.suddenLeft * 10)) or 65535)
+  local mv = world.state == "mapVote" and world.mapVote
+  if mv then
+    add("<BBB", #mv.options, u8(math.ceil(mv.timeLeft)), mv.winner)
+    for _, o in ipairs(mv.options) do add("<B", o) end
+    for _, p in ipairs(world.players) do add("<B", mv.votes[p.slot] or 0) end
+  else
+    add("<B", 0)
+  end
+  local cb = world.state == "cardBan" and world.cardBan
+  if cb then
+    add("<BB", 1, u8(math.ceil(cb.timeLeft)))
+    for _, p in ipairs(world.players) do add("<B", cb.picks[p.slot] and cb.picks[p.slot].index or 0) end
+  else
+    add("<B", 0)
+  end
+  add("<B", #(world.banned or {}))
+  for _, c in ipairs(world.banned or {}) do add("<B", c.index) end
+  local hill = world.hill
+  if hill then
+    add("<BhhBB", 1, i16(hill.x), i16(hill.y), u8(math.ceil(hill.t)), hill.owner)
+    for _, p in ipairs(world.players) do add("<BB", u8(p.hillScore or 0), u8(p.respawnT and math.ceil(p.respawnT) or 0)) end
+  else
+    add("<B", 0)
   end
 
   for _, p in ipairs(world.players) do
@@ -169,6 +196,9 @@ function Snap.encode(world, events)
     elseif kind == 8 then
       local c = e[4]
       add("<BhhBBBBB", 8, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
+    elseif kind == 11 then
+      local c = e[4]
+      add("<BhhBBBBB", 11, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
     elseif kind == 9 then
       add("<Bhh", 9, i16(e[2] * 10), i16(e[3] * 10))
     elseif kind == 10 then
@@ -209,6 +239,49 @@ function Snap.decode(data)
   end
   pk.timeLeft = left < 255 and left or nil
   v.pick = pk
+
+  local sudden
+  sudden, pos = unpack("<H", raw, pos)
+  v.suddenLeft = sudden < 65535 and sudden / 10 or nil
+  local nv
+  nv, pos = unpack("<B", raw, pos)
+  if nv > 0 then
+    local mv = { options = {}, votes = {} }
+    local tl, win
+    tl, win, pos = unpack("<BB", raw, pos)
+    mv.timeLeft, mv.winner = tl, win
+    for i = 1, nv do mv.options[i], pos = unpack("<B", raw, pos) end
+    for i = 1, np do
+      local o
+      o, pos = unpack("<B", raw, pos)
+      if o > 0 then mv.votes[i] = o end
+    end
+    v.mapVote = mv
+  end
+  local hasBan
+  hasBan, pos = unpack("<B", raw, pos)
+  if hasBan == 1 then
+    local cb = { picks = {} }
+    cb.timeLeft, pos = unpack("<B", raw, pos)
+    for i = 1, np do
+      local c
+      c, pos = unpack("<B", raw, pos)
+      if c > 0 then cb.picks[i] = c end
+    end
+    v.cardBan = cb
+  end
+  local nb
+  nb, pos = unpack("<B", raw, pos)
+  v.banned = {}
+  for i = 1, nb do v.banned[i], pos = unpack("<B", raw, pos) end
+  local hasHill
+  hasHill, pos = unpack("<B", raw, pos)
+  if hasHill == 1 then
+    local hill = { scores = {}, respawn = {} }
+    hill.x, hill.y, hill.t, hill.owner, pos = unpack("<hhBB", raw, pos)
+    for i = 1, np do hill.scores[i], hill.respawn[i], pos = unpack("<BB", raw, pos) end
+    v.hill = hill
+  end
 
   for i = 1, np do
     local p = {}
@@ -325,6 +398,10 @@ function Snap.decode(data)
       local x, y, radius, r, g, b
       x, y, radius, r, g, b, pos = unpack("<hhHBBB", raw, pos)
       v.fx[i] = { 2, x, y, radius, { r / 255, g / 255, b / 255 } }
+    elseif kind == 11 then
+      local x, y, r, g, b, count, size
+      x, y, r, g, b, count, size, pos = unpack("<hhBBBBB", raw, pos)
+      v.fx[i] = { 11, x, y, { r / 255, g / 255, b / 255 }, count, size }
     elseif kind == 3 then
       local amount
       amount, pos = unpack("<B", raw, pos)

@@ -1,15 +1,20 @@
-deckshot-map 1
+deckshot-map 2
 name Updraft
-spawn 140 540
-spawn 1140 540
-spawn 160 300
-spawn 1120 300
-rect 60 580 220 140
-rect 1000 580 220 140
-rect 560 580 160 140
-oneway 440 300 100 14
-oneway 740 300 100 14
-rect 60 340 120 20
-rect 1100 340 120 20
-obj fan dir=up force=3400 h=440 w=120 x=300 y=260
-obj fan dir=up force=3400 h=440 w=120 x=860 y=260
+theme void
+spawn 168 648
+spawn 1368 648
+spawn 192 360
+spawn 1344 360
+rect 72 696 264 168
+rect 1200 696 264 168
+rect 672 696 192 168
+oneway 528 360 120 17
+oneway 888 360 120 17
+rect 72 408 144 24
+rect 1320 408 144 24
+oneway 240 192 144 14
+oneway 1152 192 144 14
+obj fan dir=up force=3400 h=528 w=120 x=360 y=312
+obj fan dir=up force=3400 h=528 w=120 x=1032 y=312
+obj platform h=18 speed=90 w=120 x=576 y=192 path=576,192;576,96
+obj platform h=18 speed=90 w=120 x=840 y=192 path=840,192;840,96

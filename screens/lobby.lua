@@ -1,21 +1,26 @@
 -- The lobby (Steam or LAN, whichever online/active.lua holds): members, how others can join
--- (Steam: lobby code and invites; LAN: the host's address), and the host's Start button.
+-- (Steam: lobby code and invites; LAN: the host's address), chat, and the host's Start button.
 local app = require "core.app"
 local ui = require "core.ui"
 local active = require "online.active"
 local Settings = require "core.settings"
 local World = require "game.world"
 local net = require "online.net"
+local Chat = require "online.chat"
+local Cosmetics = require "core.cosmetics"
+local Map = require "game.map"
+local Cards = require "game.cards"
 
 local Lobby = {}
 Lobby.__index = Lobby
 
 function Lobby.new(message)
-  return setmetatable({ message = message, friends = {}, friendTimer = 0, copied = 0 }, Lobby)
+  return setmetatable({ message = message, friends = {}, friendTimer = 0, copied = 0, chatText = "" }, Lobby)
 end
 
 function Lobby:enter()
   love.mouse.setVisible(true)
+  require("gfx.music").play("menu")
   -- Take your saved colour, or the first free one.
   local session = active.get()
   if session.setColor then
@@ -30,6 +35,30 @@ function Lobby:enter()
   end
   self.friends = active.get().kind == "steam" and active.get().friendsOnline() or {}
   self.invited = {}
+  local hat, face = Cosmetics.mine()
+  session.cosmetics = session.cosmetics or {}
+  session.cosmetics[session.myId()] = { hat = hat, face = face }
+  if session.isHost then
+    self:sendInfo()
+  else
+    -- Tells the host our look and asks for its settings (for the read-only view).
+    session.transport:send(session.hostId, net.encodeLobbyHello(hat, face), true)
+  end
+end
+
+-- Host: everything a client needs to view the host's settings and custom content.
+function Lobby:sendInfo(peer)
+  local session = active.get()
+  if not session.isHost then return end
+  local rules = Settings.cardRules(true)
+  local Synergies = require "game.synergies"
+  local msgs = { net.encodeMaps(Map.sessionEntries()), net.encodeCards(Cards.sessionEntries()),
+    net.encodeSynergies(Synergies.sessionEntries()), net.encodeRules(rules, Cards.list, Cards.RARITIES) }
+  for _, m in ipairs(session.members) do
+    if m.id ~= session.myId() and (not peer or m.id == peer) then
+      for _, data in ipairs(msgs) do session.transport:send(m.id, data, true) end
+    end
+  end
 end
 
 local function toMenu(message)
@@ -37,24 +66,45 @@ local function toMenu(message)
   app.switch(require("screens.menu").new(message))
 end
 
+function Lobby:askLeave()
+  local session = active.get()
+  if session.isHost and #session.members > 1 then
+    require("screens.confirm").ask("Close this lobby?", "You're the host, so everyone will be disconnected.",
+      function() toMenu() end, { yes = "Close Lobby", danger = true })
+  else
+    require("screens.confirm").ask("Leave this lobby?", "", function() toMenu() end, { yes = "Leave", danger = true })
+  end
+end
+
 function Lobby:keypressed(key)
-  if key == "escape" then toMenu() end
+  if key == "escape" then self:askLeave() end
+end
+
+-- The game mode and teams setting in force: the host's.
+local function rulesInForce(session)
+  if session.isHost then
+    local v = Settings.values
+    return { teams = v.teams, mode = v.matchMode, roundsToWin = v.roundsToWin, pickFrom = v.pickFrom, picksPerRound = v.picksPerRound }
+  end
+  return session.hostRules
 end
 
 -- Everyone in the lobby plus the host's bots, with final colours and teams.
 function Lobby.slots(session)
   local slots = {}
+  local cos = session.cosmetics or {}
   for i, m in ipairs(session.members) do
     if i > session.MAX_PLAYERS then break end
-    slots[i] = { peer = m.id, name = m.name, color = m.color }
+    local look = cos[m.id] or {}
+    slots[i] = { peer = m.id, name = m.name, color = m.color, hat = look.hat, face = look.face }
   end
   for _, b in ipairs(session.bots or {}) do
     if #slots >= session.MAX_PLAYERS then break end
     slots[#slots + 1] = { peer = "bot" .. #slots, name = "Bot (" .. require("game.bot").NAMES[b.level] .. ")",
       bot = b.level, color = b.color }
   end
-  local v = Settings.values
-  if v.teams then
+  local r = rulesInForce(session)
+  if r and r.teams then
     local teams = {}
     for i, s in ipairs(slots) do
       s.team = (i - 1) % 2 + 1
@@ -80,6 +130,7 @@ end
 
 function Lobby:start()
   local session = active.get()
+  session.setRounds(Settings.values.roundsToWin)
   local slots = Lobby.slots(session)
   local data = net.encodeStart(session.rounds, slots)
   for i = 2, #slots do
@@ -106,23 +157,53 @@ function Lobby:update(dt)
     if ev.type == "hostLeft" and not session.isHost then
       toMenu("The host closed the lobby")
       return
+    elseif ev.type == "joined" and session.isHost then
+      Chat.system(session, (session.memberName and session.memberName(ev.id) or "Someone") .. " joined")
+    elseif ev.type == "left" and session.isHost then
+      Chat.system(session, (session.memberName and session.memberName(ev.id) or "Someone") .. " left")
     end
   end
 
   local msgs = session.popMessages()
   for i, msg in ipairs(msgs) do
-    if not session.isHost and msg.from == session.hostId and net.kind(msg.data) == net.MSG.START then
-      local winScore, slots = net.decodeStart(msg.data)
-      local me = session.myId()
-      local mySlot
-      for k, s in ipairs(slots) do
-        if s.peer == me then mySlot = k end
+    local kind = net.kind(msg.data)
+    if kind == net.MSG.CHAT then
+      Chat.handle(session, msg)
+    elseif session.isHost then
+      if kind == net.MSG.LOBBYHELLO then
+        local ok, hat, face = pcall(net.decodeLobbyHello, msg.data)
+        if ok then session.cosmetics[msg.from] = { hat = hat, face = face } end
+        self:sendInfo(msg.from)
       end
-      -- Not in the slots: the match is already running, so we watch it until the next one.
-      local rest = {}
-      for k = i + 1, #msgs do rest[#rest + 1] = msgs[k] end
-      app.switch(require("screens.match").newClient(slots, mySlot or 0, winScore, session.transport, msg.from, rest))
-      return
+    elseif msg.from == session.hostId then
+      if kind == net.MSG.START then
+        local winScore, slots = net.decodeStart(msg.data)
+        local me = session.myId()
+        local mySlot
+        for k, s in ipairs(slots) do
+          if s.peer == me then mySlot = k end
+        end
+        -- Not in the slots: the match is already running, so we watch it until the next one.
+        local rest = {}
+        for k = i + 1, #msgs do rest[#rest + 1] = msgs[k] end
+        app.switch(require("screens.match").newClient(slots, mySlot or 0, winScore, session.transport, msg.from, rest))
+        return
+      elseif kind == net.MSG.MAPS then
+        local ok, entries = pcall(net.decodeMaps, msg.data)
+        if ok then Map.setSession(entries) end
+      elseif kind == net.MSG.CARDS then
+        local ok, entries = pcall(net.decodeCards, msg.data)
+        if ok then Cards.setSession(entries) end
+      elseif kind == net.MSG.SYNERGIES then
+        local ok, entries = pcall(net.decodeMaps, msg.data)
+        if ok then require("game.synergies").setSession(entries) end
+      elseif kind == net.MSG.RULES then
+        local ok, rules = pcall(net.decodeRules, msg.data, Cards.RARITIES)
+        if ok then
+          Cards.applyRules(rules)
+          session.hostRules = rules
+        end
+      end
     end
   end
 
@@ -134,210 +215,203 @@ function Lobby:update(dt)
   self.copied = math.max(0, self.copied - dt)
 end
 
--- "First to 5  -  pick 1 of 3 cards" (the host's rules, from the lobby data).
+-- "King of the Hill  -  first to 5  -  pick 1 of 3 cards" (the host's rules).
 function Lobby.rulesText()
   local session = active.get()
-  local picks = session.picks > 1 and (session.picks .. " picks of ") or "pick 1 of "
-  return "First to " .. session.rounds .. "  -  " .. picks .. session.pickFrom .. " cards"
+  local r = rulesInForce(session)
+  if not r then return "" end
+  local picks = (r.picksPerRound or 1) > 1 and (r.picksPerRound .. " picks of ") or "pick 1 of "
+  return (Settings.MODE_NAMES[r.mode] or "Elimination") .. (r.teams and ", Teams" or "") .. "  -  first to " ..
+    (r.roundsToWin or session.rounds) .. "  -  " .. picks .. (r.pickFrom or 3) .. " cards"
 end
 
-function Lobby:draw()
-  local session = active.get()
-  app.centered(session.kind == "lan" and "LAN LOBBY" or "LOBBY", app.fonts.big, 28)
-
-  -- Players (members, then the host's bots)
-  local lx, ly, lw, lh = 60, 90, 560, 380
+function Lobby:drawPlayers(session, lx, ly, lw)
+  local lh = 322
   ui.panel(lx, ly, lw, lh)
   local slots = Lobby.slots(session)
   love.graphics.setFont(app.fonts.title)
   love.graphics.setColor(1, 1, 1)
-  love.graphics.print("Players  " .. #slots .. " / " .. session.MAX_PLAYERS, lx + 24, ly + 14)
-  if Settings.values.teams and session.isHost then
-    love.graphics.setFont(app.fonts.small)
-    love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.printf("TEAMS", lx, ly + 22, lw - 24, "right")
-  end
+  love.graphics.print("Players  " .. #slots .. " / " .. session.MAX_PLAYERS, lx + 20, ly + 10)
   local me = session.myId()
+  local r = rulesInForce(session)
+  local teams = r and r.teams
   local botIndex = 0
   for i = 1, session.MAX_PLAYERS do
     local sl = slots[i]
-    local ry = ly + 56 + (i - 1) * 62
-    love.graphics.setColor(0.17, 0.17, 0.22)
-    love.graphics.rectangle("fill", lx + 20, ry, lw - 40, 54, 10, 10)
+    local ry = ly + 50 + (i - 1) * 56
+    love.graphics.setColor(ui.WIDGET)
+    love.graphics.rectangle("fill", lx + 16, ry, lw - 32, 50, 10, 10)
     if sl then
       local c = World.PALETTE[sl.color] or World.COLORS[i]
-      love.graphics.setColor(c)
-      love.graphics.circle("fill", lx + 52, ry + 27, 16)
-      love.graphics.setColor(0.1, 0.1, 0.12)
-      love.graphics.circle("fill", lx + 48, ry + 23, 2.5)
-      love.graphics.circle("fill", lx + 58, ry + 23, 2.5)
-      love.graphics.setFont(app.fonts.title)
+      Cosmetics.drawPreview(lx + 46, ry + 26, 15, c, sl.hat, sl.face, { 0.5, 0 })
       love.graphics.setColor(1, 1, 1)
-      love.graphics.print(sl.name, lx + 84, ry + 4)
-      -- Wins in this lobby and the current streak.
+      ui.printFit(sl.name, app.fonts.med, lx + 78, ry + 4, lw - 280, "left")
       local st = (session.peerStreaks or {})[sl.peer] or (session.peerStreaks or {})[sl.name]
       love.graphics.setFont(app.fonts.tiny)
       love.graphics.setColor(1, 0.8, 0.35, st and 0.9 or 0.35)
       local text = st and (st.wins .. (st.wins == 1 and " win" or " wins") .. (st.streak > 1 and ("   " .. st.streak .. " in a row!") or ""))
         or "no wins yet"
-      love.graphics.print(text, lx + 86, ry + 34)
+      love.graphics.print(text, lx + 78, ry + 28)
       local tags = {}
       if sl.peer == session.hostId then tags[#tags + 1] = "HOST" end
       if sl.peer == me then tags[#tags + 1] = "YOU" end
       if sl.team then tags[#tags + 1] = World.TEAM_NAMES[sl.team]:upper() end
-      love.graphics.setFont(app.fonts.small)
       love.graphics.setColor(c)
-      love.graphics.printf(table.concat(tags, "  "), lx + 20, ry + 19, lw - (sl.bot and 110 or 60), "right")
+      ui.printFit(table.concat(tags, "  "), app.fonts.small, lx + lw - 210, ry + 16, sl.bot and 140 or 176, "right")
       if sl.bot then
         botIndex = botIndex + 1
         local bi = botIndex
-        if session.isHost and ui.button("x", lx + lw - 76, ry + 12, 36, 30, { font = app.fonts.small, back = true }) then
+        if session.isHost and ui.button("x", lx + lw - 58, ry + 10, 34, 30, { font = app.fonts.small, back = true }) then
           table.remove(session.bots, bi)
         end
       end
     else
       love.graphics.setFont(app.fonts.med)
       love.graphics.setColor(1, 1, 1, 0.3)
-      love.graphics.print("Waiting for player...", lx + 84, ry + 17)
+      love.graphics.print("Waiting for player...", lx + 78, ry + 14)
     end
   end
-  -- Your colour
-  if session.setColor and not Settings.values.teams then
-    local taken = {}
-    for _, m in ipairs(session.members) do if m.id ~= me and m.color then taken[m.color] = true end end
-    for _, bb in ipairs(session.bots or {}) do if bb.color then taken[bb.color] = true end end
-    local myColor
-    for _, m in ipairs(session.members) do if m.id == me then myColor = m.color end end
-    local sx = lx + 24
-    for k, col in ipairs(World.PALETTE) do
-      local x = sx + (k - 1) * 43
-      local y = ly + lh - 44
-      local mx, my = app.mouse()
-      local over = mx >= x and mx <= x + 36 and my >= y and my <= y + 34
-      love.graphics.setColor(col[1], col[2], col[3], taken[k] and 0.2 or 1)
-      love.graphics.rectangle("fill", x, y, 36, 34, 6, 6)
-      if k == myColor or (over and not taken[k]) then
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.setLineWidth(3)
-        love.graphics.rectangle("line", x - 2, y - 2, 40, 38, 7, 7)
-      end
-      if ui.click and over and not taken[k] then
-        session.setColor(k)
-        Settings.values.playerColor = k
-        Settings.save()
-        ui.click = nil
-      end
-    end
-  end
+  return ly + lh, teams, me
+end
 
-  local rx, ry, rw, rh = 660, 90, 560, 380
+function Lobby:drawColors(session, lx, y, teams, me)
+  if not session.setColor or teams then return end
+  -- The colours everyone actually ends up with.
+  local taken, myColor = {}, nil
+  for _, s in ipairs(Lobby.slots(session)) do
+    if s.peer == me then myColor = s.color elseif s.color then taken[s.color] = true end
+  end
+  local mx, my = app.mouse()
+  for k, col in ipairs(World.PALETTE) do
+    local x = lx + 4 + (k - 1) * 46
+    local over = mx >= x and mx <= x + 38 and my >= y and my <= y + 32
+    love.graphics.setColor(col[1], col[2], col[3], taken[k] and 0.2 or 1)
+    love.graphics.rectangle("fill", x, y, 38, 32, 6, 6)
+    if k == myColor or (over and not taken[k]) then
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.setLineWidth(3)
+      love.graphics.rectangle("line", x - 2, y - 2, 42, 36, 7, 7)
+    end
+    if ui.click and over and not taken[k] then
+      session.setColor(k)
+      Settings.values.playerColor = k
+      Settings.save()
+      ui.click = nil
+    end
+  end
+end
+
+function Lobby:drawChat(session, x, y, w, h)
+  ui.panel(x, y, w, h)
+  love.graphics.setFont(app.fonts.med)
+  love.graphics.setColor(1, 1, 1, 0.7)
+  love.graphics.print("Chat", x + 16, y + 8)
+  local lineH = app.fonts.small:getHeight()
+  local rows = math.floor((h - 90) / lineH)
+  Chat.draw(x + 16, y + h - 50, w - 32, rows)
+  local text, submitted = ui.textField(self.chatText, x + 12, y + h - 44, w - 110, 34,
+    { font = app.fonts.small, maxLength = 240, align = "left", placeholder = "Say something" })
+  self.chatText = text
+  if ui.button("Send", x + w - 90, y + h - 44, 78, 34, { font = app.fonts.small }) or submitted then
+    Chat.send(session, self.chatText)
+    self.chatText = ""
+  end
+end
+
+function Lobby:draw()
+  local session = active.get()
+  app.centered(session.kind == "lan" and "LAN LOBBY" or "LOBBY", app.fonts.big, 18)
+
+  local lx, ly, lw = 50, 72, 570
+  local bottom, teams, me = self:drawPlayers(session, lx, ly, lw)
+  self:drawColors(session, lx, bottom + 12, teams, me)
+
+  local rx, ry, rw, rh = 660, 72, 570, 268
   ui.panel(rx, ry, rw, rh)
   if session.kind == "lan" then
-    self:drawLanInfo(session, rx, ry, rw)
+    self:drawLanInfo(session, rx, ry, rw, rh)
   else
-    self:drawSteamInfo(session, rx, ry, rw)
+    self:drawSteamInfo(session, rx, ry, rw, rh)
   end
+  self:drawChat(session, rx, ry + rh + 10, rw, 252)
   self:drawControls(session)
 end
 
 -- How to join a LAN game: the host's address (desktop) and browser link.
-function Lobby:drawLanInfo(session, rx, ry, rw)
+function Lobby:drawLanInfo(session, rx, ry, rw, rh)
   local function copyButton(label, key, text, x, y, w)
-    if ui.button(self.copied > 0 and self.copiedKey == key and "Copied!" or label, x, y, w, 40, { font = app.fonts.small }) then
+    if ui.button(self.copied > 0 and self.copiedKey == key and "Copied!" or label, x, y, w, 34, { font = app.fonts.small }) then
       love.system.setClipboardText(text)
       self.copied, self.copiedKey = 1.5, key
     end
   end
-  love.graphics.setFont(app.fonts.med)
-  love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf(session.isHost and "Your address on this network" or "Connected to the host at", rx, ry + 16, rw, "center")
-  love.graphics.setFont(app.fonts.big)
-  love.graphics.setColor(1, 0.85, 0.4)
-  love.graphics.printf(session.code or "?", rx, ry + 44, rw, "center")
-  if not session.isHost then
-    love.graphics.setFont(app.fonts.small)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf("The host's settings (rounds, cards, maps) are used for the match.", rx + 30, ry + 110, rw - 60, "center")
-    return
-  end
-
-  copyButton("Copy Address", "addr", session.code or "", rx + 150, ry + 96, rw - 300)
+  local tw = session.isHost and rw - 196 or rw - 40
+  local tx = rx + 20
   love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.55)
-  love.graphics.printf("Desktop players: Online Play > LAN, then pick this game from the list or type the address.",
-    rx + 30, ry + 146, rw - 60, "center")
-
-  love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)
-  local tw = rw - 210
-  love.graphics.printf("Phones, tablets and browsers: scan the code or open", rx + 20, ry + 196, tw, "center")
-  love.graphics.setFont(app.fonts.title)
+  love.graphics.printf(session.isHost and "Your address on this network" or "Connected to the host at", tx, ry + 12, tw, "center")
+  love.graphics.setColor(ui.GOLD)
+  ui.printFit(session.code or "?", app.fonts.big, tx, ry + 32, tw, "center")
+  if not session.isHost then return end
+
+  copyButton("Copy Address", "addr", session.code or "", tx + 40, ry + 80, tw - 80)
+  love.graphics.setFont(app.fonts.small)
+  love.graphics.setColor(1, 1, 1, 0.6)
+  love.graphics.printf("Phones, tablets and browsers: scan the code or open", tx, ry + 128, tw, "center")
   if session.webDir() then
     love.graphics.setColor(0.55, 0.85, 1)
-    love.graphics.printf(session.url or "", rx + 20, ry + 246, tw, "center")
-    copyButton("Copy Browser Link", "url", session.url or "", rx + 60, ry + 286, tw - 80)
-    love.graphics.setFont(app.fonts.small)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf("then choose Online Play > LAN > Join Game.", rx + 20, ry + 332, tw, "center")
-    -- QR code of the browser link (phones on the same Wi-Fi scan it).
+    ui.printFit(session.url or "", app.fonts.title, tx, ry + 150, tw, "center")
+    copyButton("Copy Browser Link", "url", session.url or "", tx + 40, ry + 190, tw - 80)
     if self.qrUrl ~= session.url then
       self.qrUrl = session.url
       self.qrM, self.qrN = require("core.qr").encode(session.url or "")
     end
-    if self.qrM then require("core.qr").draw(self.qrM, self.qrN, rx + rw - 180, ry + 190, 160) end
+    if self.qrM then require("core.qr").draw(self.qrM, self.qrN, rx + rw - 172, ry + 44, 156) end
   else
-    love.graphics.setColor(1, 0.6, 0.45, 0.8)
-    love.graphics.printf("unavailable", rx, ry + 226, rw, "center")
-    love.graphics.setFont(app.fonts.small)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf("The browser version's files weren't found (the web folder next to the game, or dist/web " ..
-      "from ./build.sh web when running from source).", rx + 30, ry + 270, rw - 60, "center")
+    love.graphics.setColor(ui.BAD)
+    love.graphics.printf("The browser version's files weren't found.", tx, ry + 160, rw - 40, "center")
   end
   local others = {}
   for i, ip in ipairs(session.ipList or {}) do
     if i > 1 then others[#others + 1] = ip end
   end
   if #others > 0 then
-    love.graphics.setFont(app.fonts.tiny)
     love.graphics.setColor(1, 1, 1, 0.35)
-    love.graphics.printf("Other addresses of this computer: " .. table.concat(others, ", "), rx + 20, ry + 352, rw - 40, "center")
+    ui.printFit("Other addresses of this computer: " .. table.concat(others, ", "), app.fonts.tiny, tx, ry + rh - 24, rw - 40, "center")
   end
 end
 
 -- Steam: lobby code, invite dialog and friends.
-function Lobby:drawSteamInfo(session, rx, ry, rw)
-  love.graphics.setFont(app.fonts.med)
+function Lobby:drawSteamInfo(session, rx, ry, rw, rh)
+  local cw = 250
+  love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Lobby code", rx, ry + 16, rw, "center")
-  love.graphics.setFont(app.fonts.huge)
-  love.graphics.setColor(1, 0.85, 0.4)
-  love.graphics.printf(session.code or "------", rx, ry + 34, rw, "center")
-
-  local bw = (rw - 60) / 2
-  if ui.button(self.copied > 0 and "Copied!" or "Copy Code", rx + 20, ry + 150, bw, 46) then
+  love.graphics.printf("Lobby code", rx + 16, ry + 12, cw, "center")
+  love.graphics.setColor(ui.GOLD)
+  ui.printFit(session.code or "------", app.fonts.big, rx + 16, ry + 34, cw, "center")
+  if ui.button(self.copied > 0 and "Copied!" or "Copy Code", rx + 16, ry + 92, cw, 42) then
     love.system.setClipboardText(session.code or "")
     self.copied = 1.5
   end
-  if ui.button("Steam Invite...", rx + 40 + bw, ry + 150, bw, 46) then
-    session.openInviteDialog()
-  end
+  if ui.button("Steam Invite...", rx + 16, ry + 144, cw, 42) then session.openInviteDialog() end
 
+  local fx0 = rx + cw + 40
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.print("Friends online", rx + 24, ry + 210)
+  love.graphics.print("Friends online", fx0, ry + 12)
   if #self.friends == 0 then
     love.graphics.setFont(app.fonts.small)
     love.graphics.setColor(1, 1, 1, 0.35)
-    love.graphics.print("No friends online right now", rx + 24, ry + 240)
+    love.graphics.print("No friends online right now", fx0, ry + 44)
   end
-  for i = 1, math.min(#self.friends, 4) do
+  local fw = rw - cw - 56
+  for i = 1, math.min(#self.friends, 6) do
     local f = self.friends[i]
-    local fy = ry + 238 + (i - 1) * 34
-    love.graphics.setFont(app.fonts.med)
+    local fy = ry + 40 + (i - 1) * 36
     love.graphics.setColor(1, 1, 1, 0.85)
-    love.graphics.print(f.name, rx + 24, fy + 4)
+    ui.printFit(f.name, app.fonts.med, fx0, fy + 4, fw - 106, "left")
     local sent = self.invited[f.id]
-    if ui.button(sent and "Sent" or "Invite", rx + rw - 130, fy, 106, 30, { font = app.fonts.small, disabled = sent }) then
+    if ui.button(sent and "Sent" or "Invite", fx0 + fw - 96, fy, 96, 30, { font = app.fonts.small, disabled = sent }) then
       session.invite(f)
       self.invited[f.id] = true
     end
@@ -345,23 +419,16 @@ function Lobby:drawSteamInfo(session, rx, ry, rw)
 end
 
 function Lobby:drawControls(session)
-
-  -- Bottom controls
-  local by = 495
+  local by = 440
   if session.isHost then
-    local d = ui.cycler("Rounds", tostring(session.rounds), 60, by, 270, 50)
-    if d ~= 0 then
-      local opts = Settings.ROUND_OPTIONS
-      local idx = 1
-      for k, v in ipairs(opts) do if v == session.rounds then idx = k end end
-      session.setRounds(opts[(idx - 1 + d) % #opts + 1])
-    end
     -- Bots fill empty seats (only the host's game runs them).
     session.bots = session.bots or {}
     local full = #session.members + #session.bots >= session.MAX_PLAYERS
     love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.print("Add a bot", 54, by + 12)
     for k, name in ipairs(require("game.bot").NAMES) do
-      if ui.button("+ " .. name, 340 + (k - 1) * 94, by, 90, 50, { font = app.fonts.small, disabled = full }) then
+      if ui.button("+ " .. name, 136 + (k - 1) * 162, by, 156, 42, { font = app.fonts.small, disabled = full }) then
         local used = {}
         for _, m in ipairs(session.members) do if m.color then used[m.color] = true end end
         for _, bb in ipairs(session.bots) do used[bb.color] = true end
@@ -370,33 +437,25 @@ function Lobby:drawControls(session)
         table.insert(session.bots, { level = k, color = col })
       end
     end
+  end
+
+  love.graphics.setColor(1, 1, 1, 0.75)
+  ui.printFit(Lobby.rulesText(), app.fonts.med, 50, by + 54, 570, "center")
+  if not session.isHost then
+    love.graphics.setColor(1, 1, 1, 0.5)
+    ui.printFit("Waiting for the host to start...", app.fonts.small, 50, by + 80, 570, "center")
+  end
+
+  local y = 620
+  if session.isHost then
     local enough = #session.members + #session.bots >= 2
-    if ui.button(enough and "Start Match" or "Need 2+ players", 660, by, 560, 50,
-      { disabled = not enough, color = { 0.4, 1, 0.5 } }) then
+    if ui.button(enough and "Start Match" or "Need 2+ players", 50, y, 370, 54, { disabled = not enough, color = ui.GOOD }) then
       self:start()
     end
-  else
-    love.graphics.setFont(app.fonts.title)
-    love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(Lobby.rulesText() .. "  -  waiting for the host to start...", 0, by + 10, app.W, "center")
   end
-
-  if ui.button("Leave Lobby", app.W / 2 - 310, 570, 300, 46) then toMenu() end
-  if ui.button("Settings", app.W / 2 + 10, 570, 300, 46) then app.push(require("screens.settings").new()) end
-
-  love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.4)
-  if session.kind == "lan" then
-    love.graphics.printf("Everyone plays with the Online controls (mouse aim). Players need the same game version " ..
-      "as the host. Windows may ask to let the game through its firewall: allow it on private networks.",
-      100, 630, app.W - 200, "center")
-  else
-    love.graphics.printf("Friends can join with the code, or by accepting a Steam invite while they have the game open " ..
-      "(the game runs as Spacewar, so Steam can't launch it for them).", 100, 630, app.W - 200, "center")
-  end
-  if self.message then
-    app.centered(self.message, app.fonts.med, 672, { 1, 0.6, 0.45 })
-  end
+  if ui.button("Settings", 440, y, 390, 54) then app.push(require("screens.settings").new(4)) end
+  if ui.button("Leave Lobby", 850, y, 380, 54, { back = true }) then self:askLeave() end
+  if self.message then app.centered(self.message, app.fonts.med, 684, ui.BAD) end
 end
 
 return Lobby
