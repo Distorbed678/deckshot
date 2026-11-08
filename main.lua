@@ -55,25 +55,11 @@ function love.errorhandler(msg)
   end
 end
 
--- A simple generated window icon (a card with a crosshair) until there's real art.
+-- The window and taskbar icon (the .exe and AppImage icons are set in build.sh).
 local function setIcon()
   if platform.web or not love.window or not love.window.setIcon then return end
-  local size = 64
-  local img = love.image.newImageData(size, size)
-  img:mapPixel(function(x, y)
-    local cx, cy = x - 31.5, y - 31.5
-    local inCard = x >= 12 and x <= 51 and y >= 4 and y <= 59
-    local r = math.sqrt(cx * cx + cy * cy)
-    if inCard then
-      if math.abs(r - 13) < 2.2 or (math.abs(cx) < 1.6 and r < 20) or (math.abs(cy) < 1.6 and r < 20) then
-        return 0.1, 0.1, 0.13, 1
-      end
-      if y <= 18 then return 1, 0.55, 0.15, 1 end
-      return 0.92, 0.92, 0.95, 1
-    end
-    return 0, 0, 0, 0
-  end)
-  pcall(love.window.setIcon, img)
+  local ok, img = pcall(love.image.newImageData, "assets/icon.png")
+  if ok then pcall(love.window.setIcon, img) end
 end
 
 function love.load(args)

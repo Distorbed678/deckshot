@@ -79,13 +79,17 @@ build_linux() {
   sed -i "s|^#FUSE_PATH=\"\$APPDIR/my_game.love\"|FUSE_PATH=\"\$APPDIR/$NAME.love\"|" "$appdir/AppRun"
   grep -q "^FUSE_PATH=" "$appdir/AppRun" || die "could not set FUSE_PATH in AppRun"
 
+  # Our icon instead of LÖVE's.
+  rm -f "$appdir"/love.svg "$appdir"/love.png "$appdir"/.DirIcon
+  cp "$ROOT/assets/icon.png" "$appdir/$NAME.png"
+  cp "$ROOT/assets/icon.png" "$appdir/.DirIcon"
   rm -f "$appdir"/*.desktop
   cat > "$appdir/$NAME.desktop" <<EOF
 [Desktop Entry]
 Name=$TITLE
 Comment=2D duel game: lose a round, pick a card
 Exec=$NAME
-Icon=love
+Icon=$NAME
 Type=Application
 Categories=Game;
 Terminal=false
@@ -111,10 +115,14 @@ build_windows() {
   src="$(dirname "$(find "$BUILD/windows/runtime" -name love.exe | head -n 1)")"
   [ -f "$src/love.exe" ] || die "love.exe not found in $zipfile"
 
+  # Our icon instead of LÖVE's. This has to happen before the .love is appended.
+  (cd "$BUILD/windows" && npx --yes resedit-cli@3.1.1 --in "$src/love.exe" --out "$BUILD/windows/love-icon.exe" \
+    --icon "1,$ROOT/lib/windows/icon.ico") || die "could not set the Windows icon"
+
   # A fused exe is love.exe with the .love appended. Steam DLLs go next to it.
   out="$BUILD/windows/$NAME"
   mkdir -p "$out"
-  cat "$src/love.exe" "$DIST/$NAME.love" > "$out/$NAME.exe"
+  cat "$BUILD/windows/love-icon.exe" "$DIST/$NAME.love" > "$out/$NAME.exe"
   cp "$src"/*.dll "$src/license.txt" "$out/"
   cp "$ROOT/lib/windows/steam_api64.dll" "$ROOT/lib/windows/luasteam.dll" "$ROOT/steam_appid.txt" "$out/"
   copy_web "$out"

@@ -15,6 +15,18 @@ local function card(x, y, a, w, h, stripe)
   love.graphics.pop()
 end
 
+-- The card fan and crosshair on their own, centred on (x, y). Also the game's icon.
+function Logo.drawMark(x, y)
+  card(x - 26, y + 4, -0.34, 62, 90, { 0.3, 0.6, 1 })
+  card(x + 26, y + 4, 0.34, 62, 90, { 0.75, 0.35, 1 })
+  card(x, y - 4, 0, 66, 96, { 1, 0.55, 0.15 })
+  love.graphics.setColor(0.1, 0.1, 0.13)
+  love.graphics.setLineWidth(4)
+  love.graphics.circle("line", x, y + 8, 15)
+  love.graphics.line(x - 23, y + 8, x + 23, y + 8)
+  love.graphics.line(x, y + 8 - 23, x, y + 8 + 23)
+end
+
 -- cx, cy: the centre. alpha fades the whole logo.
 function Logo.draw(cx, cy, scale)
   local app = require "core.app"
@@ -26,14 +38,7 @@ function Logo.draw(cx, cy, scale)
   local text = "DECKSHOT"
   local tw = font:getWidth(text)
   local fanX = -tw / 2 - 66
-  card(fanX - 26, 4, -0.34, 62, 90, { 0.3, 0.6, 1 })
-  card(fanX + 26, 4, 0.34, 62, 90, { 0.75, 0.35, 1 })
-  card(fanX, -4, 0, 66, 96, { 1, 0.55, 0.15 })
-  love.graphics.setColor(0.1, 0.1, 0.13)
-  love.graphics.setLineWidth(4)
-  love.graphics.circle("line", fanX, 8, 15)
-  love.graphics.line(fanX - 23, 8, fanX + 23, 8)
-  love.graphics.line(fanX, 8 - 23, fanX, 8 + 23)
+  Logo.drawMark(fanX, 0)
   local top = -font:getHeight() / 2
   love.graphics.setFont(font)
   love.graphics.setColor(0, 0, 0, 0.5)

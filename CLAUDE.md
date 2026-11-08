@@ -10,8 +10,9 @@ Deckshot (formerly "Rounds Clone"): a fan-made game heavily inspired by ROUNDS (
 - Without Steam (or on an unsupported OS) `online/steam.lua` fails gracefully and online play is disabled.
 
 ## Building releases
-`./build.sh [all|linux|windows|web|love]` (Linux; needs curl, zip, unzip, and Node.js for `web`) writes to `dist/`:
+`./build.sh [all|linux|windows|web|love]` (Linux; needs curl, zip, unzip, and Node.js for `web` and the Windows icon) writes to `dist/`:
 - `Deckshot.love`: the game files (everything except `docs/`, `lib/`, `web/`, `*.md`, `*.sh`, `steam_appid.txt` and build output). `build_love` checks it contains `data/maps/order.txt`.
+- The game's icon is `assets/icon.png` (window and AppImage) and `lib/windows/icon.ico` (the `.exe`, applied with `resedit-cli` before the .love is appended). Both are drawn from `Logo.drawMark`.
 - `Deckshot-x86_64.AppImage`: LÖVE's AppImage with `Deckshot.love`, the Steam `.so` files and `web/` at the AppDir root. `FUSE_PATH` is set in `AppRun`, so the game runs fused.
 - `Deckshot-windows-x64.zip`: `Deckshot.exe` (love.exe with the .love appended), LÖVE's DLLs, the Steam DLLs and `web/`.
 - Both desktop packages carry the browser build in `web/` (`copy_web`; the web build runs first) so a LAN host can serve it to browsers.
