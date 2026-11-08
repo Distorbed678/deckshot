@@ -2,7 +2,8 @@
 -- When fx.recorder is a table (online host), every effect is also recorded so it
 -- can be replayed on clients.
 local fx = {
-  particles = {}, rings = {}, ghosts = {}, chunks = {}, shake = 0, kickX = 0, kickY = 0,
+  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, shake = 0, kickX = 0, kickY = 0,
+  showNumbers = true, -- damage numbers (a per-player setting)
   shakeScale = 1, particleScale = 1,
   recorder = nil,
 }
@@ -16,7 +17,8 @@ end
 fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
--- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick.
+-- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
+-- 10 damage number.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -82,6 +84,22 @@ function fx.debris(x, y, color, count, size)
   end
 end
 
+-- A floating damage number over a player (key: their slot). Hits close together add up.
+function fx.number(x, y, amount, key, crit)
+  if amount <= 0 then return end
+  record({ 10, x, y, amount, key or 0, crit and 1 or 0 })
+  if fx.mute then return end
+  for _, n in ipairs(fx.numbers) do
+    if n.key == key and n.age < 0.25 then
+      n.amount, n.x, n.y, n.age = n.amount + amount, x, y, 0
+      n.crit = n.crit or crit
+      return
+    end
+  end
+  table.insert(fx.numbers, { x = x, y = y, amount = amount, key = key, crit = crit, age = 0,
+    drift = (love.math.random() - 0.5) * 30 })
+end
+
 -- A small directional camera nudge (shooting recoil). Follows the shake setting.
 function fx.kick(dx, dy)
   record({ 9, dx, dy })
@@ -116,6 +134,7 @@ function fx.clear()
   fx.rings = {}
   fx.ghosts = {}
   fx.chunks = {}
+  fx.numbers = {}
   fx.shake = 0
   fx.kickX, fx.kickY = 0, 0
 end
@@ -154,6 +173,11 @@ function fx.update(dt)
       d.rot = d.rot + d.spin * dt
     end
   end
+  for i = #fx.numbers, 1, -1 do
+    local n = fx.numbers[i]
+    n.age = n.age + dt
+    if n.age > 0.9 then table.remove(fx.numbers, i) end
+  end
   fx.shake = math.max(0, fx.shake - 40 * dt)
   local k = math.max(0, 1 - 18 * dt)
   fx.kickX, fx.kickY = fx.kickX * k, fx.kickY * k
@@ -187,6 +211,30 @@ function fx.draw()
     love.graphics.setColor(1, 1, 1, 0.8 * (1 - t))
     love.graphics.setLineWidth(3)
     love.graphics.circle("line", r.x, r.y, r.r * (0.4 + 0.6 * t))
+  end
+end
+
+-- Damage numbers (drawn above everything in the arena).
+function fx.drawNumbers()
+  if not fx.showNumbers then return end
+  local app = require "core.app"
+  for _, n in ipairs(fx.numbers) do
+    local t = n.age
+    local a = t < 0.6 and 1 or math.max(0, 1 - (t - 0.6) / 0.3)
+    local pop = 1 + 0.4 * math.max(0, 1 - t * 8)
+    local font = n.crit and app.fonts.title or app.fonts.med
+    local text = tostring(math.floor(n.amount + 0.5))
+    love.graphics.setFont(font)
+    local w = font:getWidth(text)
+    local x, y = n.x + n.drift * t, n.y - 30 - 50 * t
+    love.graphics.push()
+    love.graphics.translate(x, y)
+    love.graphics.scale(pop, pop)
+    love.graphics.setColor(0, 0, 0, 0.6 * a)
+    love.graphics.print(text, -w / 2 + 2, 2)
+    if n.crit then love.graphics.setColor(1, 0.85, 0.2, a) else love.graphics.setColor(1, 1, 1, a) end
+    love.graphics.print(text, -w / 2, 0)
+    love.graphics.pop()
   end
 end
 

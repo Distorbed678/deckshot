@@ -335,6 +335,8 @@ function World:checkRoundEnd()
     return
   end
   self.roundWinner = last
+  self.history = self.history or {}
+  self.history[#self.history + 1] = last and last.slot or 0
   if last then
     if self.rules.teams and last.team then
       for _, p in ipairs(self.players) do
@@ -521,6 +523,8 @@ function World:newMatch()
   end
   self.winScore = self.startScore
   self.mapIndex = nil
+  for _, p in ipairs(self.players) do p:resetStats() end
+  self.history = {}
   self:beginMatch()
 end
 

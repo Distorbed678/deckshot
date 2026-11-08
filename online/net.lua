@@ -24,6 +24,7 @@ net.MSG = {
   PING = 14,    -- client -> host: a timestamp, echoed back as PONG (round-trip time)
   PONG = 15,
   STREAKS = 16, -- host -> clients: lobby win counts and streaks, by current peer id
+  KILL = 17,    -- host -> clients: kill feed entry (victim slot, killer slot or 0, cause)
 }
 local M = net.MSG
 
@@ -238,6 +239,15 @@ function net.decodeStreaks(data)
     out[id] = { wins = wins, streak = streak }
   end
   return out
+end
+
+function net.encodeKill(victim, killer, kind)
+  return pack("string", "<BBBs1", M.KILL, victim, killer or 0, (kind or ""):sub(1, 30))
+end
+
+function net.decodeKill(data)
+  local _, victim, killer, kind = unpack("<BBBs1", data)
+  return victim, killer > 0 and killer or nil, kind ~= "" and kind or nil
 end
 
 function net.encodePing(kind, t)

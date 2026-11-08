@@ -62,6 +62,7 @@ end
 -- `input` is an input state table (see input.lua) that this player reads every frame.
 function Player.new(id, color, input)
   local p = setmetatable({ id = id, color = color, input = input, cards = {}, score = 0 }, Player)
+  p:resetStats()
   p:recompute()
   return p
 end
@@ -103,6 +104,11 @@ function Player:recompute()
   s.radius = math.max(10, s.radius)
   self.stats = s
   self.r = s.radius
+end
+
+-- Match statistics (scoreboard): kills, deaths, damage dealt, shots, bullet hits, blocks, melee hits.
+function Player:resetStats()
+  self.st = { kills = 0, deaths = 0, dmg = 0, shots = 0, hits = 0, blocks = 0, melee = 0 }
 end
 
 -- Fire this player's trigger rules for an event. ctx: { target = player } or { x, y }.
@@ -918,6 +924,7 @@ function Player:meleeHit(e, heavy, p, dx, dy)
     fx.burst(e.x, e.y, { 1, 1, 1 }, heavy and 14 or 7, heavy and 320 or 200, 3)
     self:emitSound(heavy and "meleeHitHeavy" or "meleeHit")
     self:trigger("meleeHit", { target = e })
+    self.st.melee = self.st.melee + 1
     if heavy then self:trigger("heavyHit", { target = e }) end
   end
 end
@@ -1052,6 +1059,7 @@ function Player:tryFire()
   if self.ammo == 0 then self:emitSound("reload", 0.6) end
 
   self:volley(true, mult)
+  self.st.shots = self.st.shots + s.bullets
   self:trigger("shoot")
   if s.bloodPact > 0 and self.hp > 1 then -- Blood Pact: every shot costs HP (can't kill you)
     self.hp = math.max(1, self.hp - 5 * s.bloodPact)
@@ -1159,6 +1167,7 @@ end
 -- An attack hit our block. Parry recharges the block; extra copies also heal.
 function Player:blocked()
   local s = self.stats
+  self.st.blocks = self.st.blocks + 1
   self.riposteTimer = 1
   self:trigger("parry")
   if s.parry > 0 then
@@ -1209,6 +1218,8 @@ function Player:hit(amount, dx, dy, knock, source, kind)
     end
   end
   if self.hp < s.maxHp * 0.3 and self.hp + amount >= s.maxHp * 0.3 and self.hp > 0 then self:trigger("lowHp") end
+  if source and source ~= self and source.st then source.st.dmg = source.st.dmg + amount end
+  fx.number(self.x, self.y - self.r, amount, self.slot or 0, kind == "crit")
   self:trigger("hurt", { target = source })
   self.hitFlash = 0.1
   if kind ~= "melee" and kind ~= "edge" then self:emitSound("hit", math.min(1, 0.5 + taken / 60)) end
@@ -1275,6 +1286,9 @@ function Player:die(outOfBounds)
   self.hp = 0
   local killer = self.lastAttacker
   if killer and killer ~= self and killer.trigger and not killer.dead then killer:trigger("kill", { target = self }) end
+  self.st.deaths = self.st.deaths + 1
+  if killer and killer ~= self and killer.st then killer.st.kills = killer.st.kills + 1 end
+  if self.game and self.game.emit then self.game:emit("kill", self, killer ~= self and killer or nil, self.lastHitKind) end
   fx.burst(self.x, self.y, { 1, 1, 1 }, 15, 300, 4)
   fx.debris(self.x, self.y, self.color, 8, 9)
   self:emitSound("death")

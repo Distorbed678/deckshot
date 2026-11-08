@@ -33,18 +33,18 @@ Settings.BIND_SCHEMES = {
   { id = "p2", name = "Player 2 (local)", group = "keyboard",
     actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
   { id = "online", name = "Online", group = "online",
-    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee" } },
+    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "scoreboard" } },
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", melee = "Melee (hold)",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)",
 }
 Settings.DEFAULT_BINDS = {
   p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q" },
   p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift",
     dash = "/", melee = "." },
   online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2",
-    dash = "lshift", melee = "f" },
+    dash = "lshift", melee = "f", scoreboard = "tab" },
 }
 -- Keys that can't be bound (menu / fullscreen toggle).
 Settings.RESERVED_KEYS = { escape = true, f11 = true }
@@ -81,6 +81,8 @@ local defaults = {
   padOnline = false,     -- play online with the first gamepad instead of mouse + keys
   clientToken = "",      -- random id, so a LAN host can give you your slot back after a disconnect
   lobbyVisibility = "public", -- Steam lobbies: public (listed), friends, code (unlisted)
+  damageNumbers = true,  -- floating damage numbers
+  scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -408,6 +410,7 @@ function Settings.applyEffects()
   Bloom.intensity = Settings.BLOOM_LEVELS[v.bloomLevel][2]
   fx.shakeScale = Settings.SHAKE_LEVELS[v.shake][2]
   fx.particleScale = Settings.PARTICLE_LEVELS[v.particles][2]
+  fx.showNumbers = v.damageNumbers
   sfx.volumes.master = clamp(v.volMaster, 0, 10) / 10
   sfx.volumes.sfx = clamp(v.volSfx, 0, 10) / 10
   sfx.volumes.ui = clamp(v.volUi, 0, 10) / 10

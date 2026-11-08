@@ -37,7 +37,8 @@ end
 -- swing timer, swing power, melee range, heavy charge time, vertical speed
 -- ..., then for client prediction: last input applied (ack), vx, air jumps left, dashes left,
 -- movement flags, dash time left, dash cooldown, and the player's ping in ms.
-local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBH"
+-- ... and the scoreboard: kills, deaths, damage, shots, hits, blocks, melee hits.
+local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBHHHHHHHH"
 local BULLET_FMT = "<HhhhhBBB"
 
 function Snap.encode(world, events)
@@ -86,7 +87,8 @@ function Snap.encode(world, events)
       u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy),
       p.ack or 0, i16(p.vx), u8(p.jumpsLeft), u8(p.dashesLeft),
       bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0),
-      u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping))
+      u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping),
+      u16(p.st.kills), u16(p.st.deaths), u16(p.st.dmg), u16(p.st.shots), u16(p.st.hits), u16(p.st.blocks), u16(p.st.melee))
   end
 
   local bullets = world.bullets
@@ -113,6 +115,11 @@ function Snap.encode(world, events)
     local w = wells[i]
     add("<hhffBH", i16(w.x), i16(w.y), w.t, w.max, w.owner.slot or 0, u16(w.radius))
   end
+
+  -- Round history (winner slot per round, 0 = draw), for the scoreboard.
+  local hist = world.history or {}
+  add("<B", math.min(#hist, 255))
+  for i = math.max(1, #hist - 254), #hist do add("<B", hist[i]) end
 
   -- Map objects (same order as the map's list), spawned effects, the barrier.
   local objs = world.objects or {}
@@ -164,6 +171,8 @@ function Snap.encode(world, events)
       add("<BhhBBBBB", 8, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
     elseif kind == 9 then
       add("<Bhh", 9, i16(e[2] * 10), i16(e[3] * 10))
+    elseif kind == 10 then
+      add("<BhhHBB", 10, i16(e[2]), i16(e[3]), u16(e[4] * 10), u8(e[5]), e[6])
     else
       add("<B", 4)
     end
@@ -208,7 +217,9 @@ function Snap.decode(data)
     p.invuln, p.ammo, p.maxAmmo, p.reload, p.blockCd,
     p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry,
     flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy,
-    p.ack, p.vx, p.jumpsLeft, p.dashesLeft, mflags, p.dashT, p.dashCd2, p.ping, pos =
+    p.st = {}
+    p.ack, p.vx, p.jumpsLeft, p.dashesLeft, mflags, p.dashT, p.dashCd2, p.ping,
+    p.st.kills, p.st.deaths, p.st.dmg, p.st.shots, p.st.hits, p.st.blocks, p.st.melee, pos =
       unpack(PLAYER_FMT, raw, pos)
     p.onGround = bit.band(mflags, 1) ~= 0
     p.jumping = bit.band(mflags, 2) ~= 0
@@ -270,6 +281,11 @@ function Snap.decode(data)
     w.x, w.y, w.t, w.max, w.slot, w.radius, pos = unpack("<hhffBH", raw, pos)
     v.wells[i] = w
   end
+
+  local nh
+  nh, pos = unpack("<B", raw, pos)
+  v.history = {}
+  for i = 1, nh do v.history[i], pos = unpack("<B", raw, pos) end
 
   local no2
   no2, pos = unpack("<B", raw, pos)
@@ -333,6 +349,10 @@ function Snap.decode(data)
       local dx, dy
       dx, dy, pos = unpack("<hh", raw, pos)
       v.fx[i] = { 9, dx / 10, dy / 10 }
+    elseif kind == 10 then
+      local x, y, amount, key, crit
+      x, y, amount, key, crit, pos = unpack("<hhHBB", raw, pos)
+      v.fx[i] = { 10, x, y, amount / 10, key, crit == 1 }
     else
       v.fx[i] = { 4 }
     end

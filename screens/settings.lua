@@ -138,6 +138,17 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
     v.showFps = not v.showFps
     app.showFps = v.showFps
   end
+  ry = ry + gap
+
+  d = ui.cycler("Damage numbers", v.damageNumbers and "On" or "Off", rx, ry, colW, h)
+  if d ~= 0 then
+    v.damageNumbers = not v.damageNumbers
+    Settings.applyEffects()
+  end
+  ry = ry + gap
+
+  d = ui.cycler("Scoreboard key", v.scoreboardHold and "Hold" or "Toggle", rx, ry, colW, h)
+  if d ~= 0 then v.scoreboardHold = not v.scoreboardHold end
 end
 
 local function volumeText(v)

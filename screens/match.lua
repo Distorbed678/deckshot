@@ -213,6 +213,10 @@ function Match:hookWorld()
   w.on.roster = function()
     if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true) end
   end
+  w.on.kill = function(victim, killer, kind)
+    self:addKill(victim.slot, killer and killer.slot, kind)
+    if self.role == "host" then self:broadcast(net.encodeKill(victim.slot, killer and killer.slot, kind), true) end
+  end
   w.on.matchOver = function(winner)
     ui.reset()
     if self.role == "host" then self:recordStreaks(winner) end
@@ -416,6 +420,7 @@ function Match:applySnapshot(v)
     if #p.hist > 12 then table.remove(p.hist, 1) end
     if #p.hist == 1 then p.x, p.y = pv.x, pv.y end
     p.ping = pv.ping
+    p.st = pv.st
     p.aimX, p.aimY = math.cos(pv.aim), math.sin(pv.aim)
     p.facing = pv.facing
     p.hp = pv.hp
@@ -493,6 +498,7 @@ function Match:applySnapshot(v)
     end
   end
   view.effects = v.effects
+  view.history = v.history
   view.barrier = v.barrier
 
   for _, e in ipairs(v.fx) do
@@ -512,6 +518,8 @@ function Match:applySnapshot(v)
       fx.debris(e[2], e[3], e[4], e[5], e[6])
     elseif e[1] == 9 then
       fx.kick(e[2], e[3])
+    elseif e[1] == 10 then
+      fx.number(e[2], e[3], e[4], e[5], e[6])
     else
       fx.clear()
     end
@@ -690,6 +698,9 @@ function Match:clientNetwork()
           self.objMap = nil
         end
         self.mapsReady = true
+      elseif kind == net.MSG.KILL then
+        local ok, victim, killer, why = pcall(net.decodeKill, msg.data)
+        if ok then self:addKill(victim, killer, why) end
       elseif kind == net.MSG.STREAKS then
         local ok, st = pcall(net.decodeStreaks, msg.data)
         if ok then active.get().peerStreaks = st end
@@ -953,7 +964,25 @@ function Match:update(dt, isTop)
 end
 
 ---------------------------------------------------------------- input
+function Match:scoreboardVisible()
+  if self.showScores then return true end
+  if not Settings.values.scoreboardHold then return false end
+  if Input.isDown(Settings.values.binds.online.scoreboard) then return true end
+  for _, j in ipairs(Input.pads()) do
+    if j:isGamepadDown("back") then return true end
+  end
+  return false
+end
+
 function Match:keypressed(key)
+  if key == Settings.values.binds.online.scoreboard and not Settings.values.scoreboardHold then
+    self.showScores = not self.showScores
+    return
+  end
+  if key == "escape" and self.showScores then
+    self.showScores = false
+    return
+  end
   if key == "escape" and self.returnTo then
     app.switch(self.returnTo)
     return
@@ -1008,6 +1037,10 @@ end
 
 -- Gamepad buttons in a match. Returns true when used (otherwise they drive the menus).
 function Match:gamepadpressed(j, button)
+  if button == "back" then
+    if not Settings.values.scoreboardHold then self.showScores = not self.showScores end
+    return true
+  end
   if button == "start" then
     self.paused = not self.paused
     ui.reset()
@@ -1369,6 +1402,181 @@ function Match:drawDiscard(cp, color)
   end
 end
 
+---------------------------------------------------------------- HUD
+-- Big text that pops in (k: 0 -> 1 over its life).
+function Match:drawPop(text, k, color)
+  local scale = 1 + 0.6 * math.max(0, 1 - k * 4)
+  local a = k < 0.75 and 1 or math.max(0, 1 - (k - 0.75) * 4)
+  love.graphics.push()
+  love.graphics.translate(app.W / 2, 300)
+  love.graphics.scale(scale, scale)
+  love.graphics.setFont(app.fonts.huge)
+  love.graphics.setColor(0, 0, 0, 0.4 * a)
+  love.graphics.printf(text, -app.W / 2 + 4, -app.fonts.huge:getHeight() / 2 + 4, app.W, "center")
+  love.graphics.setColor(color[1], color[2], color[3], a)
+  love.graphics.printf(text, -app.W / 2, -app.fonts.huge:getHeight() / 2, app.W, "center")
+  love.graphics.pop()
+end
+
+local KILL_WORDS = {
+  melee = "punched out", edge = "hit the edge", explosion = "blown up", saw = "sawed", spikes = "spiked",
+  laser = "lasered", crusher = "crushed", fire = "burned", acid = "dissolved", falling = "flattened",
+  gas = "gassed", lightning = "struck by lightning",
+}
+
+function Match:addKill(victimSlot, killerSlot, kind)
+  self.killFeed = self.killFeed or {}
+  table.insert(self.killFeed, 1, { victim = victimSlot, killer = killerSlot, kind = kind, t = 5 })
+  if #self.killFeed > 5 then table.remove(self.killFeed) end
+end
+
+-- Top right, under the score panels: "Alice > Bob (melee)", "Carol was sawed".
+function Match:drawKillFeed()
+  local feed = self.killFeed
+  if not feed then return end
+  local players = self:players()
+  local dt = love.timer.getDelta()
+  local y = 120
+  love.graphics.setFont(app.fonts.small)
+  for i = #feed, 1, -1 do
+    feed[i].t = feed[i].t - dt
+    if feed[i].t <= 0 then table.remove(feed, i) end
+  end
+  for _, k in ipairs(feed) do
+    local a = math.min(1, k.t)
+    local v, kp = players[k.victim], k.killer and players[k.killer]
+    local vName = v and v.name or "?"
+    local text = {}
+    if kp and kp ~= v then
+      local c = kp.color
+      text = { { c[1], c[2], c[3], a }, kp.name or "?", { 1, 1, 1, 0.7 * a }, "  >  ", { v.color[1], v.color[2], v.color[3], a }, vName }
+      if k.kind and KILL_WORDS[k.kind] then
+        text[#text + 1] = { 1, 1, 1, 0.5 * a }
+        text[#text + 1] = "  (" .. (k.kind == "melee" and "melee" or KILL_WORDS[k.kind]) .. ")"
+      end
+    else
+      local c = v and v.color or { 1, 1, 1 }
+      text = { { c[1], c[2], c[3], a }, vName, { 1, 1, 1, 0.7 * a }, " " .. (KILL_WORDS[k.kind or ""] or "died") }
+    end
+    local w = 0
+    for j = 2, #text, 2 do w = w + app.fonts.small:getWidth(text[j]) end
+    love.graphics.setColor(0, 0, 0, 0.45 * a)
+    love.graphics.rectangle("fill", app.W - w - 36, y - 2, w + 16, 22, 4, 4)
+    love.graphics.setColor(1, 1, 1, a)
+    love.graphics.print(text, app.W - w - 28, y)
+    y = y + 26
+  end
+end
+
+-- Players above the open ceiling: an arrow at the top edge with their height.
+function Match:drawOffscreen(players)
+  for _, p in ipairs(players) do
+    if not p.dead and p.y < -p.r then
+      local x = math.max(20, math.min(app.W - 20, p.x))
+      local c = p.color
+      love.graphics.setColor(c[1], c[2], c[3], 0.9)
+      love.graphics.polygon("fill", x, 4, x - 12, 22, x + 12, 22)
+      love.graphics.setFont(app.fonts.tiny)
+      love.graphics.printf(math.floor(-p.y) .. "", x - 30, 24, 60, "center")
+    end
+  end
+end
+
+-- The human player(s) on this machine.
+function Match:myPlayers()
+  local out = {}
+  local players = self:players()
+  if self.role == "local" then
+    for _, p in ipairs(players) do
+      if not p.isBot and p.input and p.input.kind ~= "remote" then out[#out + 1] = p end
+    end
+  elseif players[self.mySlot or 0] then
+    out[1] = players[self.mySlot]
+  end
+  return out
+end
+
+-- Low HP (one person on this machine): red edges and a heartbeat.
+function Match:drawVignette(players)
+  local mine = self:myPlayers()
+  if #mine ~= 1 then return end
+  local p = mine[1]
+  local maxHp = p.stats and p.stats.maxHp or 100
+  if p.dead or p.hp >= maxHp * 0.3 then
+    self.heartT = 0
+    return
+  end
+  local k = 1 - p.hp / (maxHp * 0.3)
+  local pulse = 0.6 + 0.4 * math.sin(love.timer.getTime() * 7)
+  for i = 1, 6 do
+    local w = i * 14
+    love.graphics.setColor(0.8, 0, 0, (0.07 + 0.06 * k) * pulse)
+    love.graphics.rectangle("fill", 0, 0, w, app.H)
+    love.graphics.rectangle("fill", app.W - w, 0, w, app.H)
+    love.graphics.rectangle("fill", 0, 0, app.W, w * 0.7)
+    love.graphics.rectangle("fill", 0, app.H - w * 0.7, app.W, w * 0.7)
+  end
+  self.heartT = (self.heartT or 0) - love.timer.getDelta()
+  if self.heartT <= 0 then
+    self.heartT = 0.95 - 0.35 * k
+    sfx.play("heartbeat", nil, 0.5 + 0.5 * k, 1, true)
+  end
+end
+
+-- Scoreboard (held or toggled with the scoreboard key): stats per player and the round history.
+function Match:drawScoreboard()
+  local players = self:players()
+  local pw, rowH = 1000, 52
+  local ph = 150 + #players * rowH + 70
+  local px, py = (app.W - pw) / 2, (app.H - ph) / 2
+  love.graphics.setColor(0, 0, 0, 0.5)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  ui.panel(px, py, pw, ph)
+  love.graphics.setFont(app.fonts.big)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.printf("SCOREBOARD", px, py + 16, pw, "center")
+  local cols = { { "Player", 0, "left", 240 }, { "Score", 250 }, { "Kills", 340 }, { "Deaths", 430 }, { "Damage", 530 },
+    { "Accuracy", 640 }, { "Blocks", 750 }, { "Melee", 840 }, { "Ping", 920 } }
+  love.graphics.setFont(app.fonts.small)
+  love.graphics.setColor(1, 1, 1, 0.5)
+  for _, c in ipairs(cols) do love.graphics.printf(c[1], px + 30 + c[2], py + 74, c[4] or 80, c[3] or "center") end
+  local streaks = self.role ~= "local" and active.get().peerStreaks or {}
+  for i, p in ipairs(players) do
+    local y = py + 100 + (i - 1) * rowH
+    local st = p.st or {}
+    local acc = (st.shots or 0) > 0 and (math.floor((st.hits or 0) / st.shots * 100 + 0.5) .. "%") or "-"
+    local streak = streaks[p.peer or ""] or streaks[p.name or ""]
+    local vals = { tostring(p.score), tostring(st.kills or 0), tostring(st.deaths or 0), tostring(math.floor(st.dmg or 0)),
+      acc, tostring(st.blocks or 0), tostring(st.melee or 0),
+      self.role == "local" and "-" or (p.isBot and "bot" or (i == 1 and "host" or (p.ping and (p.ping .. "") or "-"))) }
+    love.graphics.setColor(1, 1, 1, 0.05)
+    love.graphics.rectangle("fill", px + 20, y - 6, pw - 40, rowH - 6, 6, 6)
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(p.color)
+    local name = (p.name or ("Player " .. i)) .. (p.disconnected and "  (left)" or "")
+    love.graphics.printf(name, px + 30, y + 6, 240, "left")
+    if streak and streak.streak > 1 then
+      love.graphics.setFont(app.fonts.tiny)
+      love.graphics.setColor(1, 0.8, 0.35)
+      love.graphics.print(streak.streak .. " in a row", px + 30, y + 28)
+      love.graphics.setFont(app.fonts.med)
+    end
+    love.graphics.setColor(1, 1, 1, 0.9)
+    for k, v in ipairs(vals) do love.graphics.printf(v, px + 30 + cols[k + 1][2], y + 6, 80, "center") end
+  end
+  -- Round by round: a dot per round in the winner's colour.
+  local hist = self.role == "client" and self.view.history or (self.world and self.world.history) or {}
+  local y = py + 100 + #players * rowH + 14
+  love.graphics.setFont(app.fonts.small)
+  love.graphics.setColor(1, 1, 1, 0.5)
+  love.graphics.print("Rounds", px + 30, y)
+  for k, slot in ipairs(hist) do
+    local c = players[slot] and players[slot].color or { 0.5, 0.5, 0.5 }
+    love.graphics.setColor(c)
+    love.graphics.circle("fill", px + 110 + (k - 1) * 22, y + 9, 8)
+  end
+end
+
 -- slot -> World.VOTE_* (online only; the host's world, or the clients' snapshots).
 function Match:votes()
   if self.role == "client" then
@@ -1453,10 +1661,12 @@ function Match:drawMatchOver(st)
   end
   if ui.button(withVotes("New Match", tally[World.VOTE_NEW]), x, 432, w, h) then self:newMatch() end
   if self.role == "host" then
-    if ui.button("Back to Lobby", x, 494, w, h) then self:backToLobby() end
+    if ui.button("Back to Lobby", x, 494, w / 2 - 5, h) then self:backToLobby() end
+    if ui.button("Scoreboard", x + w / 2 + 5, 494, w / 2 - 5, h) then self.showScores = not self.showScores end
     self:drawVotes(568)
   else
-    if ui.button("Main Menu", x, 494, w, h) then app.switch(require("screens.menu").new()) end
+    if ui.button("Main Menu", x, 494, w / 2 - 5, h) then app.switch(require("screens.menu").new()) end
+    if ui.button("Scoreboard", x + w / 2 + 5, 494, w / 2 - 5, h) then self.showScores = not self.showScores end
   end
 end
 
@@ -1515,6 +1725,8 @@ function Match:draw()
   for _, b in ipairs(bullets) do b:draw() end
   for _, p in ipairs(players) do p:draw() end
   fx.draw()
+  self:drawOffscreen(players)
+  fx.drawNumbers()
   love.graphics.pop()
 
   if barrier then hud.drawBarrier(barrier) end
@@ -1538,8 +1750,17 @@ function Match:draw()
     app.centered(t.text, app.fonts.med, 92 + i * 26, { c[1], c[2], c[3], math.min(1, t.t) })
   end
 
+  self:drawVignette(players)
+  self:drawKillFeed()
   if st.state == "countdown" then
-    app.centered(tostring(math.max(1, math.ceil(st.timer / 0.8))), app.fonts.huge, 250, { 1, 1, 1, 0.9 })
+    -- 3, 2, 1: each number pops in big and settles.
+    local n = math.max(1, math.ceil(st.timer / 0.8))
+    local k = 1 - ((st.timer / 0.8) % 1)
+    self:drawPop(tostring(n), k, { 1, 1, 1 })
+    self.fightT = 0
+  elseif st.state == "playing" and (self.fightT or 1) < 0.7 then
+    self.fightT = (self.fightT or 0) + love.timer.getDelta()
+    self:drawPop("FIGHT!", self.fightT / 0.7, { 1, 0.85, 0.3 })
   elseif st.state == "roundOver" then
     if st.winner then
       app.centered((st.winner.name or "Player"):upper() .. " WINS THE ROUND", app.fonts.big, 280, st.winner.color)
@@ -1578,6 +1799,8 @@ function Match:draw()
   if self:usesTouch() and not self.paused and (st.state == "countdown" or st.state == "playing" or st.state == "roundOver") then
     require("core.touch").draw()
   end
+
+  if self:scoreboardVisible() then self:drawScoreboard() end
 
   if self.paused then
     self:drawPause()

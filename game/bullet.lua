@@ -424,8 +424,9 @@ function Bullet:hitPlayer(p, game)
   if self.phased and self.ghostLevel > 1 then dmg = dmg * extra(self.ghostLevel, 0.25) end
   if os.execute > 0 and p.hp < p.stats.maxHp * 0.35 then dmg = dmg * (1 + 0.5 * os.execute) end
   if os.combo > 0 and o.comboCount > 0 then dmg = dmg * (1 + 0.1 * os.combo * math.min(5, o.comboCount)) end
-  local landed = p:hit(dmg, self.vx, self.vy, self.knockback, o)
+  local landed = p:hit(dmg, self.vx, self.vy, self.knockback, o, self.crit and "crit" or nil)
   if landed then
+    if o.st then o.st.hits = o.st.hits + 1 end
     if not self.fromTrigger and not self.isChild and o.trigger then o:trigger("hit", { target = p }) end
     if (os.bloodPact or 0) > 0 and not o.dead and o.heal then o:heal(10 * os.bloodPact) end
     if self.lifesteal > 0 then o:heal(dmg * self.lifesteal) end
