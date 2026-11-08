@@ -1,7 +1,8 @@
 -- Input sources. Each player reads an input state table:
 --   left, right, up, down, fire, jumpHeld  (held this frame)
 --   aim       (angle in radians for mouse aim, nil for keyboard aim)
---   jumpCount, blockCount (press counters; a change means "pressed")
+--   meleeHeld (melee button held: a tap is a light swing, holding charges a heavy one)
+--   jumpCount, blockCount, dashCount, meleeCount (press counters; a change means "pressed")
 --   pickHover (card the player is hovering while picking, 0 = none; sent to the host)
 -- Bindings come from Settings.values.binds and are read live, so rebinding applies at once.
 local Input = {}
@@ -10,7 +11,8 @@ local function newState(kind)
   return {
     kind = kind,
     left = false, right = false, up = false, down = false, fire = false, jumpHeld = false,
-    aim = nil, jumpCount = 0, blockCount = 0, pickHover = 0,
+    meleeHeld = false,
+    aim = nil, jumpCount = 0, blockCount = 0, dashCount = 0, meleeCount = 0, pickHover = 0,
   }
 end
 
@@ -63,6 +65,7 @@ end
 
 local function clearHeld(s)
   s.left, s.right, s.up, s.down, s.fire, s.jumpHeld = false, false, false, false, false, false
+  s.meleeHeld = false
 end
 
 -- Refresh held state. (px, py) is the player's position, used for mouse aim.
@@ -77,10 +80,12 @@ function Input.poll(s, suppressed, px, py, mx, my)
   if s.kind == "keys" then
     s.left, s.right, s.up, s.down, s.fire = down(c.left), down(c.right), down(c.up), down(c.down), down(c.fire)
     s.jumpHeld = s.up
+    s.meleeHeld = down(c.melee)
   elseif s.kind == "mouse" then
     s.left, s.right, s.down = down(c.left), down(c.right), down(c.down)
     s.jumpHeld = down(c.jump) or down(c.jump2)
     s.fire = down(c.fire)
+    s.meleeHeld = down(c.melee)
     if px and mx then s.aim = math.atan2(my - py, mx - px) end
   end
 end
@@ -88,6 +93,8 @@ end
 -- A key or mouse button ("mouse1"...) was pressed.
 local function pressed(s, b)
   local c = s.controls
+  if b == c.dash then s.dashCount = s.dashCount + 1 end
+  if b == c.melee then s.meleeCount = s.meleeCount + 1 end
   if s.kind == "keys" then
     if b == c.up then s.jumpCount = s.jumpCount + 1 end
     if b == c.block then s.blockCount = s.blockCount + 1 end

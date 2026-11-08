@@ -34,19 +34,22 @@ end
 function net.encodeInput(s, seq)
   local flags = bit.bor(
     s.left and 1 or 0, s.right and 2 or 0, s.down and 4 or 0,
-    s.fire and 8 or 0, s.jumpHeld and 16 or 0)
-  return pack("string", "<BI4BfI4I4B", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
-    math.max(0, math.min(255, s.pickHover or 0)))
+    s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0)
+  return pack("string", "<BI4BfI4I4I4I4B", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
+    s.dashCount or 0, s.meleeCount or 0, math.max(0, math.min(255, s.pickHover or 0)))
 end
 
 -- Returns the packet's sequence number.
 function net.decodeInput(data, s)
-  local _, seq, flags, aim, jc, bc, hover = unpack("<BI4BfI4I4B", data)
+  local _, seq, flags, aim, jc, bc, dc, mc, hover = unpack("<BI4BfI4I4I4I4B", data)
   s.left = bit.band(flags, 1) ~= 0
   s.right = bit.band(flags, 2) ~= 0
   s.down = bit.band(flags, 4) ~= 0
   s.fire = bit.band(flags, 8) ~= 0
   s.jumpHeld = bit.band(flags, 16) ~= 0
+  s.meleeHeld = bit.band(flags, 32) ~= 0
+  s.dashCount = dc
+  s.meleeCount = mc
   s.aim = aim
   s.jumpCount = jc
   s.blockCount = bc

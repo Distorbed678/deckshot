@@ -239,7 +239,10 @@ function Match:newProxy(slot, name)
   return setmetatable({
     id = slot, slot = slot, name = name, color = World.COLORS[slot],
     cards = {}, score = 0,
-    stats = { maxHp = 100, ammo = 3, reloadTime = 1, blockCooldown = 1, orbs = 0, stasis = 0, sentry = 0 },
+    stats = { maxHp = 100, ammo = 3, reloadTime = 1, blockCooldown = 1, orbs = 0, stasis = 0, sentry = 0,
+      meleeRange = 55, heavyCharge = 0.6 },
+    stunTimer = 0, charging = false, meleeCharge = 0, swingTimer = 0, swingHeavy = false, swingPower = 0,
+    dashTimer = 0, vx = 0, vy = 0,
     vote = 0, shield = 0,
     decay = { { remaining = 0 } },
     x = -1000, y = -1000, r = 20, aimX = 1, aimY = 0, facing = 1,
@@ -292,6 +295,12 @@ function Match:applySnapshot(v)
     p.vote = pv.vote
     p.shield = pv.shield
     s.sentry = pv.sentry
+    p.stunTimer = pv.stunned and 1 or 0
+    p.charging, p.meleeCharge = pv.charging, pv.meleeCharge
+    p.swingTimer, p.swingHeavy, p.swingPower = pv.swingTimer, pv.swingHeavy, pv.swingPower
+    p.dashTimer = pv.dashing and 1 or 0
+    p.vy = pv.vy
+    s.meleeRange, s.heavyCharge = pv.meleeRange, pv.heavyCharge
   end
 
   local views, list = {}, {}
@@ -346,6 +355,7 @@ function Match:clientInterpolate(dt)
       p.y = p.fromY + (p.toY - p.fromY) * t
     end
     p.hitFlash = math.max(0, p.hitFlash - dt)
+    p.swingTimer = math.max(0, (p.swingTimer or 0) - dt)
   end
   local age = love.timer.getTime() - self.snapTime
   for _, b in ipairs(self.bulletList) do
@@ -413,7 +423,8 @@ function Match:hostNetwork(dt)
         if seq > info.seq then
           info.seq = seq
           local inp = self.world.players[info.slot].input
-          for _, k in ipairs({ "left", "right", "down", "fire", "jumpHeld", "aim", "jumpCount", "blockCount" }) do
+          for _, k in ipairs({ "left", "right", "down", "fire", "jumpHeld", "meleeHeld", "aim", "jumpCount", "blockCount",
+            "dashCount", "meleeCount" }) do
             inp[k] = scratch[k]
           end
           if scratch.pickHover > 0 then self.world:hover(info.slot, scratch.pickHover) end

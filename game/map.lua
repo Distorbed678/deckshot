@@ -234,21 +234,44 @@ function Map.overlaps(ax, ay, aw, ah, b)
   return ax < b.x + b.w and ax + aw > b.x and ay < b.y + b.h and ay + ah > b.y
 end
 
--- Returns the first rect overlapping the given box, or nil.
+-- Returns the first solid rect overlapping the given box, or nil. One-way platforms
+-- (rect.oneway) are skipped: only players land on them, from above.
 function Map.hit(rects, x, y, w, h)
   for _, b in ipairs(rects) do
-    if Map.overlaps(x, y, w, h, b) then return b end
+    if not b.oneway and Map.overlaps(x, y, w, h, b) then return b end
   end
   return nil
 end
 
 function Map.draw(map)
   for _, b in ipairs(map.rects) do
-    love.graphics.setColor(0.3, 0.31, 0.38)
-    love.graphics.rectangle("fill", b.x, b.y, b.w, b.h)
-    love.graphics.setColor(0.45, 0.46, 0.55)
-    love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
+    if b.oneway then
+      love.graphics.setColor(0.3, 0.31, 0.38, 0.55)
+      love.graphics.rectangle("fill", b.x, b.y, b.w, math.min(b.h, 10))
+      love.graphics.setColor(0.62, 0.64, 0.75)
+      love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
+    else
+      love.graphics.setColor(0.3, 0.31, 0.38)
+      love.graphics.rectangle("fill", b.x, b.y, b.w, b.h)
+      love.graphics.setColor(0.45, 0.46, 0.55)
+      love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
+    end
   end
+  Map.drawEdges()
+end
+
+-- The arena's damaging edges (left, right, bottom).
+function Map.drawEdges()
+  local t = love.timer.getTime()
+  local a = 0.45 + 0.15 * math.sin(t * 3)
+  love.graphics.setColor(1, 0.2, 0.18, a)
+  love.graphics.rectangle("fill", 0, 0, 4, 720)
+  love.graphics.rectangle("fill", 1276, 0, 4, 720)
+  love.graphics.rectangle("fill", 0, 716, 1280, 4)
+  love.graphics.setColor(1, 0.2, 0.18, a * 0.25)
+  love.graphics.rectangle("fill", 4, 0, 8, 720)
+  love.graphics.rectangle("fill", 1268, 0, 8, 720)
+  love.graphics.rectangle("fill", 0, 708, 1280, 8)
 end
 
 return Map

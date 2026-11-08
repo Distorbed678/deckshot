@@ -249,7 +249,7 @@ end
 
 function Bullet:step(dt, game)
   local r = self.r
-  local rects = game.map.rects
+  local rects = game.solids or game.map.rects
   local mx, my = self.vx * dt, self.vy * dt
   self.travel = self.travel + math.sqrt(mx * mx + my * my)
 

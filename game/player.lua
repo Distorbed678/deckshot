@@ -5,13 +5,39 @@ local Bullet = require "game.bullet"
 local Player = {}
 Player.__index = Player
 
+-- Movement tuning (Celeste / Hollow Knight style). Cards scale speed, jump, gravityMul and airJumps.
+local MOVE = {
+  groundAccel = 6000, groundDecel = 7000, turnMul = 1.5,
+  airAccel = 3900, airDecel = 2600,
+  overDecelGround = 2400, overDecelAir = 900, -- above max speed (knockback, dash, launches)
+  lockAccel = 600,                            -- while knocked back
+  gravity = 2400, apexGravityMul = 0.5, apexThreshold = 90, fallGravityMul = 1.5,
+  maxFall = 900, fastFallMax = 1400, fastFallMul = 2,
+  jumpCut = 0.45, coyote = 0.1, jumpBuffer = 0.12,
+  wallSlide = 160, wallCoyote = 0.08,
+  cornerCeiling = 8, cornerLedge = 6,
+  dashTime = 0.14, dashKeep = 0.6, dropTime = 0.25,
+}
+Player.MOVE = MOVE
+
 -- Wall jump: upward speed (fraction of jump), push away from the wall (fraction of move
 -- speed) and how long steering is weakened afterwards.
-Player.WALL_JUMP = { up = 0.95, push = 0.6, lock = 0.1 }
+Player.WALL_JUMP = { up = 0.95, push = 0.65, lock = 0.12 }
 
-local GRAVITY = 1800
-local MAX_FALL = 1100
-local WALL_SLIDE = 120
+-- Melee: a tap is a light swing, holding charges a heavy swing with a lunge.
+local MELEE = {
+  lightThreshold = 0.15, -- held longer than this = heavy
+  overHold = 0.35,       -- a full charge releases by itself after this extra hold
+  cone = math.rad(75),
+  lightStun = 0.25, heavyStunMin = 0.25, heavyStunMax = 0.8,
+  lungeTime = 0.12, swingShow = 0.16, chargeSpeedMul = 0.6,
+}
+Player.MELEE = MELEE
+
+-- Arena edges (left, right, bottom): damage and a launch back in. The top is open.
+local EDGE = { damage = 30, launch = 900, launchUp = 650, bottomLaunch = 1150, cooldown = 0.3 }
+Player.EDGE = EDGE
+
 local ORB_DISTANCE = 55
 local ORB_SIZE = 9
 local SHOCKWAVE_RADIUS = 170
@@ -21,7 +47,10 @@ local ARENA_W, ARENA_H = 1280, 720
 
 local BASE = {
   maxHp = 100, radius = 20,
-  speed = 340, jump = 800, airJumps = 0, gravityMul = 1,
+  speed = 340, jump = 930, airJumps = 0, gravityMul = 1,
+  dashes = 1, dashSpeed = 950, dashCooldown = 0.6,
+  meleeDamage = 12, meleeKnockback = 450, meleeRange = 55, meleeCooldown = 0.45,
+  heavyCharge = 0.6, heavyDash = 260, meleeStun = 0, meleeLifesteal = 0,
   damage = 34, bulletSpeed = 950, bulletGravity = 0.25, bulletSize = 5,
   bullets = 1, spread = 0, bounces = 0,
   fireDelay = 0.25, ammo = 3, reloadTime = 1.5,
@@ -127,7 +156,25 @@ function Player:spawn(x, y, facing, game)
   self.staticTimer = 0
   self.seenJump = self.input.jumpCount
   self.seenBlock = self.input.blockCount
+  self.seenDash = self.input.dashCount or 0
+  self.seenMelee = self.input.meleeCount or 0
   self.jumpWasHeld = self.input.jumpHeld
+  self.jumpBuffer = 0
+  self.jumping = false       -- rising from our own jump (release cuts it short)
+  self.wallCoyote, self.lastWallDir = 0, 0
+  self.groundOneway = false  -- standing on a one-way platform
+  self.dropTimer = 0         -- falling through one-way platforms
+  self.dashesLeft = self.stats.dashes
+  self.dashTimer, self.dashCd = 0, 0
+  self.dashX, self.dashY = 0, 0
+  self.edgeCd = 0
+  self.stunTimer = 0
+  self.meleeCd = 0
+  self.charging, self.meleeCharge = false, 0
+  self.lungeTimer, self.lungePower = 0, 0
+  self.lungeHit = nil
+  self.swingTimer, self.swingHeavy, self.swingPower = 0, false, 0
+  self.lastAttacker = nil
 end
 
 function Player:isBlocking()
@@ -204,10 +251,23 @@ function Player:update(dt, frozen)
     if self.dead then return end
   end
 
-  -- Jump/block are edge-triggered from press counters, so no press is ever lost.
   local inp = self.input
-  if frozen then
+  local stunned = self.stunTimer > 0
+  self.stunTimer = math.max(0, self.stunTimer - dt)
+  self.dashCd = math.max(0, self.dashCd - dt)
+  self.meleeCd = math.max(0, self.meleeCd - dt)
+  self.edgeCd = math.max(0, self.edgeCd - dt)
+  self.dropTimer = math.max(0, self.dropTimer - dt)
+  self.swingTimer = math.max(0, self.swingTimer - dt)
+  self.jumpBuffer = math.max(0, self.jumpBuffer - dt)
+
+  -- Jump/block/dash/melee are edge-triggered from press counters, so no press is ever lost.
+  -- While frozen (countdown) or stunned, presses are swallowed.
+  local acting = not frozen and not stunned
+  if not acting then
     self.seenJump, self.seenBlock = inp.jumpCount, inp.blockCount
+    self.seenDash, self.seenMelee = inp.dashCount or 0, inp.meleeCount or 0
+    self.charging = false
   else
     if inp.jumpCount ~= self.seenJump then
       self.seenJump = inp.jumpCount
@@ -217,13 +277,31 @@ function Player:update(dt, frozen)
       self.seenBlock = inp.blockCount
       self:blockPressed()
     end
+    if (inp.dashCount or 0) ~= self.seenDash then
+      self.seenDash = inp.dashCount or 0
+      self:dashPressed()
+    end
+    if (inp.meleeCount or 0) ~= self.seenMelee then
+      self.seenMelee = inp.meleeCount or 0
+      if self.meleeCd <= 0 and not self.charging and self.lungeTimer <= 0 then
+        self.charging, self.meleeCharge = true, 0
+      end
+    end
     if self.jumpWasHeld and not inp.jumpHeld then self:jumpReleased() end
   end
   self.jumpWasHeld = inp.jumpHeld
 
+  -- Melee charge: release (or overholding a full charge) swings.
+  if self.charging then
+    self.meleeCharge = self.meleeCharge + dt
+    if not inp.meleeHeld or self.meleeCharge >= MELEE.lightThreshold + s.heavyCharge + MELEE.overHold then
+      self:meleeRelease()
+    end
+  end
+
   -- Horizontal movement
   local dir = 0
-  if not frozen then
+  if acting then
     if inp.left then dir = dir - 1 end
     if inp.right then dir = dir + 1 end
   end
@@ -231,15 +309,27 @@ function Player:update(dt, frozen)
   local speed = s.speed * (self.slowTimer > 0 and 0.5 or 1)
   if self.sprintTimer > 0 then speed = speed * (1 + 0.4 * s.sprintBlock) end
   if self:adrenalineActive() then speed = speed * (1 + 0.2 * s.adrenaline) end
-  local accel = self.onGround and 4000 or 2200
-  if self.controlLock > 0 then accel = 600 end
-  self.vx = approach(self.vx, dir * speed, accel * dt)
+  if self.charging and self.meleeCharge > MELEE.lightThreshold then speed = speed * MELEE.chargeSpeedMul end
 
-  -- Gravity and wall slide
-  local fastFall = inp.aim and inp.down and not frozen and not self.onGround
-  self.vy = math.min(self.vy + GRAVITY * s.gravityMul * (fastFall and 2.2 or 1) * dt, MAX_FALL)
-  if not self.onGround and self.wallDir ~= 0 and dir == self.wallDir and self.vy > WALL_SLIDE then
-    self.vy = WALL_SLIDE
+  if self.dashTimer > 0 or self.lungeTimer > 0 then
+    -- Dashing / lunging: fixed velocity, no gravity.
+    if self.dashTimer > 0 then
+      self.dashTimer = self.dashTimer - dt
+      self.vx, self.vy = self.dashX, self.dashY
+      if self.dashTimer <= 0 then
+        self.vx, self.vy = self.vx * MOVE.dashKeep, self.vy * MOVE.dashKeep
+      end
+    else
+      self.lungeTimer = self.lungeTimer - dt
+      self.vx, self.vy = self.dashX, self.dashY
+      self:meleeHitCheck()
+      if self.lungeTimer <= 0 then
+        self.vx, self.vy = self.vx * 0.35, self.vy * 0.35
+        self:meleeHitCheck(true)
+      end
+    end
+  else
+    self:runPhysics(dt, dir, speed, acting)
   end
 
   -- Enemy black holes pull you in
@@ -256,17 +346,32 @@ function Player:update(dt, frozen)
     end
   end
 
-  local rects = game.map.rects
+  local rects = game.solids or game.map.rects
+  local wasGround = self.onGround
   self:moveX(self.vx * dt, rects)
   self:moveY(self.vy * dt, rects)
   self:senseWalls(rects)
+  self:checkEdges()
+  if self.dead then return end
 
   if self.onGround then
-    self.coyote = 0.08
+    self.coyote = MOVE.coyote
+    self.jumping = false
   else
     self.coyote = math.max(0, self.coyote - dt)
   end
-  if self.onGround or self.wallDir ~= 0 then self.jumpsLeft = s.airJumps end
+  if self.wallDir ~= 0 then
+    self.wallCoyote, self.lastWallDir = MOVE.wallCoyote, self.wallDir
+  else
+    self.wallCoyote = math.max(0, self.wallCoyote - dt)
+  end
+  if self.onGround or self.wallDir ~= 0 then
+    self.jumpsLeft = s.airJumps
+    if self.dashTimer <= 0 and self.dashesLeft < s.dashes then self.dashesLeft = s.dashes end
+  end
+  if self.onGround and not wasGround then self:landed() end
+  -- A buffered jump fires as soon as it can.
+  if self.jumpBuffer > 0 and acting and (self.onGround or self.wallDir ~= 0) then self:jumpPressed(true) end
 
   if inp.aim then
     -- Mouse aim (online): free angle, facing follows the aim.
@@ -283,7 +388,7 @@ function Player:update(dt, frozen)
     self.aimX, self.aimY = math.cos(angle) * self.facing, math.sin(angle)
   end
 
-  local holding = not frozen and inp.fire
+  local holding = acting and inp.fire
   if holding then self:tryFire() end
   -- Overclock copies make the ramp drain more slowly.
   if not holding or self.ammo == 0 then self.spin = math.max(0, self.spin - dt * 1.5 / math.max(1, s.spinup)) end
@@ -304,7 +409,99 @@ function Player:update(dt, frozen)
     if s.sentry > 0 then self:updateSentry(dt) end
   end
 
-  if self.y > 820 or self.x < -150 or self.x > 1430 then self:die(true) end
+end
+
+-- Running, gravity and wall sliding (not while dashing).
+function Player:runPhysics(dt, dir, speed, acting)
+  local s, inp = self.stats, self.input
+  local target = dir * speed
+  local accel
+  if self.controlLock > 0 then
+    accel = MOVE.lockAccel
+  elseif math.abs(self.vx) > speed and (dir == 0 or (self.vx > 0) == (dir > 0)) then
+    accel = self.onGround and MOVE.overDecelGround or MOVE.overDecelAir -- keep momentum from launches
+    target = dir == 0 and 0 or (self.vx > 0 and speed or -speed)
+  elseif dir == 0 then
+    accel = self.onGround and MOVE.groundDecel or MOVE.airDecel
+  else
+    accel = self.onGround and MOVE.groundAccel or MOVE.airAccel
+    if self.vx ~= 0 and (self.vx > 0) ~= (dir > 0) then accel = accel * MOVE.turnMul end
+  end
+  self.vx = approach(self.vx, target, accel * dt)
+
+  -- Gravity: light near the apex while jump is held, heavier when falling.
+  local g = MOVE.gravity * s.gravityMul
+  if math.abs(self.vy) < MOVE.apexThreshold and inp.jumpHeld and acting then
+    g = g * MOVE.apexGravityMul
+  elseif self.vy > 0 then
+    g = g * MOVE.fallGravityMul
+  end
+  local maxFall = MOVE.maxFall
+  local fastFall = acting and inp.down and not self.onGround and self.vy > -MOVE.apexThreshold
+  if fastFall then
+    g = g * MOVE.fastFallMul
+    maxFall = MOVE.fastFallMax
+  end
+  if self.vy < maxFall then
+    self.vy = math.min(self.vy + g * dt, maxFall)
+  else
+    self.vy = approach(self.vy, maxFall, g * dt) -- launched faster than the clamp: ease back
+  end
+  if self.vy > 0 then self.jumping = false end
+
+  if not self.onGround and self.wallDir ~= 0 and dir == self.wallDir and self.vy > MOVE.wallSlide then
+    self.vy = MOVE.wallSlide
+  end
+end
+
+-- Just touched the ground.
+function Player:landed()
+end
+
+-- Left, right and bottom edges hurt and launch you back in; blocking makes it a free bounce.
+function Player:checkEdges()
+  local r = self.r
+  local side
+  if self.x - r < 0 then
+    self.x = r
+    side = "left"
+  elseif self.x + r > ARENA_W then
+    self.x = ARENA_W - r
+    side = "right"
+  elseif self.y + r > ARENA_H then
+    self.y = ARENA_H - r
+    side = "bottom"
+  end
+  if not side then return end
+  if side == "left" then
+    self.vx, self.vy = EDGE.launch, math.min(self.vy, -EDGE.launchUp)
+  elseif side == "right" then
+    self.vx, self.vy = -EDGE.launch, math.min(self.vy, -EDGE.launchUp)
+  else
+    self.vy = -EDGE.bottomLaunch
+  end
+  self.controlLock = math.max(self.controlLock, 0.15)
+  self.dashTimer, self.lungeTimer = 0, 0
+  self.jumping = false
+  if self.edgeCd > 0 then return end
+  self.edgeCd = EDGE.cooldown
+  local ex = side == "left" and 0 or side == "right" and ARENA_W or self.x
+  local ey = side == "bottom" and ARENA_H or self.y
+  if self:isBlocking() then
+    fx.burst(ex, ey, { 1, 1, 1 }, 10, 260, 3)
+    self:blocked()
+    self:emitSound("edgeBlock")
+    return
+  end
+  fx.burst(ex, ey, { 1, 0.25, 0.2 }, 14, 320, 4)
+  self:emitSound("edge")
+  self:hit(EDGE.damage, 0, 0, 0, nil, "edge")
+end
+
+-- Sound hook (filled in by gfx/sfx.lua when it is loaded).
+function Player:emitSound(name, volume, pitch)
+  local sfx = package.loaded["gfx.sfx"]
+  if sfx then sfx.play(name, self.x, volume, pitch) end
 end
 
 function Player:updateOrbs(dt)
@@ -386,30 +583,67 @@ function Player:reloaded()
   end
 end
 
+-- Is the player's box at (x, y) free of solid rects? One-way platforms don't count.
+function Player:freeAt(x, y, rects)
+  local r = self.r
+  for _, b in ipairs(rects) do
+    if not b.oneway and Map.overlaps(x - r, y - r, r * 2, r * 2, b) then return false end
+  end
+  return true
+end
+
 function Player:moveX(dx, rects)
   local r = self.r
   self.x = self.x + dx
   for _, b in ipairs(rects) do
-    if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
-      if dx > 0 then self.x = b.x - r elseif dx < 0 then self.x = b.x + b.w + r end
-      self.vx = 0
+    if not b.oneway and Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
+      -- Ledge correction: clipping the top corner of a block steps up onto it.
+      local lift = (self.y + r) - b.y
+      if dx ~= 0 and self.vy >= 0 and lift > 0 and lift <= MOVE.cornerLedge
+          and self:freeAt(self.x, b.y - r, rects) then
+        self.y = b.y - r
+      else
+        if dx > 0 then self.x = b.x - r elseif dx < 0 then self.x = b.x + b.w + r end
+        self.vx = 0
+      end
     end
   end
 end
 
 function Player:moveY(dy, rects)
   local r = self.r
+  local prevBottom = self.y + r
   self.onGround = false
+  self.groundOneway = false
   self.y = self.y + dy
   for _, b in ipairs(rects) do
     if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
-      if dy > 0 then
+      if b.oneway then
+        -- Only lands from above, and not while dropping through.
+        if dy >= 0 and prevBottom <= b.y + 0.5 and self.dropTimer <= 0 then
+          self.y = b.y - r
+          self.vy = 0
+          self.onGround = true
+          self.groundOneway = true
+        end
+      elseif dy > 0 then
         self.y = b.y - r
+        self.vy = 0
         self.onGround = true
       elseif dy < 0 then
-        self.y = b.y + b.h + r
+        -- Corner correction: bumping a ceiling's edge slides around it.
+        local fromLeft = (self.x + r) - b.x
+        local fromRight = (b.x + b.w) - (self.x - r)
+        if fromLeft <= MOVE.cornerCeiling and self:freeAt(b.x - r, self.y, rects) then
+          self.x = b.x - r
+        elseif fromRight <= MOVE.cornerCeiling and self:freeAt(b.x + b.w + r, self.y, rects) then
+          self.x = b.x + b.w + r
+        else
+          self.y = b.y + b.h + r
+          self.vy = 0
+          self.jumping = false
+        end
       end
-      self.vy = 0
     end
   end
 end
@@ -425,30 +659,160 @@ function Player:senseWalls(rects)
   end
 end
 
-function Player:jumpPressed()
+-- fromBuffer: a buffered press retried on landing / touching a wall.
+function Player:jumpPressed(fromBuffer)
   if self.dead then return end
-  local s = self.stats
+  local s, inp = self.stats, self.input
+  self.jumpBuffer = 0
+  -- Down + Jump on a one-way platform drops through it.
+  if inp.down and self.onGround and self.groundOneway then
+    self.dropTimer = MOVE.dropTime
+    self.onGround = false
+    self.coyote = 0
+    self.y = self.y + 2
+    return
+  end
   if self.onGround or self.coyote > 0 then
     self.vy = -s.jump
     self.coyote = 0
     self.onGround = false
-  elseif self.wallDir ~= 0 then
+    self.jumping = true
+    self.dashTimer = 0
+    fx.burst(self.x, self.y + self.r, { 0.8, 0.8, 0.85 }, 5, 110, 3)
+    self:emitSound("jump")
+  elseif self.wallDir ~= 0 or self.wallCoyote > 0 then
+    local wall = self.wallDir ~= 0 and self.wallDir or self.lastWallDir
     local wj = Player.WALL_JUMP
     self.vy = -s.jump * wj.up
-    self.vx = -self.wallDir * s.speed * wj.push
-    self.facing = -self.wallDir
+    self.vx = -wall * s.speed * wj.push
+    self.facing = -wall
     self.controlLock = wj.lock
-    fx.burst(self.x + self.wallDir * self.r, self.y, { 0.8, 0.8, 0.8 }, 5, 120, 3)
-  elseif self.jumpsLeft > 0 then
+    self.wallCoyote = 0
+    self.jumping = true
+    self.dashTimer = 0
+    fx.burst(self.x + wall * self.r, self.y, { 0.8, 0.8, 0.8 }, 5, 120, 3)
+    self:emitSound("wallJump")
+  elseif self.jumpsLeft > 0 and not fromBuffer then
     self.jumpsLeft = self.jumpsLeft - 1
     self.vy = -s.jump * 0.9
+    self.jumping = true
+    self.dashTimer = 0
     fx.burst(self.x, self.y + self.r, self.color, 6, 150, 3)
+    self:emitSound("doubleJump")
+  elseif not fromBuffer then
+    self.jumpBuffer = MOVE.jumpBuffer -- try again on landing
   end
 end
 
--- Releasing jump early cuts the jump short.
+-- Releasing jump early cuts the jump short (variable jump height).
 function Player:jumpReleased()
-  if not self.dead and self.vy < 0 then self.vy = self.vy * 0.5 end
+  if not self.dead and self.jumping and self.vy < 0 then self.vy = self.vy * MOVE.jumpCut end
+  self.jumping = false
+end
+
+-- 8-way dash: held direction keys, else the aim (mouse / stick), else facing.
+function Player:dashPressed()
+  local s, inp = self.stats, self.input
+  if self.dead or self.dashCd > 0 or self.dashesLeft <= 0 or self.lungeTimer > 0 then return end
+  local dx, dy = 0, 0
+  if inp.left then dx = dx - 1 end
+  if inp.right then dx = dx + 1 end
+  if inp.aim then
+    if dx == 0 then dx, dy = math.cos(inp.aim), math.sin(inp.aim) end
+  else
+    if inp.up then dy = dy - 1 end
+    if inp.down then dy = dy + 1 end
+  end
+  if dx == 0 and dy == 0 then dx = self.facing end
+  local len = math.sqrt(dx * dx + dy * dy)
+  dx, dy = dx / len, dy / len
+  self.dashesLeft = self.dashesLeft - 1
+  self.dashCd = s.dashCooldown
+  self.dashTimer = MOVE.dashTime
+  self.dashX, self.dashY = dx * s.dashSpeed, dy * s.dashSpeed
+  self.jumping = false
+  if math.abs(dx) > 0.2 then self.facing = dx > 0 and 1 or -1 end
+  fx.burst(self.x, self.y, self.color, 8, 180, 3)
+  self:emitSound("dash")
+end
+
+---------------------------------------------------------------- melee
+-- The held melee button was released (or a full charge was overheld).
+function Player:meleeRelease()
+  local s = self.stats
+  local held = self.meleeCharge
+  self.charging, self.meleeCharge = false, 0
+  if held < MELEE.lightThreshold then
+    self.swingHeavy, self.swingPower = false, 0
+    self.meleeCd = s.meleeCooldown
+    self.swingTimer = MELEE.swingShow
+    self.lungeHit = {}
+    self:emitSound("meleeLight")
+    self:meleeHitCheck(true)
+  else
+    local p = math.max(0, math.min(1, (held - MELEE.lightThreshold) / s.heavyCharge))
+    self.swingHeavy, self.swingPower = true, p
+    self.meleeCd = s.meleeCooldown * 2
+    self.swingTimer = MELEE.swingShow + MELEE.lungeTime
+    self.lungeHit = {}
+    local dist = s.heavyDash * (0.45 + 0.55 * p)
+    self.lungeTimer = MELEE.lungeTime
+    self.dashX, self.dashY = self.aimX * dist / MELEE.lungeTime, self.aimY * dist / MELEE.lungeTime
+    self.dashTimer = 0
+    self:emitSound("meleeHeavy", 0.7 + 0.3 * p)
+  end
+end
+
+-- Hit every enemy in the swing cone once. final: the end of the swing (heavy) or the light swing.
+function Player:meleeHitCheck(final)
+  local s, game = self.stats, self.game
+  if not self.lungeHit then return end
+  local heavy, p = self.swingHeavy, self.swingPower
+  local reach = s.meleeRange * (heavy and 1.2 or 1)
+  local aimAng = math.atan2(self.aimY, self.aimX)
+  for _, e in ipairs(game:enemiesOf(self)) do
+    if not self.lungeHit[e] then
+      local dx, dy = e.x - self.x, e.y - self.y
+      local d = math.sqrt(dx * dx + dy * dy)
+      local diff = math.abs((math.atan2(dy, dx) - aimAng + math.pi) % (math.pi * 2) - math.pi)
+      if d <= self.r + reach + e.r and (diff <= MELEE.cone or d < self.r + e.r + 6) then
+        self.lungeHit[e] = true
+        self:meleeHit(e, heavy, p, dx, dy)
+      end
+    end
+  end
+  if game.meleeObjects then game:meleeObjects(self, reach, heavy, p) end
+  if final then self.lungeHit = nil end
+end
+
+function Player:meleeHit(e, heavy, p, dx, dy)
+  local s = self.stats
+  local dmg = heavy and s.meleeDamage * (1.67 + 1.66 * p) or s.meleeDamage
+  local knock = heavy and s.meleeKnockback * (1.2 + 0.8 * p) or s.meleeKnockback
+  if e:isBlocking() then
+    -- A blocked melee stuns the attacker; harder swings stun longer.
+    local stun = heavy and (MELEE.heavyStunMin + (MELEE.heavyStunMax - MELEE.heavyStunMin) * p) or MELEE.lightStun
+    stun = stun * (1 + 0.5 * (e.stats.meleeStun or 0))
+    self:stun(stun)
+    e:blocked()
+    local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+    self.vx, self.vy = -dx / d * 350, -dy / d * 350 - 150
+    self.lungeTimer = 0
+    fx.burst((self.x + e.x) / 2, (self.y + e.y) / 2, { 1, 1, 1 }, 12, 260, 3)
+    self:emitSound("stun")
+    return
+  end
+  if e:hit(dmg, dx, dy - math.abs(dx) * 0.3, knock, self, "melee") then
+    if s.meleeLifesteal > 0 then self:heal(dmg * s.meleeLifesteal) end
+    fx.burst(e.x, e.y, { 1, 1, 1 }, heavy and 14 or 7, heavy and 320 or 200, 3)
+    self:emitSound(heavy and "meleeHitHeavy" or "meleeHit")
+  end
+end
+
+function Player:stun(t)
+  self.stunTimer = math.max(self.stunTimer, t)
+  self.charging = false
+  self.dashTimer, self.lungeTimer = 0, 0
 end
 
 function Player:blockPressed()
@@ -518,7 +882,7 @@ end
 
 -- Teleport along the aim direction, as far as possible up to `dist`.
 function Player:blink(dist)
-  local rects = self.game.map.rects
+  local rects = self.game.solids or self.game.map.rects
   local r = self.r
   for d = dist, 30, -15 do
     local nx, ny = self.x + self.aimX * d, self.y + self.aimY * d
@@ -606,7 +970,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
   local bx = self.x + math.cos(ang) * (self.r + 8)
   local by = self.y + math.sin(ang) * (self.r + 8)
   -- If the muzzle is inside a wall, spawn from the body instead.
-  if Map.hit(game.map.rects, bx - s.bulletSize, by - s.bulletSize, s.bulletSize * 2, s.bulletSize * 2) then
+  if Map.hit(game.solids or game.map.rects, bx - s.bulletSize, by - s.bulletSize, s.bulletSize * 2, s.bulletSize * 2) then
     bx, by = self.x, self.y
   end
 
@@ -646,7 +1010,7 @@ function Player:mirrorBullet(b)
     local c = b:clone()
     if MIRRORS[i][1] then c.x, c.vx = ARENA_W - c.x, -c.vx end
     if MIRRORS[i][2] then c.y, c.vy = ARENA_H - c.y, -c.vy end
-    if not Map.hit(game.map.rects, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2) then game:addBullet(c) end
+    if not Map.hit(game.solids or game.map.rects, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2) then game:addBullet(c) end
   end
 end
 
@@ -661,8 +1025,11 @@ end
 
 -- Returns true if damage landed (false when blocked, invulnerable or already dead).
 -- source: the player who caused it (for Thorns and Frostback), or nil.
-function Player:hit(amount, dx, dy, knock, source)
+-- kind: optional cause ("melee", "edge", hazard names...) for the kill feed.
+function Player:hit(amount, dx, dy, knock, source, kind)
   if self.dead then return false end
+  if source and source ~= self then self.lastAttacker = source end
+  self.lastHitKind = kind
   if self:isBlocking() then
     fx.burst(self.x, self.y, { 1, 1, 1 }, 8, 200, 3)
     self:blocked()
@@ -794,6 +1161,39 @@ function Player:drawGlow()
   end
 end
 
+-- Melee charge ring, swing arc and stun stars.
+function Player:drawMelee(A)
+  local r, c = self.r, self.color
+  local aim = math.atan2(self.aimY, self.aimX)
+  if self.charging and (self.meleeCharge or 0) > MELEE.lightThreshold then
+    local p = math.min(1, (self.meleeCharge - MELEE.lightThreshold) / math.max(0.05, self.stats.heavyCharge or 0.6))
+    love.graphics.setColor(1, 1, 1, 0.25 * A)
+    love.graphics.setLineWidth(3)
+    love.graphics.circle("line", self.x, self.y, r + 10)
+    love.graphics.setColor(1, p >= 1 and 0.85 or 1, p >= 1 and 0.3 or 1, 0.9 * A)
+    love.graphics.arc("line", "open", self.x, self.y, r + 10, -math.pi / 2, -math.pi / 2 + math.pi * 2 * p)
+  end
+  if (self.swingTimer or 0) > 0 then
+    local t = self.swingTimer / (MELEE.swingShow + (self.swingHeavy and MELEE.lungeTime or 0))
+    local reach = r + (self.stats.meleeRange or 55) * (self.swingHeavy and 1.2 or 1)
+    local spread = MELEE.cone
+    local sweep = aim - spread + (1 - t) * spread * 2
+    love.graphics.setColor(1, 1, 1, 0.55 * t * A)
+    love.graphics.setLineWidth(self.swingHeavy and 8 or 5)
+    love.graphics.arc("line", "open", self.x, self.y, reach, aim - spread, sweep)
+    love.graphics.setColor(c[1], c[2], c[3], 0.35 * t * A)
+    love.graphics.arc("fill", self.x, self.y, reach, aim - spread, sweep)
+  end
+  if (self.stunTimer or 0) > 0 then
+    local t = love.timer.getTime()
+    love.graphics.setColor(1, 0.95, 0.4, A)
+    for i = 1, 3 do
+      local a = t * 5 + i * math.pi * 2 / 3
+      love.graphics.circle("fill", self.x + math.cos(a) * r * 0.9, self.y - r - 8 + math.sin(a) * 4, 3)
+    end
+  end
+end
+
 function Player:draw()
   if self.dead then return end
   local r, s = self.r, self.stats
@@ -852,6 +1252,8 @@ function Player:draw()
     love.graphics.setColor(c)
     love.graphics.circle("fill", ox, oy, ORB_SIZE)
   end
+
+  self:drawMelee(A)
 
   -- Gun
   if self.empowered then

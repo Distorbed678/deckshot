@@ -88,6 +88,9 @@ end
 
 function World:startRound()
   self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
+  -- Everything players and bullets collide with: the map's rects (objects add to this later).
+  self.solids = {}
+  for i, r in ipairs(self.map.rects) do self.solids[i] = r end
   self.bullets = {}
   self.pending = {}
   self.wells = {}

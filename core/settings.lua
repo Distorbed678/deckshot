@@ -26,20 +26,22 @@ Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
 Settings.BIND_SCHEMES = {
   { id = "p1", name = "Player 1 (local)", group = "keyboard",
-    actions = { "left", "right", "up", "down", "fire", "block" } },
+    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
   { id = "p2", name = "Player 2 (local)", group = "keyboard",
-    actions = { "left", "right", "up", "down", "fire", "block" } },
+    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
   { id = "online", name = "Online", group = "online",
-    actions = { "left", "right", "jump", "jump2", "down", "fire", "block" } },
+    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee" } },
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", melee = "Melee (hold: heavy)",
 }
 Settings.DEFAULT_BINDS = {
-  p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift" },
-  p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift" },
-  online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2" },
+  p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q" },
+  p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift",
+    dash = "/", melee = "." },
+  online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2",
+    dash = "lshift", melee = "f" },
 }
 -- Keys that can't be bound (menu / fullscreen toggle).
 Settings.RESERVED_KEYS = { escape = true, f11 = true }

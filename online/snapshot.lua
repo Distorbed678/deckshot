@@ -33,7 +33,9 @@ local function u16(v)
   return v
 end
 
-local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBB" -- ..., score, stasis copies, match-over vote, shield, sentries
+-- ..., score, stasis copies, match-over vote, shield, sentries, melee/dash flags, melee charge,
+-- swing timer, swing power, melee range, heavy charge time, vertical speed
+local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBh"
 local BULLET_FMT = "<HhhhhBBB"
 
 function Snap.encode(world, events)
@@ -72,7 +74,11 @@ function Snap.encode(world, events)
       p.hp or 0, s.maxHp, u8(p.r), flags,
       p.invuln or 0, u8(p.ammo), u8(s.ammo), reload, u8(255 * (p.blockCd or 0) / s.blockCooldown),
       u8(s.orbs), p.orbAngle or 0, u8(p.livesLeft), pending, u16(p.score),
-      u8(s.stasis), (world.votes and world.votes[p.slot]) or 0, u8(p.shield), u8(s.sentry))
+      u8(s.stasis), (world.votes and world.votes[p.slot]) or 0, u8(p.shield), u8(s.sentry),
+      bit.bor((p.stunTimer or 0) > 0 and 1 or 0, p.charging and 2 or 0, p.swingHeavy and 4 or 0,
+        (p.dashTimer or 0) > 0 and 8 or 0),
+      u8((p.meleeCharge or 0) * 100), u8((p.swingTimer or 0) * 800), u8((p.swingPower or 0) * 255),
+      u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy))
   end
 
   local bullets = world.bullets
@@ -145,11 +151,20 @@ function Snap.decode(data)
 
   for i = 1, np do
     local p = {}
-    local flags
+    local flags, flags2
     p.x, p.y, p.aim, p.facing, p.hp, p.maxHp, p.r, flags,
     p.invuln, p.ammo, p.maxAmmo, p.reload, p.blockCd,
-    p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry, pos =
+    p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry,
+    flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy, pos =
       unpack(PLAYER_FMT, raw, pos)
+    p.stunned = bit.band(flags2, 1) ~= 0
+    p.charging = bit.band(flags2, 2) ~= 0
+    p.swingHeavy = bit.band(flags2, 4) ~= 0
+    p.dashing = bit.band(flags2, 8) ~= 0
+    p.meleeCharge = p.meleeCharge / 100
+    p.swingTimer = p.swingTimer / 800
+    p.swingPower = p.swingPower / 255
+    p.heavyCharge = p.heavyCharge / 100
     p.dead = bit.band(flags, 1) ~= 0
     p.blocking = bit.band(flags, 2) ~= 0
     p.empowered = bit.band(flags, 4) ~= 0
