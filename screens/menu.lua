@@ -53,8 +53,11 @@ function Menu:draw()
   if ui.button("Online Play", x, y + 72, w, h) then
     app.switch(require("screens.online").new())
   end
-  if ui.button("Editor", x, y + 144, w, h) then
+  if ui.button("Editor", x, y + 144, w / 2 - 5, h) then
     app.switch(require("screens.editor_hub").new())
+  end
+  if ui.button("Codex", x + w / 2 + 5, y + 144, w / 2 - 5, h) then
+    app.switch(require("screens.codex").new())
   end
   if ui.button("Settings", x, y + 216, w, h) then
     app.push(require("screens.settings").new())

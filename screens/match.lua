@@ -19,6 +19,7 @@ local Snap = require "online.snapshot"
 local hud = require "gfx.hud"
 local active = require "online.active"
 local Settings = require "core.settings"
+local Profile = require "core.profile"
 
 local Match = {}
 Match.__index = Match
@@ -120,6 +121,7 @@ end
 
 function Match:leave()
   self.closed = true
+  Profile.save()
   if self.role == "client" then -- drop the host's session map and card lists
     Map.loadAll()
     Cards.loadAll()
@@ -594,6 +596,7 @@ function Match:update(dt, isTop)
   end
 
   self:updatePickAnim(dt)
+  self:recordRound(self:status())
   local mx, my = app.mouse()
   if self.role == "local" then
     for _, inp in ipairs(self.inputs) do Input.poll(inp, suppressed) end
@@ -736,6 +739,9 @@ function Match:updatePickAnim(dt)
       a = { serial = cp.serial, slot = cp.slot, t = 0, flip = {}, sparkles = {} }
       self.pickAnim = a
       sfx.play("cardDeal", nil, 1, 1, true)
+      if self:isMine(cp.slot) then
+        for _, c in ipairs(cp.options) do Profile.add(c.id, "offered") end
+      end
     end
     a.t = a.t + dt
     for i, card in ipairs(cp.options) do
@@ -788,6 +794,7 @@ function Match:updatePickAnim(dt)
     if before and n > before and p.cards[n] then
       self.flyers[#self.flyers + 1] = { card = p.cards[n], slot = i, t = 0 }
       sfx.play("cardPick", nil, 1, 1, true)
+      if self:isMine(i) then Profile.add(p.cards[n].id, "picked") end
     end
     self.cardCounts[i] = n
   end
@@ -795,6 +802,28 @@ function Match:updatePickAnim(dt)
     local f = self.flyers[i]
     f.t = f.t + dt
     if f.t >= 0.6 then table.remove(self.flyers, i) end
+  end
+end
+
+-- Is this slot played on this machine (by a person)? Used for the codex statistics.
+function Match:isMine(slot)
+  if self.role == "local" then
+    local p = self.world.players[slot]
+    return p and not p.isBot and not self.returnTo
+  end
+  return slot == self.mySlot
+end
+
+-- A round ended: count a win for every card the winner holds (if the winner is ours).
+function Match:recordRound(st)
+  local entered = st.state == "roundOver" and self.prevState ~= "roundOver"
+  self.prevState = st.state
+  if not entered or not st.winner then return end
+  for i, p in ipairs(self:players()) do
+    if p == st.winner and self:isMine(i) then
+      for _, c in ipairs(p.cards) do Profile.add(c.id, "wins") end
+      Profile.save()
+    end
   end
 end
 
