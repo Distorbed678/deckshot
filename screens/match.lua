@@ -32,7 +32,8 @@ local SNAPSHOT_INTERVAL = 1 / 30
 local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
 local PING_EVERY = 1
 local RECONNECT_TIME = 60     -- seconds a dropped player's slot is kept for them
-local PICK_DELAY = 0.4 -- ignore "take" presses right after a hand appears
+local PICK_DELAY = 0.9 -- ignore "take" presses right after a hand appears
+local LOAD_TIME = 1.6  -- the loading screen before a match
 
 local function newMatch(role)
   return setmetatable({
@@ -41,6 +42,11 @@ local function newMatch(role)
     toasts = {},
     pickUI = nil,   -- { slot, serial, index, delay, waiting } while this machine controls the pick
   }, Match)
+end
+
+local function ease(t)
+  t = math.max(0, math.min(1, t))
+  return 1 - (1 - t) ^ 3
 end
 
 function Match:enter()
@@ -128,6 +134,7 @@ function Match.newLocal(winScore, opts)
   m.world = World.new(defs, winScore, rules)
   m:hookWorld()
   fx.recorder = nil
+  m.loading = opts.loading and { t = 0 } or nil
   m.world:beginMatch()
   if opts.giveCards then -- card editor test: player 1 owns these
     for _, c in ipairs(opts.giveCards) do table.insert(m.world.players[1].cards, c) end
@@ -169,6 +176,7 @@ function Match.newHost(slots, winScore, transport, opts)
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
+  m.loading = { t = 0 }
   m.world:beginMatch()
   return m
 end
@@ -195,6 +203,7 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   end
   m.bulletViews, m.bulletList, m.wellList = {}, {}, {}
   m.snapTime = love.timer.getTime()
+  m.loading = { t = 0 }
   fx.recorder = nil
   fx.clear()
   return m
@@ -338,7 +347,7 @@ function Match:syncPick(dt)
     self.pickUI = pu
     self.discardMode = false
   end
-  pu.delay = math.max(0, pu.delay - dt)
+  if not self.loading then pu.delay = math.max(0, pu.delay - dt) end
   pu.index = math.max(1, math.min(#cp.options, pu.index))
   if self.role == "client" then
     self.myInput.pickHover = pu.index
@@ -1081,12 +1090,20 @@ function Match:update(dt, isTop)
   self:updatePresence()
   self:updatePractice(dt)
   if self.cardChooser then isTop = false end -- the practice card chooser is open: hold everyone still
+  if self.loading then
+    -- Host and clients both hold for the same time; a client also waits for the first snapshot.
+    self.loading.t = self.loading.t + dt
+    if self.loading.t >= LOAD_TIME and (self.role ~= "client" or self.snapped) then
+      self.loading = nil
+      app.fadeFrom(0.5)
+    end
+  end
   self:updateMapSlide(dt)
   if self:usesTouch() and require("core.touch").takePause() and isTop then
     self.paused = not self.paused
     ui.reset()
   end
-  local suppressed = self.paused or not isTop or self.chatOpen
+  local suppressed = self.paused or not isTop or self.chatOpen or self.loading ~= nil
   fx.update(dt)
   self:updateAudio()
   for i = #self.toasts, 1, -1 do
@@ -1105,12 +1122,12 @@ function Match:update(dt, isTop)
     for _, inp in ipairs(self.inputs) do
       if inp.kind ~= "bot" then Input.poll(inp, suppressed) end
     end
-    if not self.paused then self.world:update(dt) end
+    if not self.paused and not self.loading then self.world:update(dt) end
     self:syncPick(dt)
   elseif self.role == "host" then
     local me = self.world.players[1]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
-    self.world:update(dt)
+    if not self.loading then self.world:update(dt) end
     self:syncPick(dt)
     self:hostNetwork(dt)
   else
@@ -1165,15 +1182,18 @@ end
 function Match:drawMapVote(st)
   local mv = st.mapVote
   if not mv then return end
-  love.graphics.setColor(0, 0, 0, 0.82)
+  -- Comes in gently: the backdrop and title fade up, then the maps rise in one after another.
+  local voteT = self.voteT or 0
+  local fadeK = math.min(1, voteT / 0.6)
+  love.graphics.setColor(0, 0, 0, 0.82 * fadeK)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local players = self:players()
   local slot = mv.winner == 0 and self:voterSlot(mv.votes) or nil
   local title = "VOTE FOR THE NEXT MAP"
   if mv.winner > 0 then title = "NEXT MAP"
   elseif self.role == "local" and slot then title = (players[slot].name or "Player"):upper() .. ": VOTE FOR THE NEXT MAP" end
-  app.centered(title, app.fonts.big, 34)
-  if mv.winner == 0 then app.centered(tostring(math.max(0, math.ceil(mv.timeLeft))), app.fonts.title, 84, { 1, 1, 1, 0.7 }) end
+  app.centered(title, app.fonts.big, 34, { 1, 1, 1, fadeK })
+  if mv.winner == 0 then app.centered(tostring(math.max(0, math.ceil(mv.timeLeft))), app.fonts.title, 84, { 1, 1, 1, 0.7 * fadeK }) end
   local n = #mv.options
   local perRow = n <= 3 and n or 3
   local rows = math.ceil(n / perRow)
@@ -1185,6 +1205,8 @@ function Match:drawMapVote(st)
     local inRow = row == rows - 1 and (n - (rows - 1) * perRow) or perRow
     local rowW = inRow * w + (inRow - 1) * gap
     local x, y = (app.W - rowW) / 2 + col * (w + gap), top + row * (h + gap)
+    local rise = ease((voteT - 0.25 - (i - 1) * 0.15) / 0.6)
+    y = y + (1 - rise) * (app.H - y + 20)
     local map = Map.list[idx]
     local mine = slot and mv.votes[slot] == i
     local won = mv.winner == i
@@ -1352,12 +1374,14 @@ end
 
 -- The arena slides out to the left when a round gives way to card picks or the map vote, stays
 -- away while they're on screen, and the next map slides in from the right. The HUD stays put.
-local MAP_SLIDE_TIME = 0.55
+local MAP_SLIDE_TIME = 0.85
 local NO_MAP_STATES = { cardPick = true, mapVote = true, cardBan = true }
 
 function Match:updateMapSlide(dt)
+  if self.loading then return end
   if self.role == "client" and not self.snapped then return end -- nothing from the host yet
   local state = self:status().state
+  if state == "mapVote" then self.voteT = (self.voteT or 0) + dt else self.voteT = 0 end
   local prev = self.slideState
   if state ~= prev then
     self.slideState = state
@@ -1592,23 +1616,20 @@ end
 
 ---------------------------------------------------------------- drawing
 ---------------------------------------------------------------- card pick animation
-local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.07, 0.28, 0.32
+local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.13, 0.55, 0.42
+local DEAL_WAIT = 0.35 -- after a round, the arena is on its way out before the cards come in
 local LIFT_SPEED = 14 -- how fast the hovered card slides up
 local REVEAL_SOUND = { rare = "revealRare", epic = "revealEpic", legendary = "revealLegendary" }
-
-local function ease(t)
-  t = math.max(0, math.min(1, t))
-  return 1 - (1 - t) ^ 3
-end
 
 -- Dealing, flipping and reveal sparkles; also cards flying to a player's panel after a pick.
 -- Sounds here are local (every machine animates the same pick), so they aren't recorded.
 function Match:updatePickAnim(dt)
+  if self.loading then return end
   local cp = self:currentPick()
   local a = self.pickAnim
   if cp then
     if not a or a.serial ~= cp.serial or a.slot ~= cp.slot then
-      a = { serial = cp.serial, slot = cp.slot, t = 0, flip = {}, sparkles = {}, lift = {} }
+      a = { serial = cp.serial, slot = cp.slot, t = self.mapSlide and -DEAL_WAIT or 0, flip = {}, sparkles = {}, lift = {} }
       self.pickAnim = a
       sfx.play("cardDeal", nil, 1, 1, true)
       if self:isMine(cp.slot) then
@@ -1770,7 +1791,8 @@ function Match:drawCardPick(st)
   else
     title = name .. " IS PICKING" .. count
   end
-  app.centered(title, app.fonts.big, 80, color)
+  local inK = self.pickAnim and math.max(0, math.min(1, self.pickAnim.t / 0.5)) or 1
+  app.centered(title, app.fonts.big, 80, { color[1], color[2], color[3], inK })
 
   local hint
   if pu then
@@ -1779,7 +1801,7 @@ function Match:drawCardPick(st)
   else
     hint = "Watching " .. (p and p.name or "them") .. " choose"
   end
-  if hint then app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 }) end
+  if hint then app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 * inK }) end
 
   -- Pick timer
   if cp.timeLeft then
@@ -2129,7 +2151,7 @@ end
 
 function Match:drawRoundBanner(st)
   local t = self.roundT or 0
-  local k = ease(t / 0.3)
+  local k = ease(t / 0.55)
   local c = st.winner and st.winner.color or { 1, 1, 1 }
   local text = st.winner and ((st.winner.name or "Player"):upper() .. " WINS THE ROUND") or "DRAW"
   love.graphics.setColor(0, 0, 0, 0.6)
@@ -2306,6 +2328,13 @@ function Match:drawPause()
 end
 
 function Match:draw()
+  if self.loading then
+    love.graphics.setColor(0.09, 0.09, 0.12)
+    love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+    local k = math.min(1, self.loading.t / LOAD_TIME)
+    require("gfx.logo").drawLoading("Loading match...", k, math.min(1, self.loading.t / 0.3))
+    return
+  end
   local players, bullets, wells, map = self:scene()
   if not map then return end
   local st = self:status()

@@ -245,6 +245,13 @@ function sfx.load()
   for _, n in ipairs(sfx.NAMES) do queue[#queue + 1] = n end
 end
 
+-- How much of the sound set has been built (0-1), for the loading bar.
+function sfx.progress()
+  if not queue then return 1 end
+  local total = #sfx.NAMES
+  return math.max(0, math.min(1, 1 - #queue / total))
+end
+
 -- Builds a few sounds per frame so start-up stays quick (the web build has no JIT).
 function sfx.update()
   if not queue then return end

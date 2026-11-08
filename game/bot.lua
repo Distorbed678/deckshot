@@ -432,7 +432,7 @@ end
 
 function Bot.pick(w, pk, dt)
   local p = w.players[pk.slot]
-  pk.botTimer = (pk.botTimer or 0) + dt
+  pk.botTimer = (pk.botTimer or -0.9) + dt -- waits while the cards are dealt
   local n = #pk.options
   local step = math.floor(pk.botTimer / 0.35) + 1
   if step <= n then

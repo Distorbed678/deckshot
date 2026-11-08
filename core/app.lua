@@ -53,9 +53,23 @@ end
 
 ---------------------------------------------------------------- transitions
 -- The next frame slides in from the right while the last one slides out to the left.
-local SLIDE_TIME = 0.35
+local SLIDE_TIME = 0.6
 function app.slide()
+  if app.skipSlide then
+    app.skipSlide = false
+    return
+  end
   if not app.noSlide then app.transPending = true end
+end
+
+-- The next switch happens without sliding.
+function app.instant()
+  app.skipSlide = true
+end
+
+-- The screen fades up from dark over `dur` seconds.
+function app.fadeFrom(dur)
+  app.fade = { t = 0, dur = dur }
 end
 
 function app.switch(screen, ...)
@@ -157,6 +171,15 @@ function app.draw()
     love.graphics.draw(app.canvas, app.ox, app.oy, 0, app.scale, app.scale)
   end
   love.graphics.setBlendMode("alpha")
+
+  local fade = app.fade
+  if fade then
+    fade.t = fade.t + math.min(1 / 30, love.timer.getDelta())
+    local k = math.min(1, fade.t / fade.dur)
+    love.graphics.setColor(0.09, 0.09, 0.12, 1 - k * k * (3 - 2 * k))
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getDimensions())
+    if k >= 1 then app.fade = nil end
+  end
 
   if app.showFps then
     love.graphics.setFont(app.fonts.overlay)

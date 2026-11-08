@@ -158,6 +158,15 @@ local function buildAll()
   end
 end
 
+-- How much of the music has been built (0-1), for the loading bar.
+function Music.progress()
+  local done = 0
+  for _, name in ipairs(order) do
+    if stems[name] then done = done + 1 end
+  end
+  return done / #order
+end
+
 function Music.play(name)
   Music.wanted = name
 end

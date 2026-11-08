@@ -97,6 +97,7 @@ function love.load(args)
     app.switch(require("screens.lobby").new())
   end
 
+  app.instant()
   app.switch(require("screens.splash").new())
 
   -- Launched from a Steam invite: "+connect_lobby <id>"

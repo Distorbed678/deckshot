@@ -95,7 +95,8 @@ function Setup:start()
   for _, s in ipairs(self.slots) do
     if s.kind ~= "off" then setup[#setup + 1] = { kind = s.kind, color = s.color, team = s.team } end
   end
-  app.switch(require("screens.match").newLocal(v.roundsToWin, { setup = setup, teams = v.teams }))
+  app.instant()
+  app.switch(require("screens.match").newLocal(v.roundsToWin, { setup = setup, teams = v.teams, loading = true }))
 end
 
 -- Next colour not used by another active slot.

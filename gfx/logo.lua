@@ -45,4 +45,27 @@ function Logo.draw(cx, cy, scale)
   love.graphics.pop()
 end
 
+-- The logo over a loading bar (start-up and before a match). progress 0-1, alpha fades everything.
+function Logo.drawLoading(label, progress, alpha)
+  local app = require "core.app"
+  love.graphics.push("all")
+  Logo.draw(app.W / 2, app.H / 2 - 50, 1)
+  love.graphics.pop()
+  local cover = 1 - alpha
+  if cover > 0 then
+    love.graphics.setColor(0.09, 0.09, 0.12, cover)
+    love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  end
+  local w, h, x, y = 460, 10, (app.W - 460) / 2, app.H / 2 + 60
+  love.graphics.setColor(1, 1, 1, 0.12 * alpha)
+  love.graphics.rectangle("fill", x, y, w, h, 5, 5)
+  if progress > 0.01 then
+    love.graphics.setColor(1, 0.55, 0.15, alpha)
+    love.graphics.rectangle("fill", x, y, math.max(h, w * progress), h, 5, 5)
+  end
+  love.graphics.setFont(app.fonts.med)
+  love.graphics.setColor(1, 1, 1, 0.65 * alpha)
+  love.graphics.printf(label, 0, y + 22, app.W, "center")
+end
+
 return Logo

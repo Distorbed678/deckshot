@@ -137,6 +137,7 @@ function Lobby:start()
     if not slots[i].bot then session.transport:send(slots[i].peer, data, true) end
   end
   -- (The lobby stays joinable: people who join mid-match watch until the next one.)
+  app.instant()
   app.switch(require("screens.match").newHost(slots, session.rounds, session.transport))
 end
 
@@ -186,6 +187,7 @@ function Lobby:update(dt)
         -- Not in the slots: the match is already running, so we watch it until the next one.
         local rest = {}
         for k = i + 1, #msgs do rest[#rest + 1] = msgs[k] end
+        app.instant()
         app.switch(require("screens.match").newClient(slots, mySlot or 0, winScore, session.transport, msg.from, rest))
         return
       elseif kind == net.MSG.MAPS then

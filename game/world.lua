@@ -264,7 +264,7 @@ function World:announceMatchPoint()
 end
 
 ---------------------------------------------------------------- map vote
-World.MAP_VOTE_TIME, World.MAP_VOTE_SHOW = 10, 1.1
+World.MAP_VOTE_TIME, World.MAP_VOTE_SHOW = 11, 1.7
 
 function World:openMapVote()
   if not self.map then
@@ -643,7 +643,7 @@ function World:endRound(last)
   end
   sfx.play("stingerRound")
   self.state = "roundOver"
-  self.timer = 1.6
+  self.timer = 2.1
 end
 
 function World:afterRound()
