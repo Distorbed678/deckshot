@@ -46,22 +46,25 @@ function Menu:draw()
 
   local w, h = 340, 58
   local x = (app.W - w) / 2
-  local y = 260
+  local y = 250
   if ui.button("Local Play", x, y, w, h) then
     app.switch(require("screens.match").newLocal(Settings.values.roundsToWin))
   end
   if ui.button("Online Play", x, y + 72, w, h) then
     app.switch(require("screens.online").new())
   end
-  if ui.button("Settings", x, y + 144, w, h) then
+  if ui.button("Editor", x, y + 144, w, h) then
+    app.switch(require("screens.editor_hub").new())
+  end
+  if ui.button("Settings", x, y + 216, w, h) then
     app.push(require("screens.settings").new())
   end
-  if not platform.web and ui.button("Quit", x, y + 216, w, h) then
+  if not platform.web and ui.button("Quit", x, y + 288, w, h) then
     love.event.quit()
   end
 
   if self.message then
-    app.centered(self.message, app.fonts.med, 560, { 1, 0.6, 0.45 })
+    app.centered(self.message, app.fonts.med, 230, { 1, 0.6, 0.45 })
   end
 
   love.graphics.setFont(app.fonts.small)

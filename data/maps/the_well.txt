@@ -1,0 +1,14 @@
+deckshot-map 1
+name The Well
+spawn 200 540
+spawn 1080 540
+spawn 170 260
+spawn 1110 260
+rect 100 580 420 40
+rect 760 580 420 40
+rect 240 440 140 16
+rect 900 440 140 16
+rect 120 300 100 16
+rect 1060 300 100 16
+rect 520 690 240 30
+rect 560 380 160 16

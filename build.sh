@@ -56,6 +56,7 @@ build_love() {
   local files
   files="$(unzip -Z1 "$out")"
   grep -qx 'main.lua' <<<"$files" || die "$NAME.love has no main.lua"
+  grep -qx 'data/maps/order.txt' <<<"$files" || die "$NAME.love has no maps"
 }
 
 build_linux() {

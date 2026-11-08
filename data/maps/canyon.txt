@@ -1,0 +1,14 @@
+deckshot-map 1
+name Canyon
+spawn 160 380
+spawn 1120 380
+spawn 460 480
+spawn 820 480
+rect 60 420 220 300
+rect 1000 420 220 300
+rect 380 520 120 16
+rect 780 520 120 16
+rect 120 280 100 16
+rect 1060 280 100 16
+rect 280 640 720 40
+rect 560 420 160 16

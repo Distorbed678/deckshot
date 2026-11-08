@@ -1,0 +1,15 @@
+deckshot-map 1
+name Zigzag
+spawn 300 600
+spawn 980 600
+spawn 220 290
+spawn 1060 290
+rect 100 520 200 16
+rect 980 520 200 16
+rect 380 430 160 16
+rect 740 430 160 16
+rect 140 330 160 16
+rect 980 330 160 16
+rect 200 640 880 30
+rect 560 500 160 16
+rect 580 240 120 16

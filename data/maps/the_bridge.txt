@@ -1,0 +1,14 @@
+deckshot-map 1
+name The Bridge
+spawn 180 480
+spawn 1100 480
+spawn 270 320
+spawn 1010 320
+rect 60 520 260 200
+rect 960 520 260 200
+rect 420 520 440 16
+rect 60 300 24 220
+rect 1196 300 24 220
+rect 200 360 140 16
+rect 940 360 140 16
+rect 570 330 140 16

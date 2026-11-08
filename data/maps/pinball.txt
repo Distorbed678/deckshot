@@ -1,0 +1,17 @@
+deckshot-map 1
+name Pinball
+spawn 180 590
+spawn 1100 590
+spawn 270 290
+spawn 1010 290
+rect 250 520 40 40
+rect 990 520 40 40
+rect 420 440 40 40
+rect 820 440 40 40
+rect 250 330 40 40
+rect 990 330 40 40
+rect 130 420 40 40
+rect 1110 420 40 40
+rect 100 630 1080 30
+rect 620 350 40 40
+rect 600 520 80 20

@@ -43,14 +43,22 @@ local function settingsRules(online)
 end
 
 ---------------------------------------------------------------- construction
-function Match.newLocal(winScore)
+-- opts (optional): map = play only this map, test = editor test play (player 2 stands still),
+-- returnTo = screen to go back to on Esc.
+function Match.newLocal(winScore, opts)
+  opts = opts or {}
   local m = newMatch("local")
+  m.returnTo = opts.returnTo
   local binds = Settings.values.binds
-  m.inputs = { Input.keys(binds.p1), Input.keys(binds.p2) }
+  m.inputs = { Input.keys(binds.p1), opts.test and Input.remote() or Input.keys(binds.p2) }
+  if opts.test then m.inputs[2].aim = nil end
+  local rules = settingsRules(false)
+  if opts.map then rules.forceMap = opts.map end
+  if opts.test then rules.startCards = 0 end
   m.world = World.new({
     { name = "Player 1", input = m.inputs[1] },
-    { name = "Player 2", input = m.inputs[2] },
-  }, winScore, settingsRules(false))
+    { name = opts.test and "Dummy" or "Player 2", input = m.inputs[2] },
+  }, winScore, rules)
   m:hookWorld()
   fx.recorder = nil
   m.world:beginMatch()
@@ -74,6 +82,7 @@ function Match.newHost(slots, winScore, transport, opts)
   end
   m.world = World.new(defs, winScore, settingsRules(true))
   m:hookWorld()
+  m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
@@ -104,6 +113,7 @@ end
 
 function Match:leave()
   self.closed = true
+  if self.role == "client" then Map.loadAll() end -- drop the host's session map list
   fx.recorder = nil
   fx.clear()
   love.mouse.setVisible(true)
@@ -453,9 +463,17 @@ function Match:clientNetwork()
   for _, msg in ipairs(msgs) do
     if msg.from == self.hostPeer then
       local kind = net.kind(msg.data)
-      if kind == net.MSG.SNAPSHOT then
+      if kind == net.MSG.MAPS then
+        local ok, entries = pcall(net.decodeMaps, msg.data)
+        if ok then
+          Map.setSession(entries)
+          self.objMap = nil
+        end
+        self.mapsReady = true
+      elseif kind == net.MSG.SNAPSHOT then
+        -- Snapshots refer to the host's map list, so wait for it.
         local ok, v = pcall(Snap.decode, msg.data)
-        if ok then self:applySnapshot(v) end
+        if ok and self.mapsReady then self:applySnapshot(v) end
       elseif kind == net.MSG.ROSTER then
         for i, r in ipairs(net.decodeRoster(msg.data)) do
           local p = self.proxies[i]
@@ -591,6 +609,10 @@ end
 
 ---------------------------------------------------------------- input
 function Match:keypressed(key)
+  if key == "escape" and self.returnTo then
+    app.switch(self.returnTo)
+    return
+  end
   if key == "escape" then
     self.paused = not self.paused
     ui.reset()

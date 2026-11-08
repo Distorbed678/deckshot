@@ -243,6 +243,7 @@ end
 -- x: arena x for stereo pan (nil = centre). volume / pitch: multipliers.
 -- noRecord: don't send to online clients (used when replaying).
 function sfx.play(name, x, volume, pitch, noRecord)
+  if sfx.silent then return end
   if not noRecord and fx.recorder and sfx.ID[name] and not (DEFS[name] and DEFS[name].ui) then
     fx.record({ 5, sfx.ID[name], x or 640, volume or 1, pitch or 1 })
   end

@@ -1,0 +1,13 @@
+deckshot-map 1
+name The Ring
+spawn 240 580
+spawn 1040 580
+spawn 380 440
+spawn 900 440
+rect 140 260 30 360
+rect 1110 260 30 360
+rect 320 480 140 16
+rect 820 480 140 16
+rect 140 620 1000 30
+rect 340 140 600 24
+rect 540 360 200 16

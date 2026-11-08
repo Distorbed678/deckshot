@@ -1,0 +1,14 @@
+deckshot-map 1
+name Fortress
+spawn 200 580
+spawn 1080 580
+spawn 340 300
+spawn 940 300
+rect 520 420 24 200
+rect 736 420 24 200
+rect 240 500 140 16
+rect 900 500 140 16
+rect 280 340 120 16
+rect 880 340 120 16
+rect 120 620 1040 40
+rect 520 400 240 20

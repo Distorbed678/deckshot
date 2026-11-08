@@ -1,0 +1,15 @@
+deckshot-map 1
+name The Cage
+spawn 200 580
+spawn 1080 580
+spawn 300 430
+spawn 980 430
+rect 100 620 1080 40
+rect 500 320 280 20
+rect 500 340 20 180
+rect 760 340 20 180
+rect 560 470 160 16
+rect 220 470 160 16
+rect 900 470 160 16
+rect 320 330 100 16
+rect 860 330 100 16

@@ -1,0 +1,14 @@
+deckshot-map 1
+name Staircase
+spawn 160 580
+spawn 1120 580
+spawn 260 340
+spawn 1020 340
+rect 80 620 240 30
+rect 320 540 160 30
+rect 480 460 320 30
+rect 800 540 160 30
+rect 960 620 240 30
+rect 200 380 120 16
+rect 960 380 120 16
+rect 580 300 120 16

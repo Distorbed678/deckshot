@@ -8,13 +8,18 @@ local Map = require "game.map"
 local Screen = {}
 Screen.__index = Screen
 
-local COLS = 7
+local COLS, ROWS = 7, 4
+local PER_PAGE = COLS * ROWS
 local THUMB_W, THUMB_H = 160, 90
 local GAP_X, LABEL_H, GAP_Y = 12, 22, 12
 local GRID_Y = 100
 
 function Screen.new()
-  return setmetatable({}, Screen)
+  return setmetatable({ page = 1 }, Screen)
+end
+
+function Screen:wheelmoved(_, dy)
+  self.page = self.page - (dy > 0 and 1 or -1)
 end
 
 function Screen:keypressed(key)
@@ -22,13 +27,7 @@ function Screen:keypressed(key)
 end
 
 local function drawThumb(map, x, y, on)
-  love.graphics.setColor(0.09, 0.09, 0.12)
-  love.graphics.rectangle("fill", x, y, THUMB_W, THUMB_H, 6, 6)
-  love.graphics.push()
-  love.graphics.translate(x, y)
-  love.graphics.scale(THUMB_W / 1280, THUMB_H / 720)
-  Map.draw(map)
-  love.graphics.pop()
+  require("screens.editor_hub").drawThumb(map, x, y, THUMB_W, THUMB_H)
   if not on then
     love.graphics.setColor(0, 0, 0, 0.6)
     love.graphics.rectangle("fill", x, y, THUMB_W, THUMB_H, 6, 6)
@@ -56,8 +55,13 @@ function Screen:draw()
 
   local gridW = COLS * THUMB_W + (COLS - 1) * GAP_X
   local x0 = (app.W - gridW) / 2
-  for i, map in ipairs(Map.list) do
-    local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
+  local pages = math.max(1, math.ceil(#Map.list / PER_PAGE))
+  self.page = math.max(1, math.min(pages, self.page))
+  for k = 1, PER_PAGE do
+    local i = (self.page - 1) * PER_PAGE + k
+    local map = Map.list[i]
+    if not map then break end
+    local col, row = (k - 1) % COLS, math.floor((k - 1) / COLS)
     local x = x0 + col * (THUMB_W + GAP_X)
     local y = GRID_Y + row * (THUMB_H + LABEL_H + GAP_Y)
     local on = Settings.mapEnabled(map)
@@ -68,10 +72,18 @@ function Screen:draw()
     love.graphics.printf(map.name, x, y + THUMB_H + 3, THUMB_W, "center")
   end
 
+  if pages > 1 then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.printf("Page " .. self.page .. " / " .. pages, 0, 596, app.W, "center")
+    if ui.button("<", app.W / 2 - 150, 588, 50, 36, { disabled = self.page <= 1 }) then self.page = self.page - 1 end
+    if ui.button(">", app.W / 2 + 100, 588, 50, 36, { disabled = self.page >= pages }) then self.page = self.page + 1 end
+  end
+
   if enabled == 0 then
     love.graphics.setFont(app.fonts.med)
     love.graphics.setColor(1, 0.6, 0.45)
-    love.graphics.printf("No maps are enabled, so every map will be used.", 0, 600, app.W, "center")
+    love.graphics.printf("No maps are enabled, so every map will be used.", 0, 560, app.W, "center")
   end
 
   local bw, by = 220, 636

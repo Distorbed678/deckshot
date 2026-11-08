@@ -1,0 +1,13 @@
+deckshot-map 1
+name The Pit
+spawn 220 560
+spawn 1060 560
+spawn 330 290
+spawn 950 290
+rect 100 600 1080 40
+rect 100 180 40 420
+rect 1140 180 40 420
+rect 600 560 80 40
+rect 500 450 280 20
+rect 260 330 140 20
+rect 880 330 140 20

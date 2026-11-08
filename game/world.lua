@@ -95,7 +95,11 @@ end
 
 -- Pick a map and build the collision list.
 function World:loadMap()
-  self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
+  if self.rules.forceMap then
+    self.map, self.mapIndex = self.rules.forceMap, self.rules.forceMap.index or 0
+  else
+    self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
+  end
   -- Objects come back fresh every round. With hazards off, hazards (and ropes holding them) sit out.
   self.objects = Objects.build(self.map)
   if self.rules.hazards == false then

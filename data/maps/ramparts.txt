@@ -1,0 +1,15 @@
+deckshot-map 1
+name Ramparts
+spawn 150 480
+spawn 1130 480
+spawn 470 390
+spawn 810 390
+rect 60 520 180 100
+rect 1040 520 180 100
+rect 240 560 120 60
+rect 920 560 120 60
+rect 420 430 120 16
+rect 740 430 120 16
+rect 60 620 1160 40
+rect 590 320 100 16
+rect 620 560 40 60
