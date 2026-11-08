@@ -42,6 +42,7 @@ function love.update(dt)
   lan.update()
   Settings.update()
   sfx.update()
+  require("core.webkeyboard").update()
   app.update(dt)
   lan.flush()
 end
@@ -81,6 +82,28 @@ end
 
 function love.textinput(t)
   app.textinput(t)
+end
+
+-- Touch: drives the touch controls; touches also arrive as mouse clicks for menus.
+function love.touchpressed(id, x, y)
+  local Touch = require "core.touch"
+  local first = not Touch.enabled
+  Touch.pressed(id, x, y)
+  local v = Settings.values
+  if first and Touch.enabled and platform.web and not v.mobileDefaults then
+    -- A phone or tablet: lighter effects by default.
+    v.mobileDefaults, v.bloom, v.particles = true, false, 1
+    Settings.applyEffects()
+    Settings.save()
+  end
+end
+
+function love.touchmoved(id, x, y)
+  require("core.touch").moved(id, x, y)
+end
+
+function love.touchreleased(id)
+  require("core.touch").released(id)
 end
 
 function love.gamepadpressed(joystick, button)

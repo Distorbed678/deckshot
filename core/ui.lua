@@ -35,6 +35,7 @@ function ui.beginFrame()
 end
 
 function ui.endFrame()
+  ui.textWasActive, ui.textActive = ui.textActive, false
   if ui.focus ~= prevFocus and ui.count > 0 then sound("uiHover") end
   prevFocus = ui.focus
   ui.lastCount = ui.count
@@ -181,6 +182,7 @@ function ui.textField(text, x, y, w, h, opts)
       ui.click = nil
     end
     if focused then
+      ui.textActive = true
       local add = ui.text
       if ui.key == "paste" then
         add = add .. (love.system.getClipboardText() or "")

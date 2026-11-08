@@ -64,6 +64,13 @@ function Input.pad(joystick)
   return s
 end
 
+-- Touch controls (core/touch.lua).
+function Input.touch()
+  local s = newState("touch")
+  s.aim = 0
+  return s
+end
+
 -- A bot: game/bot.lua fills this in every frame.
 function Input.bot(difficulty)
   local s = newState("bot")
@@ -104,6 +111,8 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.left, s.right, s.up, s.down, s.fire = down(c.left), down(c.right), down(c.up), down(c.down), down(c.fire)
     s.jumpHeld = s.up
     s.meleeHeld = down(c.melee)
+  elseif s.kind == "touch" then
+    require("core.touch").apply(s, love.timer.getDelta())
   elseif s.kind == "pad" then
     local j = s.joystick
     if not j or not j:isConnected() then return clearHeld(s) end

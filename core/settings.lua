@@ -74,6 +74,11 @@ local defaults = {
   friendlyFire = false,  -- teams: bullets and explosions hurt teammates
   localSetup = "p1:1:1;p2:2:2;off:3:1;off:4:2", -- local play slots: kind:colour:team
   playerColor = 1,       -- your colour in online lobbies
+  touchControls = "auto", -- auto (on after the first touch) / on / off
+  touchLayout = "",      -- custom touch button positions (core/touch.lua)
+  touchOpacity = 0.5,
+  mobileDefaults = false, -- lighter effects were applied for a touch device
+  padOnline = false,     -- play online with the first gamepad instead of mouse + keys
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -391,6 +396,9 @@ end
 -- Effects that don't touch the window.
 function Settings.applyEffects()
   local v = Settings.values
+  local Touch = require "core.touch"
+  Touch.setLayout(v.touchLayout, v.touchOpacity)
+  if v.touchControls == "on" then Touch.enabled = true elseif v.touchControls == "off" then Touch.enabled = false end
   Bloom.enabled = v.bloom
   Bloom.intensity = Settings.BLOOM_LEVELS[v.bloomLevel][2]
   fx.shakeScale = Settings.SHAKE_LEVELS[v.shake][2]

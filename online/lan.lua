@@ -731,10 +731,12 @@ function lan.browse()
   if not socket then return {} end
   local f = lan.finder
   if not f then
-    local u = socket.udp()
+    -- udp4 creates the IPv4 socket right away (plain udp() waits for a bind).
+    local u = (socket.udp4 or socket.udp)()
     if not u then return {} end
     u:settimeout(0)
-    u:setsockname("0.0.0.0", 0)
+    -- No explicit bind: the first sendto binds an ephemeral port. Joiners never listen, so Windows
+    -- doesn't show its firewall prompt for them (it allows replies to our own broadcasts).
     u:setoption("broadcast", true)
     f = { udp = u, games = {}, nextQuery = 0, targets = { "255.255.255.255", "127.0.0.1" } }
     for _, ip in ipairs(lan.addresses()) do

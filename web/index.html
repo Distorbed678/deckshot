@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#121218">
+  <link rel="manifest" href="manifest.json">
   <title>Deckshot</title>
   <meta name="description" content="Deckshot: a 2D duel shooter where the round loser picks an upgrade card. Two players on one keyboard, right in your browser.">
   <style>
@@ -41,6 +45,18 @@
     #stage:fullscreen #canvas { width: min(100vw, 100vh * 16 / 9); border-radius: 0; }
 
     footer { color: var(--muted); font-size: 13px; text-align: center; padding: 8px 16px 14px; }
+
+    /* Phones and tablets: the game fills the screen, no page chrome, no scrolling or zooming. */
+    body { touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+    @media (pointer: coarse), (max-height: 520px) {
+      header, footer { display: none; }
+      #stage { padding: 0; height: 100vh; height: 100dvh; background: #000; }
+      #canvas, #loading { width: min(100vw, 100vh * 16 / 9); width: min(100vw, 100dvh * 16 / 9); border-radius: 0; }
+    }
+    #rotate { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 10; color: var(--text);
+      align-items: center; justify-content: center; text-align: center; font-size: 20px; padding: 24px; }
+    @media (pointer: coarse) and (orientation: portrait) { #rotate { display: flex; } }
+    #kbd { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; }
     kbd { background: var(--panel); border: 1px solid #3a3a4a; border-radius: 4px; padding: 0 5px; font-size: 12px; }
   </style>
 </head>
@@ -54,6 +70,8 @@
     </nav>
   </header>
 
+  <div id="rotate">Turn your device sideways to play.</div>
+  <input id="kbd" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   <div id="stage">
     <div id="loading">Loading...</div>
     <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
@@ -195,11 +213,41 @@
       lanWrite();
     }
 
+    // The phone keyboard for text fields (see core/webkeyboard.lua).
+    var kbd = document.getElementById("kbd"), kbdBuffer = "";
+    kbd.addEventListener("input", function () { kbdBuffer += kbd.value; kbd.value = ""; });
+    kbd.addEventListener("keydown", function (e) {
+      if (e.key === "Backspace") { kbdBuffer += "\b"; e.preventDefault(); }
+      else if (e.key === "Enter") { kbdBuffer += "\n"; e.preventDefault(); kbd.blur(); }
+    });
+    function kbdCommand(line) {
+      var cmd = line.split(" ")[1];
+      if (cmd === "show") { kbd.value = ""; kbd.focus(); }
+      else if (cmd === "hide") { kbd.blur(); canvas.focus(); }
+      else if (cmd === "poll") {
+        try { Module.FS_unlink("/tmp/rckbd.txt"); } catch (e) {}
+        Module.FS_createDataFile("/tmp", "rckbd.txt", new TextEncoder().encode(kbdBuffer), true, true, true);
+        kbdBuffer = "";
+      }
+    }
+
+    // Browsers only allow sound after a tap or click: resume every audio context on the first one.
+    var audioContexts = [];
+    ["AudioContext", "webkitAudioContext"].forEach(function (name) {
+      var Orig = window[name];
+      if (!Orig) return;
+      window[name] = function () { var ctx = new Orig(...arguments); audioContexts.push(ctx); return ctx; };
+      window[name].prototype = Orig.prototype;
+    });
+    function unlockAudio() { audioContexts.forEach(function (c) { if (c.state === "suspended") c.resume(); }); }
+    ["touchend", "mousedown", "keydown"].forEach(function (t) { window.addEventListener(t, unlockAudio, true); });
+
     var Module = {
       arguments: ["./game.love"],
       INITIAL_MEMORY: 67108864,
       print: function (text) {
         if (text.lastIndexOf("\x1bLAN ", 0) === 0) lanCommand(text);
+        else if (text.lastIndexOf("\x1bKBD ", 0) === 0) kbdCommand(text);
         else console.log(text);
       },
       printErr: console.error.bind(console),

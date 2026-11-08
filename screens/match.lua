@@ -44,10 +44,19 @@ local function settingsRules(online)
 end
 
 ---------------------------------------------------------------- construction
+-- This machine's input online: touch controls on a touch device, else a gamepad if one is in use, else mouse + keys.
+function Match.onlineInput()
+  if require("core.touch").enabled then return Input.touch() end
+  local pads = Input.pads()
+  if Settings.values.padOnline and pads[1] then return Input.pad(pads[1]) end
+  return Input.mouse(Settings.values.binds.online)
+end
+
 -- An input for a local slot kind: "p1" / "p2" (keyboard), "pad1".."pad4", "bot1".."bot3".
 function Match.localInput(kind)
   local binds = Settings.values.binds
   if kind == "p1" or kind == "p2" then return Input.keys(binds[kind]) end
+  if kind == "touch" then return Input.touch() end
   local pad = kind:match("^pad(%d)$")
   if pad then return Input.pad(Input.pads()[tonumber(pad)]) end
   local bot = kind:match("^bot(%d)$")
@@ -113,7 +122,7 @@ function Match.newHost(slots, winScore, transport, opts)
   local m = newMatch("host")
   m.transport = transport
   m.popEvents = opts.popEvents or active.get().popEvents
-  m.myInput = Input.mouse(Settings.values.binds.online)
+  m.myInput = Match.onlineInput()
   m.mySlot = 1
   m.peers = {}
   local defs, colors = {}, {}
@@ -144,7 +153,7 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.popEvents = opts.popEvents or active.get().popEvents
   m.hostPeer = hostPeer
   m.mySlot = mySlot
-  m.myInput = Input.mouse(Settings.values.binds.online)
+  m.myInput = Match.onlineInput()
   m.inputSeq = 0
   m.pending = pending
   local colors = {}
@@ -635,7 +644,20 @@ function Match:backToLobby(message)
 end
 
 ---------------------------------------------------------------- update
+-- Does anyone on this machine play with touch controls?
+function Match:usesTouch()
+  if self.role == "local" then
+    for _, inp in ipairs(self.inputs) do if inp.kind == "touch" then return true end end
+    return false
+  end
+  return self.myInput and self.myInput.kind == "touch"
+end
+
 function Match:update(dt, isTop)
+  if self:usesTouch() and require("core.touch").takePause() and isTop then
+    self.paused = not self.paused
+    ui.reset()
+  end
   local suppressed = self.paused or not isTop
   fx.update(dt)
   for i = #self.toasts, 1, -1 do
@@ -1279,6 +1301,10 @@ function Match:draw()
     local mx, my = app.mouse()
     local item = hud.cardAt(cardItems, mx, my)
     if item then hud.drawCardTooltip(item) end
+  end
+
+  if self:usesTouch() and not self.paused and (st.state == "countdown" or st.state == "playing" or st.state == "roundOver") then
+    require("core.touch").draw()
   end
 
   if self.paused then

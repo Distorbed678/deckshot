@@ -1,0 +1,10 @@
+{
+  "name": "Deckshot",
+  "short_name": "Deckshot",
+  "description": "A 2D duel shooter where the round loser picks an upgrade card. Inspired by ROUNDS.",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#121218",
+  "theme_color": "#121218"
+}

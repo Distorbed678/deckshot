@@ -133,6 +133,7 @@ build_web() {
   npx --yes "love.js@$LOVEJS_VERSION" -c -t "$TITLE" -m 67108864 "$DIST/$NAME.love" "$DIST/web" >/dev/null \
     || die "love.js failed"
   cp "$ROOT/web/index.html" "$DIST/web/index.html"
+  cp "$ROOT/web/manifest.json" "$DIST/web/manifest.json"
   rm -rf "$DIST/web/theme"
   touch "$DIST/web/.nojekyll"
   [ -f "$DIST/web/love.wasm" ] && [ -f "$DIST/web/game.data" ] || die "web build is incomplete"

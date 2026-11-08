@@ -11,6 +11,7 @@ Setup.__index = Setup
 
 local function kinds()
   local list = { "off", "p1", "p2" }
+  if require("core.touch").enabled then list[#list + 1] = "touch" end
   for i = 1, #Input.pads() do list[#list + 1] = "pad" .. i end
   for i = 1, 3 do list[#list + 1] = "bot" .. i end
   return list
@@ -20,6 +21,7 @@ local function kindName(k)
   if k == "off" then return "Off" end
   if k == "p1" then return "Keyboard (P1 keys)" end
   if k == "p2" then return "Keyboard (P2 keys)" end
+  if k == "touch" then return "Touch screen" end
   local pad = k:match("^pad(%d)$")
   if pad then
     local j = Input.pads()[tonumber(pad)]
@@ -47,7 +49,17 @@ function Setup.encode(slots)
 end
 
 function Setup.new()
-  return setmetatable({ slots = Setup.parse(Settings.values.localSetup) }, Setup)
+  local slots = Setup.parse(Settings.values.localSetup)
+  -- On a touch device, start with you (touch) against a bot.
+  if require("core.touch").enabled then
+    local hasTouch = false
+    for _, s in ipairs(slots) do if s.kind == "touch" then hasTouch = true end end
+    if not hasTouch then
+      slots[1].kind = "touch"
+      if slots[2].kind == "p2" or slots[2].kind == "off" then slots[2].kind = "bot2" end
+    end
+  end
+  return setmetatable({ slots = slots }, Setup)
 end
 
 function Setup:keypressed(key)

@@ -258,15 +258,22 @@ function Lobby:drawLanInfo(session, rx, ry, rw)
 
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Browser players open", rx, ry + 200, rw, "center")
+  local tw = rw - 210
+  love.graphics.printf("Phones, tablets and browsers: scan the code or open", rx + 20, ry + 196, tw, "center")
   love.graphics.setFont(app.fonts.title)
   if session.webDir() then
     love.graphics.setColor(0.55, 0.85, 1)
-    love.graphics.printf(session.url or "", rx, ry + 226, rw, "center")
-    copyButton("Copy Browser Link", "url", session.url or "", rx + 150, ry + 266, rw - 300)
+    love.graphics.printf(session.url or "", rx + 20, ry + 246, tw, "center")
+    copyButton("Copy Browser Link", "url", session.url or "", rx + 60, ry + 286, tw - 80)
     love.graphics.setFont(app.fonts.small)
     love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf("then choose Online Play > LAN > Join Game.", rx + 30, ry + 316, rw - 60, "center")
+    love.graphics.printf("then choose Online Play > LAN > Join Game.", rx + 20, ry + 332, tw, "center")
+    -- QR code of the browser link (phones on the same Wi-Fi scan it).
+    if self.qrUrl ~= session.url then
+      self.qrUrl = session.url
+      self.qrM, self.qrN = require("core.qr").encode(session.url or "")
+    end
+    if self.qrM then require("core.qr").draw(self.qrM, self.qrN, rx + rw - 180, ry + 190, 160) end
   else
     love.graphics.setColor(1, 0.6, 0.45, 0.8)
     love.graphics.printf("unavailable", rx, ry + 226, rw, "center")

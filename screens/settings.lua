@@ -306,6 +306,21 @@ function Screen:drawControls(x, y, w)
     self:stopCapture()
     Settings.resetBinds()
   end
+  local v = Settings.values
+  local modes = { "auto", "on", "off" }
+  local names = { auto = "Auto", on = "On", off = "Off" }
+  local d = ui.cycler("Touch controls", names[v.touchControls] or "Auto", x + 236, by + 44, 300, 40)
+  if d ~= 0 then
+    local i = 1
+    for k, m in ipairs(modes) do if m == v.touchControls then i = k end end
+    v.touchControls = modes[(i - 1 + d) % 3 + 1]
+    Settings.applyEffects()
+  end
+  if ui.button("Touch layout...", x + 552, by + 44, 200, 40, { font = app.fonts.med }) then
+    app.push(require("screens.touchlayout").new())
+  end
+  d = ui.cycler("Gamepad online", v.padOnline and "On" or "Off", x + 768, by + 44, w - 768, 40)
+  if d ~= 0 then v.padOnline = not v.padOnline end
 end
 
 ---------------------------------------------------------------- gameplay
