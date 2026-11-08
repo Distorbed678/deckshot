@@ -1,0 +1,8 @@
+deckshot-card 1
+name Cluster Bombs
+rarity epic
+row add explosion 40
+row add cluster 1
+note +bullets explode
+note +explosions split into 3 mini blasts
+stack +2 mini blasts per extra copy

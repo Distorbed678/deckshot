@@ -1,0 +1,5 @@
+deckshot-card 1
+name Bouncy
+rarity common
+row add bounces 2
+row mul gunDamage 1.1

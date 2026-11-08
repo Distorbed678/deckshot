@@ -1,0 +1,6 @@
+deckshot-card 1
+name Nova
+rarity epic
+block
+row add blockNova 8
+note +blocking fires a ring of 8 bullets

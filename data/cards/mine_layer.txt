@@ -1,0 +1,7 @@
+deckshot-card 1
+name Mine Layer
+rarity uncommon
+block
+row add mineLayer 1
+note +blocking drops a mine at your feet
+stack +1 mine per copy

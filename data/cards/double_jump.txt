@@ -1,0 +1,5 @@
+deckshot-card 1
+name Double Jump
+rarity common
+row add airJumps 1
+row mul speed 1.1

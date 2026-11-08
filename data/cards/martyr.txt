@@ -1,0 +1,5 @@
+deckshot-card 1
+name Martyr
+rarity uncommon
+row add martyr 1
+note +explode violently when you die

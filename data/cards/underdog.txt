@@ -1,0 +1,4 @@
+deckshot-card 1
+name Underdog
+rarity uncommon
+row add underdog 1

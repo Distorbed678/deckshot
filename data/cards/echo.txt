@@ -1,0 +1,6 @@
+deckshot-card 1
+name Echo
+rarity rare
+row add burst 2
+row mul gunDamage 0.7
+note +every shot echoes 2 more times for free

@@ -1,0 +1,6 @@
+deckshot-card 1
+name Overclock
+rarity rare
+row add spinup 1
+note +fire rate ramps up to 3x while you hold fire
+stack ramps up faster and cools down slower per copy

@@ -1,0 +1,7 @@
+deckshot-card 1
+name Sticky Mines
+rarity rare
+row add sticky 1
+note +spent bullets stick to walls as mines
+note +mines explode near the enemy
+stack +40% mine trigger and blast radius per extra copy

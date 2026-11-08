@@ -179,6 +179,19 @@ function hud.cardRects(n, selected)
   return rects
 end
 
+-- A small wrench: marks custom and edited cards (and maps).
+function hud.drawWrench(x, y, size, color)
+  love.graphics.setColor(color or { 1, 1, 1 })
+  love.graphics.push()
+  love.graphics.translate(x + size / 2, y + size / 2)
+  love.graphics.rotate(-math.pi / 4)
+  love.graphics.rectangle("fill", -size * 0.1, -size * 0.1, size * 0.2, size * 0.55)
+  love.graphics.circle("fill", 0, -size * 0.22, size * 0.24)
+  love.graphics.setColor(1, 1, 1, 0)
+  love.graphics.pop()
+  love.graphics.setColor(color or { 1, 1, 1 })
+end
+
 -- The back of a face-down card (rarity hidden until it is turned over).
 function hud.drawCardBack(x, y, w, h, selected, ownerColor)
   love.graphics.setColor(0.16, 0.16, 0.22)
@@ -239,21 +252,43 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   love.graphics.setColor(0.08, 0.08, 0.1)
   love.graphics.printf(card.name, x + 10, y + 40 - titleFont:getHeight() / 2, w - 20, "center")
 
-  local font = app.fonts.med
+  -- Shrink the text until every line (and the stacking note) fits on the card.
+  local stackH = 0
+  if card.stack then
+    local _, sw = app.fonts.small:getWrap("Stacking: " .. card.stack, w - 28)
+    stackH = #sw * app.fonts.small:getHeight() + 6
+  end
+  local room = h - 100 - 40 - stackH
+  local font, gap
+  for _, f in ipairs({ { app.fonts.med, 10 }, { app.fonts.small, 6 }, { app.fonts.tiny, 3 } }) do
+    font, gap = f[1], f[2]
+    local total = 0
+    for _, line in ipairs(card.lines) do
+      local _, wr = font:getWrap(line, w - 28)
+      total = total + #wr * font:getHeight() + gap
+    end
+    if total <= room then break end
+  end
   love.graphics.setFont(font)
   local ly = y + 100
-  for _, line in ipairs(card.lines) do
-    local first = line:sub(1, 1)
-    if first == "+" then
+  for i, line in ipairs(card.lines) do
+    local good
+    if card.lineGood then
+      good = card.lineGood[i]
+    else
+      local first = line:sub(1, 1)
+      good = (first == "+" and true) or (first == "-" and false) or nil
+    end
+    if good == true then
       love.graphics.setColor(0.5, 1, 0.5)
-    elseif first == "-" then
+    elseif good == false then
       love.graphics.setColor(1, 0.45, 0.45)
     else
       love.graphics.setColor(1, 1, 1)
     end
     love.graphics.printf(line, x + 14, ly, w - 28, "center")
     local _, wrapped = font:getWrap(line, w - 28)
-    ly = ly + #wrapped * font:getHeight() + 10
+    ly = ly + #wrapped * font:getHeight() + gap
   end
 
   -- What extra copies do (for cards where it isn't just "the stats add up").
@@ -267,6 +302,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
 
   local label = rarity.name:upper()
   if card.block then label = label .. "  -  BLOCK" end
+  if card.custom or card.edited then hud.drawWrench(x + w - 26, y + 8, 18, { 0.08, 0.08, 0.1 }) end
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(rc)
   love.graphics.printf(label, x, y + h - 30, w, "center")

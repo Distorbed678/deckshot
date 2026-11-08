@@ -1,0 +1,8 @@
+deckshot-card 1
+name Bulwark
+rarity common
+block
+row add blockTime 0.1
+row mul blockCooldown 0.85
+row add maxHp 20
+note +longer block

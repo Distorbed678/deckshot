@@ -1,0 +1,7 @@
+deckshot-card 1
+name Ricochet Seeker
+rarity rare
+row add seek 2
+row add bounces 1
+note +bullets home in on enemies after bouncing
+stack stronger homing per copy

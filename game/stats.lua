@@ -1,0 +1,179 @@
+-- Player stats: base values plus how each stat is shown on cards and in the card editor.
+--   fmt "pct"   : a multiplier row shows "+30% <label>"; an add row of a fraction shows "+30% <label>"
+--   fmt "flat"  : an add row shows "+20 <label>"; a multiplier row shows a percentage
+--   fmt "rate"  : shown inverted (fireDelay x0.75 -> "+33% fire rate")
+--   fmt "secs"  : seconds ("+1.5s <label>")
+--   fmt "count" : abilities counted per copy ("+1 <label>")
+--   fmt "hidden": internal tuning values; the card's notes describe them
+-- better: "high" (more is good) or "low" (less is good) - colours the generated line.
+-- Card abilities are counts of copies (0 = not owned), so every card stacks.
+local Stats = {}
+
+Stats.GROUPS = { "Gun", "Bullets", "Melee", "Movement", "Defense", "Block", "Abilities" }
+
+Stats.LIST = {
+  -- Gun
+  { "gunDamage", 34, "Gun", "pct", "high", "gun damage" },
+  { "fireDelay", 0.25, "Gun", "rate", "low", "fire rate" },
+  { "ammo", 3, "Gun", "flat", "high", "ammo" },
+  { "reloadTime", 1.5, "Gun", "pct", "low", "reload time" },
+  { "bullets", 1, "Gun", "flat", "high", "bullets per shot" },
+  { "spread", 0, "Gun", "pct", "low", "spread" },
+  { "knockback", 250, "Gun", "pct", "high", "knockback" },
+  { "recoil", 0, "Gun", "hidden", "high", "recoil" },
+  { "burst", 0, "Gun", "count", "high", "echo shots" },
+  { "spinup", 0, "Gun", "count", "high", "fire-rate ramp" },
+  { "backShot", 0, "Gun", "count", "high", "back shots" },
+  -- Bullets
+  { "bulletSpeed", 950, "Bullets", "pct", "high", "bullet speed" },
+  { "bulletGravity", 0.25, "Bullets", "pct", "low", "bullet drop" },
+  { "bulletSize", 5, "Bullets", "pct", "high", "bullet size" },
+  { "bounces", 0, "Bullets", "flat", "high", "bullet bounces" },
+  { "bounceDamage", 0, "Bullets", "pct", "high", "damage per bounce" },
+  { "distDamage", 0, "Bullets", "hidden", "high", "damage over distance" },
+  { "accel", 0, "Bullets", "hidden", "high", "bullet acceleration" },
+  { "explosion", 0, "Bullets", "flat", "high", "explosion radius" },
+  { "poison", 0, "Bullets", "pct", "high", "poison damage" },
+  { "homing", 0, "Bullets", "hidden", "high", "homing" },
+  { "lifesteal", 0, "Bullets", "pct", "high", "lifesteal" },
+  { "frost", 0, "Bullets", "secs", "high", "slow on hit" },
+  { "crit", 0, "Bullets", "pct", "high", "crit chance" },
+  { "pierce", 0, "Bullets", "flat", "high", "players pierced" },
+  { "split", 0, "Bullets", "count", "high", "wall splits" },
+  { "ghost", 0, "Bullets", "count", "high", "ghost bullets" },
+  { "sticky", 0, "Bullets", "count", "high", "sticky mines" },
+  { "blackhole", 0, "Bullets", "count", "high", "black holes" },
+  { "shrapnel", 0, "Bullets", "count", "high", "shrapnel" },
+  { "seek", 0, "Bullets", "hidden", "high", "ricochet homing" },
+  { "cluster", 0, "Bullets", "count", "high", "cluster blasts" },
+  { "hydra", 0, "Bullets", "count", "high", "hydra heads" },
+  { "laser", 0, "Bullets", "count", "high", "laser" },
+  { "railgun", 0, "Bullets", "count", "high", "railgun" },
+  { "mirror", 0, "Bullets", "count", "high", "mirror shots" },
+  { "scavenger", 0, "Bullets", "flat", "high", "ammo refunded per hit" },
+  -- Melee
+  { "meleeDamage", 12, "Melee", "pct", "high", "melee damage" },
+  { "meleeKnockback", 450, "Melee", "pct", "high", "melee knockback" },
+  { "meleeRange", 55, "Melee", "pct", "high", "melee range" },
+  { "meleeCooldown", 0.45, "Melee", "pct", "low", "melee cooldown" },
+  { "heavyCharge", 0.6, "Melee", "pct", "low", "heavy charge time" },
+  { "heavyDash", 260, "Melee", "pct", "high", "heavy lunge" },
+  { "meleeStun", 0, "Melee", "pct", "high", "stun when you block melee" },
+  { "meleeLifesteal", 0, "Melee", "pct", "high", "melee lifesteal" },
+  -- Movement
+  { "speed", 340, "Movement", "pct", "high", "move speed" },
+  { "jump", 930, "Movement", "pct", "high", "jump power" },
+  { "airJumps", 0, "Movement", "flat", "high", "air jumps" },
+  { "gravityMul", 1, "Movement", "pct", "low", "gravity" },
+  { "dashes", 1, "Movement", "flat", "high", "air dashes" },
+  { "dashSpeed", 950, "Movement", "pct", "high", "dash speed" },
+  { "dashCooldown", 0.6, "Movement", "pct", "low", "dash cooldown" },
+  { "radius", 20, "Movement", "pct", "low", "body size" },
+  -- Defense
+  { "maxHp", 100, "Defense", "flat", "high", "HP" },
+  { "armor", 0, "Defense", "flat", "high", "damage blocked per hit" },
+  { "regen", 0, "Defense", "flat", "high", "HP per second" },
+  { "shieldMax", 0, "Defense", "flat", "high", "shield each round" },
+  { "lives", 0, "Defense", "count", "high", "revives" },
+  { "lastStand", 0, "Defense", "count", "high", "last stands" },
+  { "decay", 0, "Defense", "count", "high", "damage decay" },
+  { "thorns", 0, "Defense", "pct", "high", "thorns" },
+  { "frostback", 0, "Defense", "secs", "high", "slow on attackers" },
+  { "knockbackImmune", 0, "Defense", "count", "high", "knockback immunity" },
+  { "stasis", 0, "Defense", "count", "high", "stasis field" },
+  { "repel", 0, "Defense", "count", "high", "bullet repulsion" },
+  { "orbs", 0, "Defense", "flat", "high", "orbiting orbs" },
+  -- Block
+  { "blockCooldown", 4, "Block", "pct", "low", "block cooldown" },
+  { "blockTime", 0.3, "Block", "secs", "high", "block duration" },
+  { "blockHeal", 0, "Block", "flat", "high", "HP healed when blocking" },
+  { "reflect", 0, "Block", "count", "high", "reflected bullets" },
+  { "shockwave", 0, "Block", "count", "high", "block shockwave" },
+  { "blink", 0, "Block", "flat", "high", "blink distance" },
+  { "empower", 0, "Block", "count", "high", "empowered shots" },
+  { "parry", 0, "Block", "count", "high", "parry" },
+  { "blockReload", 0, "Block", "count", "high", "block reload" },
+  { "cloak", 0, "Block", "secs", "high", "cloak" },
+  { "blockNova", 0, "Block", "flat", "high", "nova bullets" },
+  { "sprintBlock", 0, "Block", "count", "high", "sprint block" },
+  { "mineLayer", 0, "Block", "flat", "high", "mines per block" },
+  { "lockLoad", 0, "Block", "count", "high", "lock and load" },
+  { "gravityBlock", 0, "Block", "count", "high", "gravity block" },
+  { "timeWarp", 0, "Block", "count", "high", "time warp" },
+  -- Abilities (damage conditions and effects)
+  { "berserk", 0, "Abilities", "count", "high", "berserker" },
+  { "underdog", 0, "Abilities", "count", "high", "underdog" },
+  { "martyr", 0, "Abilities", "count", "high", "martyr" },
+  { "lastRound", 0, "Abilities", "count", "high", "last round" },
+  { "spite", 0, "Abilities", "count", "high", "spite" },
+  { "execute", 0, "Abilities", "count", "high", "executioner" },
+  { "combo", 0, "Abilities", "count", "high", "combo" },
+  { "static", 0, "Abilities", "flat", "high", "static damage per second" },
+  { "quickdraw", 0, "Abilities", "count", "high", "quickdraw" },
+  { "momentum", 0, "Abilities", "count", "high", "momentum" },
+  { "reloadNova", 0, "Abilities", "flat", "high", "reload nova bullets" },
+  { "adrenaline", 0, "Abilities", "count", "high", "adrenaline" },
+  { "swap", 0, "Abilities", "count", "high", "swap shot" },
+  { "sentry", 0, "Abilities", "count", "high", "sentry" },
+}
+
+Stats.BASE = {}
+Stats.INFO = {}
+for i, row in ipairs(Stats.LIST) do
+  local info = { key = row[1], base = row[2], group = row[3], fmt = row[4], better = row[5], label = row[6], order = i }
+  Stats.INFO[info.key] = info
+  Stats.BASE[info.key] = info.base
+end
+
+-- Renamed stats (old card files / settings).
+Stats.ALIAS = { damage = "gunDamage" }
+
+local function round(v) return math.floor(v + 0.5) end
+
+local function num(v)
+  if math.abs(v - round(v)) < 0.001 then return tostring(round(v)) end
+  return (string.format("%.2f", v):gsub("0+$", ""):gsub("%.$", ""))
+end
+Stats.num = num
+
+-- The text line for one card row, and whether it's good for the player (nil = neutral/hidden).
+-- row = { op = "add" | "mul" | "set", stat = key, value = number }
+function Stats.describe(row)
+  local info = Stats.INFO[row.stat]
+  if not info or info.fmt == "hidden" then return nil end
+  local v = row.value
+  local text, up
+  if row.op == "set" then
+    return "+" .. info.label .. " set to " .. num(v), nil
+  elseif row.op == "mul" then
+    if v == 1 then return nil end
+    if info.fmt == "rate" then
+      local pct = round((1 / v - 1) * 100)
+      up = pct > 0
+      text = (pct > 0 and "+" or "") .. pct .. "% " .. info.label
+      return text, up
+    end
+    local pct = round((v - 1) * 100)
+    if pct == 0 then return nil end
+    up = pct > 0
+    text = (pct > 0 and "+" or "") .. pct .. "% " .. info.label
+  else -- add
+    if v == 0 then return nil end
+    up = v > 0
+    if info.fmt == "pct" and math.abs(v) <= 5 then
+      text = (v > 0 and "+" or "") .. round(v * 100) .. "% " .. info.label
+    elseif info.fmt == "secs" then
+      text = (v > 0 and "+" or "") .. num(v) .. "s " .. info.label
+    elseif info.fmt == "rate" then
+      text = (v > 0 and "+" or "") .. num(v) .. "s between shots"
+      up = v < 0
+    else
+      text = (v > 0 and "+" or "") .. num(v) .. " " .. info.label
+    end
+  end
+  local good = up
+  if info.better == "low" then good = not up end
+  return text, good
+end
+
+return Stats

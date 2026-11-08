@@ -1,0 +1,4 @@
+deckshot-card 1
+name Quick Hands
+rarity common
+row mul fireDelay 0.75

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Rocket
+rarity uncommon
+row mul bulletSpeed 0.45
+row add accel 2200
+row mul gunDamage 1.25
+note +bullets accelerate in flight
+note -launch slowly

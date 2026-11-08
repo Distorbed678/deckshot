@@ -1,0 +1,6 @@
+deckshot-card 1
+name Quickdraw
+rarity uncommon
+row add quickdraw 1
+note +your first shot after a reload deals +50% damage
+stack +50% per copy

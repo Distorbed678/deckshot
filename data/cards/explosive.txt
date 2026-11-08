@@ -1,0 +1,6 @@
+deckshot-card 1
+name Explosive
+rarity rare
+row add explosion 70
+row mul fireDelay 1.33
+note +bullets explode

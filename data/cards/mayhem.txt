@@ -1,0 +1,5 @@
+deckshot-card 1
+name Mayhem
+rarity rare
+row add bounces 5
+row mul gunDamage 0.85

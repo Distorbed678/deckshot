@@ -19,6 +19,7 @@ net.MSG = {
   VOTE = 9,     -- client -> host: match-over vote (continue / new match)
   DISCARD = 10, -- client -> host: discard an owned card instead of picking
   MAPS = 11,    -- host -> clients: the map list (full text for custom / edited maps), zlib
+  CARDS = 12,   -- host -> clients: the card list (full text for custom / edited cards), zlib
 }
 local M = net.MSG
 
@@ -171,15 +172,18 @@ function net.decodeDiscard(data)
   return cardPos, serial
 end
 
--- entries: { { id = string, text = string or nil } } (see Map.sessionEntries)
-function net.encodeMaps(entries)
+-- entries: { { id = string, text = string or nil } } (see Map.sessionEntries / Cards.sessionEntries)
+local function encodeEntries(kind, entries)
   local parts = { pack("string", "<H", #entries) }
   for _, e in ipairs(entries) do
     parts[#parts + 1] = pack("string", "<s1", e.id:sub(1, 255))
     parts[#parts + 1] = pack("string", "<s4", e.text or "")
   end
-  return string.char(M.MAPS) .. love.data.compress("string", "zlib", table.concat(parts), 6)
+  return string.char(kind) .. love.data.compress("string", "zlib", table.concat(parts), 6)
 end
+
+function net.encodeMaps(entries) return encodeEntries(M.MAPS, entries) end
+function net.encodeCards(entries) return encodeEntries(M.CARDS, entries) end
 
 function net.decodeMaps(data)
   local raw = love.data.decompress("string", "zlib", data:sub(2))
@@ -193,6 +197,8 @@ function net.decodeMaps(data)
   end
   return out
 end
+
+net.decodeCards = function(data) return net.decodeMaps(data) end
 
 function net.encodeVote(choice)
   return pack("string", "<BB", M.VOTE, choice)

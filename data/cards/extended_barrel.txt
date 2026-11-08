@@ -1,0 +1,5 @@
+deckshot-card 1
+name Extended Barrel
+rarity common
+row add ammo 1
+row mul bulletSpeed 1.2

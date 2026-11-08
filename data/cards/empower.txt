@@ -1,0 +1,7 @@
+deckshot-card 1
+name Empower
+rarity uncommon
+block
+row add empower 1
+note +after blocking, your next shot deals double damage
+stack +1 empowered shot per copy

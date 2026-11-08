@@ -1,0 +1,4 @@
+deckshot-card 1
+name Spring Legs
+rarity common
+row mul jump 1.15

@@ -44,7 +44,7 @@ function Bullet.new(owner, x, y, vx, vy)
     owner = owner,
     x = x, y = y, vx = vx, vy = vy,
     r = s.bulletSize,
-    damage = s.damage,
+    damage = s.gunDamage,
     bounces = s.bounces,
     bounced = false,
     gravity = s.bulletGravity,
@@ -412,6 +412,7 @@ function Bullet:hitPlayer(p, game)
   if os.combo > 0 and o.comboCount > 0 then dmg = dmg * (1 + 0.1 * os.combo * math.min(5, o.comboCount)) end
   local landed = p:hit(dmg, self.vx, self.vy, self.knockback, o)
   if landed then
+    if not self.fromTrigger and not self.isChild and o.trigger then o:trigger("hit", { target = p }) end
     if self.lifesteal > 0 then o:heal(dmg * self.lifesteal) end
     if self.poison > 0 then p:poisonFor(dmg * self.poison, 3) end
     if self.frost > 0 then p.slowTimer = math.max(p.slowTimer, self.frost) end

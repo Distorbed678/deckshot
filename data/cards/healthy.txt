@@ -1,0 +1,4 @@
+deckshot-card 1
+name Healthy
+rarity common
+row add maxHp 50

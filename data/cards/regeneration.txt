@@ -1,0 +1,5 @@
+deckshot-card 1
+name Regeneration
+rarity common
+row add regen 3
+note +heal 3 HP per second

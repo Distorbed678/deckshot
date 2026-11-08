@@ -1,0 +1,7 @@
+deckshot-card 1
+name Piercing Rounds
+rarity rare
+row add pierce 1
+row mul gunDamage 0.9
+note +bullets pass through 1 player
+stack +1 player per copy

@@ -1,0 +1,6 @@
+deckshot-card 1
+name Last Stand
+rarity rare
+row add lastStand 1
+note +once per round, survive a lethal hit with 1 HP
+stack +1 use per round per copy

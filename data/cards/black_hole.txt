@@ -1,0 +1,7 @@
+deckshot-card 1
+name Black Hole
+rarity legendary
+row add blackhole 1
+note +bullet impacts open a black hole
+note +black holes pull the enemy in
+stack +30% pull radius and strength per extra copy

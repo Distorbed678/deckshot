@@ -1,0 +1,7 @@
+deckshot-card 1
+name Gravity Block
+rarity rare
+block
+row add gravityBlock 1
+note +blocking opens a black hole at your position
+stack +30% pull radius and strength per extra copy

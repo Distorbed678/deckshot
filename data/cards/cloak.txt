@@ -1,0 +1,7 @@
+deckshot-card 1
+name Cloak
+rarity uncommon
+block
+row add cloak 1.5
+note +blocking turns you nearly invisible for 1.5s
+note +homing can't track you

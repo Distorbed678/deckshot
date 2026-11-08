@@ -1,0 +1,7 @@
+deckshot-card 1
+name Buckshot
+rarity uncommon
+row add bullets 4
+row add spread 0.5
+row mul gunDamage 0.45
+note +wide spread

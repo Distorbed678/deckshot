@@ -1,0 +1,5 @@
+deckshot-card 1
+name Big Mag
+rarity common
+row add ammo 3
+row mul reloadTime 0.9

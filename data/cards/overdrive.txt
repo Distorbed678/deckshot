@@ -1,0 +1,6 @@
+deckshot-card 1
+name Overdrive
+rarity epic
+row mul fireDelay 0.625
+row add ammo 3
+row mul bulletSize 0.7

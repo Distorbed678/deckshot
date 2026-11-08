@@ -1,0 +1,5 @@
+deckshot-card 1
+name Hollow Points
+rarity common
+row mul gunDamage 1.25
+row mul bulletSpeed 0.85

@@ -1,0 +1,7 @@
+deckshot-card 1
+name Lock and Load
+rarity rare
+block
+row add lockLoad 1
+note +blocking gives 1.5s where your shots don't use ammo
+stack +1s per extra copy

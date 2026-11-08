@@ -1,0 +1,4 @@
+deckshot-card 1
+name Quick Reload
+rarity common
+row mul reloadTime 0.55

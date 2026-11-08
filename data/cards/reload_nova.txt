@@ -1,0 +1,6 @@
+deckshot-card 1
+name Reload Nova
+rarity rare
+row add reloadNova 6
+note +finishing a reload fires 6 bullets around you
+stack +6 bullets per copy

@@ -1,0 +1,7 @@
+deckshot-card 1
+name Parry
+rarity uncommon
+block
+row add parry 1
+note +blocking an attack instantly recharges your block
+stack parries heal 10 HP per extra copy

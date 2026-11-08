@@ -1,0 +1,6 @@
+deckshot-card 1
+name Steady Aim
+rarity common
+row mul spread 0.4
+row mul gunDamage 1.15
+row mul fireDelay 1.1

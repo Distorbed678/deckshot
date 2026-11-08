@@ -1,0 +1,6 @@
+deckshot-card 1
+name Poison
+rarity uncommon
+row add poison 0.6
+row mul gunDamage 0.85
+note +hits poison for 60% dmg

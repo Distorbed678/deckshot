@@ -1,0 +1,5 @@
+deckshot-card 1
+name Phoenix
+rarity legendary
+row add lives 1
+note +revive once per round at 50% HP

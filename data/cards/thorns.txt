@@ -1,0 +1,6 @@
+deckshot-card 1
+name Thorns
+rarity uncommon
+row add thorns 0.25
+note +enemies that hit you take 25% of the damage back
+stack +25% per copy

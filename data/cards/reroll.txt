@@ -1,0 +1,5 @@
+deckshot-card 1
+name Reroll
+rarity legendary
+special reroll
+note Reroll these cards

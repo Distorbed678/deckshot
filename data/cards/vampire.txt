@@ -1,0 +1,5 @@
+deckshot-card 1
+name Vampire
+rarity epic
+row add lifesteal 0.3
+row add maxHp 25

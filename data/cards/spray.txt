@@ -1,0 +1,8 @@
+deckshot-card 1
+name Spray
+rarity uncommon
+row mul fireDelay 0.3
+row add ammo 4
+row add spread 0.15
+row mul gunDamage 0.45
+note +spread

@@ -62,6 +62,11 @@ function Match.newLocal(winScore, opts)
   m:hookWorld()
   fx.recorder = nil
   m.world:beginMatch()
+  if opts.giveCards then -- card editor test: player 1 owns these
+    for _, c in ipairs(opts.giveCards) do table.insert(m.world.players[1].cards, c) end
+    m.world.players[1]:recompute()
+    m.world:startRound()
+  end
   return m
 end
 
@@ -83,6 +88,7 @@ function Match.newHost(slots, winScore, transport, opts)
   m.world = World.new(defs, winScore, settingsRules(true))
   m:hookWorld()
   m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
+  m:broadcast(net.encodeCards(Cards.sessionEntries()), true)
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
@@ -113,7 +119,10 @@ end
 
 function Match:leave()
   self.closed = true
-  if self.role == "client" then Map.loadAll() end -- drop the host's session map list
+  if self.role == "client" then -- drop the host's session map and card lists
+    Map.loadAll()
+    Cards.loadAll()
+  end
   fx.recorder = nil
   fx.clear()
   love.mouse.setVisible(true)
@@ -463,7 +472,10 @@ function Match:clientNetwork()
   for _, msg in ipairs(msgs) do
     if msg.from == self.hostPeer then
       local kind = net.kind(msg.data)
-      if kind == net.MSG.MAPS then
+      if kind == net.MSG.CARDS then
+        local ok, entries = pcall(net.decodeCards, msg.data)
+        if ok then Cards.setSession(entries) end
+      elseif kind == net.MSG.MAPS then
         local ok, entries = pcall(net.decodeMaps, msg.data)
         if ok then
           Map.setSession(entries)

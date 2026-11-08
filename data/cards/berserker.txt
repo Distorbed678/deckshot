@@ -1,0 +1,5 @@
+deckshot-card 1
+name Berserker
+rarity uncommon
+row add berserk 1
+note +up to +100% damage as your HP drops

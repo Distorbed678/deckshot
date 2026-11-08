@@ -1,0 +1,6 @@
+deckshot-card 1
+name Mirror Shot
+rarity legendary
+row add mirror 1
+note +every shot is also fired from the mirrored side of the arena
+stack 2nd copy: also mirrored top-to-bottom, 3rd: corner-to-corner, more: +15% damage

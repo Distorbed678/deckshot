@@ -1,0 +1,5 @@
+deckshot-card 1
+name Light Rounds
+rarity common
+row mul bulletGravity 0.5
+row mul bulletSpeed 1.15

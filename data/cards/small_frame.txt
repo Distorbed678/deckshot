@@ -1,0 +1,7 @@
+deckshot-card 1
+name Small Frame
+rarity common
+row add radius -3
+row mul speed 1.1
+row add maxHp -15
+note +smaller body (harder to hit)

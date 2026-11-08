@@ -1,0 +1,7 @@
+deckshot-card 1
+name Ghost Bullets
+rarity legendary
+row first mul gunDamage 0.85
+row add ghost 1
+note +bullets pass through walls
+stack +25% damage through walls per extra copy (penalty doesn't stack)

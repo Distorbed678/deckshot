@@ -1,0 +1,7 @@
+deckshot-card 1
+name Sentry
+rarity legendary
+row add sentry 1
+note +a turret hovers by you and shoots the nearest enemy
+note +turret shots deal 40% of your damage
+stack turret fires 50% faster per extra copy

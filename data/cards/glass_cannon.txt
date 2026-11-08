@@ -1,0 +1,5 @@
+deckshot-card 1
+name Glass Cannon
+rarity common
+row mul gunDamage 2
+row mul maxHp 0.5

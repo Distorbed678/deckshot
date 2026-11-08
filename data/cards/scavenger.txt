@@ -1,0 +1,6 @@
+deckshot-card 1
+name Scavenger
+rarity common
+row add scavenger 1
+note +hits refund 1 ammo
+note +hits cancel your reload

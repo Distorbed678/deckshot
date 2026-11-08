@@ -1,0 +1,6 @@
+deckshot-card 1
+name Thick Skin
+rarity common
+row add maxHp 30
+row add armor 3
+note +take 3 less damage from every hit

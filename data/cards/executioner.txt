@@ -1,0 +1,5 @@
+deckshot-card 1
+name Executioner
+rarity uncommon
+row add execute 1
+stack +50% per copy

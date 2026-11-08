@@ -1,0 +1,6 @@
+deckshot-card 1
+name Moon Shoes
+rarity common
+row mul gravityMul 0.55
+row mul jump 0.8
+note +floaty, higher jumps

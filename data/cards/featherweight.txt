@@ -1,0 +1,6 @@
+deckshot-card 1
+name Featherweight
+rarity common
+row mul gravityMul 0.75
+row mul speed 1.15
+row add maxHp -20

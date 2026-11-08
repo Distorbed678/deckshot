@@ -1,0 +1,7 @@
+deckshot-card 1
+name Reflector
+rarity uncommon
+block
+row add reflect 1
+note +bullets you block come back as 1 extra bullet
+stack +1 extra reflected bullet per copy

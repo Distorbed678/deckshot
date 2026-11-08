@@ -2,6 +2,7 @@ local Map = require "game.map"
 local fx = require "gfx.fx"
 local Bullet = require "game.bullet"
 local sfx = require "gfx.sfx"
+local Triggers = require "game.triggers"
 
 local Player = {}
 Player.__index = Player
@@ -46,33 +47,8 @@ local STATIC_RADIUS = 130
 local SENTRY_DELAY = 0.9
 local ARENA_W, ARENA_H = 1280, 720
 
-local BASE = {
-  maxHp = 100, radius = 20,
-  speed = 340, jump = 930, airJumps = 0, gravityMul = 1,
-  dashes = 1, dashSpeed = 950, dashCooldown = 0.6,
-  meleeDamage = 12, meleeKnockback = 450, meleeRange = 55, meleeCooldown = 0.45,
-  heavyCharge = 0.6, heavyDash = 260, meleeStun = 0, meleeLifesteal = 0,
-  damage = 34, bulletSpeed = 950, bulletGravity = 0.25, bulletSize = 5,
-  bullets = 1, spread = 0, bounces = 0,
-  fireDelay = 0.25, ammo = 3, reloadTime = 1.5,
-  knockback = 250, lifesteal = 0, explosion = 0, poison = 0, homing = 0,
-  blockCooldown = 4, blockTime = 0.3,
-  -- Card abilities are counts (copies held), so every card stacks; 0 = not owned.
-  -- block effects
-  reflect = 0, shockwave = 0, blockHeal = 0, blink = 0, empower = 0,
-  parry = 0, blockReload = 0, cloak = 0, blockNova = 0,
-  -- special behaviours
-  lives = 0, split = 0, bounceDamage = 0, distDamage = 0, accel = 0, decay = 0,
-  recoil = 0, frost = 0, ghost = 0, burst = 0, spinup = 0, crit = 0, sticky = 0,
-  orbs = 0, berserk = 0, martyr = 0, repel = 0, backShot = 0, blackhole = 0,
-  underdog = 0, scavenger = 0, laser = 0, knockbackImmune = false, stasis = 0,
-  -- v0.3 cards
-  armor = 0, regen = 0, lastRound = 0, thorns = 0, spite = 0, execute = 0, combo = 0,
-  sprintBlock = 0, frostback = 0, mineLayer = 0, static = 0, quickdraw = 0, pierce = 0,
-  shrapnel = 0, seek = 0, lastStand = 0, lockLoad = 0, momentum = 0, reloadNova = 0,
-  adrenaline = 0, gravityBlock = 0, swap = 0, cluster = 0, shieldMax = 0, timeWarp = 0,
-  hydra = 0, sentry = 0, mirror = 0, railgun = 0,
-}
+local Stats = require "game.stats"
+local BASE = Stats.BASE -- base stats; cards change copies of these (see game/stats.lua)
 
 Player.stasisRadius = Bullet.stasisRadius
 
@@ -92,7 +68,17 @@ end
 function Player:recompute()
   local s = {}
   for k, v in pairs(BASE) do s[k] = v end
-  for _, card in ipairs(self.cards) do card.apply(s) end
+  -- Each copy applies again (copyIndex lets cards treat the first copy differently),
+  -- and each copy adds its trigger rules again.
+  local copies = {}
+  self.triggerList = {}
+  for _, card in ipairs(self.cards) do
+    copies[card] = (copies[card] or 0) + 1
+    card.apply(s, copies[card])
+    for _, rule in ipairs(card.triggers or {}) do
+      self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
+    end
+  end
   s.maxHp = math.max(10, s.maxHp)
   s.fireDelay = math.max(0.06, s.fireDelay)
   s.reloadTime = math.max(0.3, s.reloadTime)
@@ -104,6 +90,21 @@ function Player:recompute()
   s.radius = math.max(10, s.radius)
   self.stats = s
   self.r = s.radius
+end
+
+-- Fire this player's trigger rules for an event. ctx: { target = player } or { x, y }.
+function Player:trigger(when, ctx)
+  if self.inTrigger or self.dead or not self.game or not self.triggerList then return end
+  local now = self.game.time or 0
+  for _, inst in ipairs(self.triggerList) do
+    local rule = inst.rule
+    if rule.when == when and now >= inst.ready and love.math.random() < (rule.chance or 1) then
+      inst.ready = now + (rule.cd or 0)
+      self.inTrigger = true
+      Triggers.run(self, rule, ctx)
+      self.inTrigger = false
+    end
+  end
 end
 
 function Player:addCard(card)
@@ -176,6 +177,9 @@ function Player:spawn(x, y, facing, game)
   self.lungeHit = nil
   self.swingTimer, self.swingHeavy, self.swingPower = 0, false, 0
   self.lastAttacker = nil
+  self.boostSpeed, self.boostSpeedTimer, self.boostDamage, self.boostShots = 0, 0, 0, 0
+  self.roundStartPending = true
+  for _, inst in ipairs(self.triggerList or {}) do inst.ready, inst.t = 0, 0 end
 end
 
 function Player:isBlocking()
@@ -294,6 +298,27 @@ function Player:update(dt, frozen)
   end
   self.jumpWasHeld = inp.jumpHeld
 
+  if acting then
+    if self.roundStartPending then
+      self.roundStartPending = false
+      self:trigger("roundStart")
+    end
+    for _, inst in ipairs(self.triggerList or {}) do
+      if inst.rule.when == "interval" then
+        inst.t = inst.t + dt
+        if inst.t >= ((inst.rule.params and inst.rule.params.every) or 5) then
+          inst.t = 0
+          if not self.inTrigger then
+            self.inTrigger = true
+            Triggers.run(self, inst.rule)
+            self.inTrigger = false
+          end
+        end
+      end
+    end
+  end
+  self.boostSpeedTimer = math.max(0, (self.boostSpeedTimer or 0) - dt)
+
   -- Melee charge: release (or overholding a full charge) swings.
   if self.charging then
     local before = self.meleeCharge
@@ -315,6 +340,7 @@ function Player:update(dt, frozen)
   if self.sprintTimer > 0 then speed = speed * (1 + 0.4 * s.sprintBlock) end
   if self:adrenalineActive() then speed = speed * (1 + 0.2 * s.adrenaline) end
   if self.charging and self.meleeCharge > MELEE.lightThreshold then speed = speed * MELEE.chargeSpeedMul end
+  if (self.boostSpeedTimer or 0) > 0 then speed = speed * (1 + self.boostSpeed) end
 
   if self.dashTimer > 0 or self.lungeTimer > 0 then
     -- Dashing / lunging: fixed velocity, no gravity.
@@ -491,6 +517,7 @@ function Player:landed(fallSpeed)
     fx.spray(self.x - self.r * 0.6, self.y + self.r, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
     fx.spray(self.x + self.r * 0.6, self.y + self.r, 0, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
     self:emitSound("land", 0.35 + 0.65 * k, 1.1 - 0.3 * k)
+    if fallSpeed > 600 then self:trigger("land") end
   end
   self.landSquash = math.min(0.35, fallSpeed / 3000)
 end
@@ -622,6 +649,7 @@ end
 -- A reload just finished.
 function Player:reloaded()
   local s = self.stats
+  self:trigger("reload")
   if s.quickdraw > 0 then self.quickdrawReady = true end
   for i = 1, s.reloadNova do
     self:spawnBullet(i / s.reloadNova * math.pi * 2, 0.8, false)
@@ -728,6 +756,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x, self.y + self.r, { 0.8, 0.8, 0.85 }, 5, 110, 3)
     self:emitSound("jump")
+    self:trigger("jump")
   elseif self.wallDir ~= 0 or self.wallCoyote > 0 then
     local wall = self.wallDir ~= 0 and self.wallDir or self.lastWallDir
     local wj = Player.WALL_JUMP
@@ -740,6 +769,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x + wall * self.r, self.y, { 0.8, 0.8, 0.8 }, 5, 120, 3)
     self:emitSound("wallJump")
+    self:trigger("wallJump")
   elseif self.jumpsLeft > 0 and not fromBuffer then
     self.jumpsLeft = self.jumpsLeft - 1
     self.vy = -s.jump * 0.9
@@ -747,6 +777,7 @@ function Player:jumpPressed(fromBuffer)
     self.dashTimer = 0
     fx.burst(self.x, self.y + self.r, self.color, 6, 150, 3)
     self:emitSound("doubleJump")
+    self:trigger("jump")
   elseif not fromBuffer then
     self.jumpBuffer = MOVE.jumpBuffer -- try again on landing
   end
@@ -782,6 +813,7 @@ function Player:dashPressed()
   if math.abs(dx) > 0.2 then self.facing = dx > 0 and 1 or -1 end
   fx.burst(self.x, self.y, self.color, 8, 180, 3)
   self:emitSound("dash")
+  self:trigger("dash")
 end
 
 ---------------------------------------------------------------- melee
@@ -843,6 +875,7 @@ function Player:meleeHit(e, heavy, p, dx, dy)
     stun = stun * (1 + 0.5 * (e.stats.meleeStun or 0))
     self:stun(stun)
     e:blocked()
+    e:trigger("meleeBlocked", { target = self })
     local d = math.max(1, math.sqrt(dx * dx + dy * dy))
     self.vx, self.vy = -dx / d * 350, -dy / d * 350 - 150
     self.lungeTimer = 0
@@ -854,6 +887,8 @@ function Player:meleeHit(e, heavy, p, dx, dy)
     if s.meleeLifesteal > 0 then self:heal(dmg * s.meleeLifesteal) end
     fx.burst(e.x, e.y, { 1, 1, 1 }, heavy and 14 or 7, heavy and 320 or 200, 3)
     self:emitSound(heavy and "meleeHitHeavy" or "meleeHit")
+    self:trigger("meleeHit", { target = e })
+    if heavy then self:trigger("heavyHit", { target = e }) end
   end
 end
 
@@ -870,6 +905,7 @@ function Player:blockPressed()
   self.blockCd = s.blockCooldown
   fx.ring(self.x, self.y, self.r + 18, { 1, 1, 1 })
   self:emitSound("block", 0.45, 1.25)
+  self:trigger("block")
 
   if s.blockHeal > 0 then
     self:heal(s.blockHeal)
@@ -969,6 +1005,11 @@ function Player:tryFire()
     mult = mult * (1 + 0.5 * s.quickdraw)
     self.quickdrawReady = false
   end
+  if (self.boostShots or 0) > 0 then
+    mult = mult * (1 + self.boostDamage)
+    self.boostShots = self.boostShots - 1
+    if self.boostShots <= 0 then self.boostDamage = 0 end
+  end
   if self.spiteReady and s.spite > 0 then
     mult = mult * (1 + 0.6 * s.spite)
     self.spiteReady = false
@@ -981,6 +1022,7 @@ function Player:tryFire()
   if self.ammo == 0 then self:emitSound("reload", 0.6) end
 
   self:volley(true, mult)
+  self:trigger("shoot")
   if s.burst > 0 then
     self.burstLeft = s.burst
     self.burstTimer = 0.09
@@ -1039,6 +1081,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
   end
 
   local b = Bullet.new(self, bx, by, math.cos(ang) * speed, math.sin(ang) * speed)
+  if self.inTrigger then b.fromTrigger = true end
   if s.berserk > 0 then
     b.damage = b.damage * (1 + s.berserk * (1 - math.max(0, self.hp) / s.maxHp))
   end
@@ -1081,6 +1124,7 @@ end
 -- An attack hit our block. Parry recharges the block; extra copies also heal.
 function Player:blocked()
   local s = self.stats
+  self:trigger("parry")
   if s.parry > 0 then
     self:emitSound("parry")
     self.blockCd = 0
@@ -1128,12 +1172,14 @@ function Player:hit(amount, dx, dy, knock, source, kind)
       if source.hp <= 0 then source:die() end
     end
   end
+  if self.hp < s.maxHp * 0.3 and self.hp + amount >= s.maxHp * 0.3 and self.hp > 0 then self:trigger("lowHp") end
+  self:trigger("hurt", { target = source })
   self.hitFlash = 0.1
   if kind ~= "melee" and kind ~= "edge" then self:emitSound("hit", math.min(1, 0.5 + taken / 60)) end
   fx.burst(self.x, self.y, self.color, 10, 220, 4)
   fx.addShake(4)
   local len = math.sqrt(dx * dx + dy * dy)
-  if len > 0 and not self.stats.knockbackImmune then
+  if len > 0 and self.stats.knockbackImmune <= 0 then
     self.vx = self.vx + dx / len * knock
     self.vy = self.vy + dy / len * knock - knock * 0.3
     self.controlLock = 0.12
@@ -1191,6 +1237,8 @@ function Player:die(outOfBounds)
 
   self.dead = true
   self.hp = 0
+  local killer = self.lastAttacker
+  if killer and killer ~= self and killer.trigger and not killer.dead then killer:trigger("kill", { target = self }) end
   fx.burst(self.x, self.y, { 1, 1, 1 }, 15, 300, 4)
   fx.debris(self.x, self.y, self.color, 8, 9)
   self:emitSound("death")

@@ -1,0 +1,6 @@
+deckshot-card 1
+name Adrenaline
+rarity rare
+row add adrenaline 1
+note +below 50% HP: +40% fire rate and +20% move speed
+stack +40% fire rate and +20% speed per copy

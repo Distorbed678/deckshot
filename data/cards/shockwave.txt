@@ -1,0 +1,7 @@
+deckshot-card 1
+name Shockwave
+rarity uncommon
+block
+row add shockwave 1
+note +blocking releases a shockwave
+note +wave hurts, knocks back and erases bullets
