@@ -37,7 +37,7 @@ function World.new(defs, winScore, rules)
     winScore = winScore,
     startScore = winScore,
     rules = rules or Cards.rules,
-    pick = nil,       -- the card pick in progress: { slot, options, hover, num, total, serial }
+    pick = nil,       -- the card pick in progress: { slot, options, hover, num, total, serial, flipped, timeLeft }
     pickQueue = {},   -- upcoming picks: { slot, num, total }
     pickSerial = 0,   -- bumped on every new hand (u8), so stale choices can be ignored
     votes = {},       -- slot -> World.VOTE_* while the match is over
@@ -87,11 +87,41 @@ function World:nearestEnemy(p, x, y, visibleOnly)
   return best
 end
 
-function World:startRound()
+-- Pick a map and build the collision list.
+function World:loadMap()
   self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
   -- Everything players and bullets collide with: the map's rects (objects add to this later).
   self.solids = {}
   for i, r in ipairs(self.map.rects) do self.solids[i] = r end
+end
+
+-- Start of a match: everyone picks their starting cards (rules.startCards, slot order), then round 1.
+function World:beginMatch()
+  local n = self.rules.startCards or 0
+  if n <= 0 then return self:startRound() end
+  self:loadMap()
+  self.bullets, self.pending, self.wells = {}, {}, {}
+  for i, p in ipairs(self.players) do
+    local s = self.map.spawns[i]
+    p:spawn(s[1], s[2], s[1] < 640 and 1 or -1, self)
+    if p.disconnected then p.dead, p.hp = true, 0 end
+  end
+  self.roundWinner = nil
+  self.pickQueue = {}
+  for _, p in ipairs(self.players) do
+    if not p.disconnected then
+      for num = 1, n do
+        self.pickQueue[#self.pickQueue + 1] = { slot = p.slot, num = num, total = n, start = true }
+      end
+    end
+  end
+  self.state = "cardPick"
+  self:emit("roster")
+  self:nextPick()
+end
+
+function World:startRound()
+  self:loadMap()
   self.bullets = {}
   self.pending = {}
   self.wells = {}
@@ -123,6 +153,17 @@ function World:update(dt)
       sfx.play("fight")
     elseif now ~= before then
       sfx.play("beep")
+    end
+  elseif self.state == "cardPick" then
+    local pk = self.pick
+    if pk and pk.timeLeft then
+      pk.timeLeft = pk.timeLeft - dt
+      if pk.timeLeft <= 0 then
+        -- Out of time: take the hovered card, or a random one if it was never turned over.
+        local idx = pk.flipped[pk.hover] and pk.hover or love.math.random(#pk.options)
+        self:toast((self.players[pk.slot].name or "Player") .. " ran out of time", pk.slot)
+        self:choose(pk.slot, idx, pk.serial)
+      end
     end
   elseif self.state == "playing" or self.state == "roundOver" then
     local sdt = (self.state == "roundOver") and dt * 0.35 or dt
@@ -211,9 +252,13 @@ function World:dealPick(slot, num, total)
   local options = Cards.deal(self.rules.pickFrom or 3, self.players[slot])
   if #options == 0 then return false end
   self.pickSerial = (self.pickSerial + 1) % 256
+  local timer = self.rules.pickTimer or 0
+  local hover = math.ceil(#options / 2)
   self.pick = {
-    slot = slot, options = options, hover = math.ceil(#options / 2),
+    slot = slot, options = options, hover = hover,
     num = num, total = total, serial = self.pickSerial,
+    flipped = { [hover] = true }, -- cards are dealt face down; hovering one turns it over
+    timeLeft = timer > 0 and timer or nil,
   }
   self:emit("pick", slot, options)
   return true
@@ -245,7 +290,10 @@ end
 -- The current picker moved their selection (shown to everyone).
 function World:hover(slot, index)
   local pk = self.pick
-  if self.state == "cardPick" and pk and pk.slot == slot and pk.options[index] then pk.hover = index end
+  if self.state == "cardPick" and pk and pk.slot == slot and pk.options[index] then
+    pk.hover = index
+    pk.flipped[index] = true
+  end
 end
 
 -- serial: optional; a choice made for an older hand is ignored.
@@ -268,6 +316,23 @@ function World:choose(slot, optionIndex, serial)
   else
     p:addCard(card)
   end
+  self:emit("roster")
+  self:nextPick()
+end
+
+-- Instead of taking a card, the picker removes one they own (if the host allows it).
+-- cardPos: index into the player's card list.
+function World:discard(slot, cardPos, serial)
+  if self.state ~= "cardPick" or not self.rules.allowDiscard then return end
+  local pk = self.pick
+  if not pk or pk.slot ~= slot then return end
+  if serial and serial ~= pk.serial then return end
+  local p = self.players[slot]
+  local card = p.cards[cardPos]
+  if not card then return end
+  table.remove(p.cards, cardPos)
+  p:recompute()
+  self:toast((p.name or "Player") .. " discarded " .. card.name, slot)
   self:emit("roster")
   self:nextPick()
 end
@@ -310,7 +375,7 @@ function World:newMatch()
   end
   self.winScore = self.startScore
   self.mapIndex = nil
-  self:startRound()
+  self:beginMatch()
 end
 
 -- A network player left: they sit out the rest of the match.

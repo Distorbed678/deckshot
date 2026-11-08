@@ -17,6 +17,7 @@ net.MSG = {
   TOAST = 7,    -- host -> clients: message banner
   TOLOBBY = 8,  -- host -> clients: return to the lobby
   VOTE = 9,     -- client -> host: match-over vote (continue / new match)
+  DISCARD = 10, -- client -> host: discard an owned card instead of picking
 }
 local M = net.MSG
 
@@ -132,6 +133,8 @@ function net.encodeRules(rules, cards, rarities)
     if rules.disabled[c.index] then b = b + 128 end
     parts[#parts + 1] = string.char(b)
   end
+  parts[#parts + 1] = pack("string", "<BBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
+    rules.allowDiscard and 1 or 0)
   return table.concat(parts)
 end
 
@@ -149,7 +152,20 @@ function net.decodeRules(data, rarities)
     rules.rarity[i] = r and r.id
     rules.disabled[i] = b >= 128 or nil
   end
+  pos = pos + nc
+  local discard
+  rules.startCards, rules.pickTimer, discard = unpack("<BBB", data, pos)
+  rules.allowDiscard = discard == 1
   return rules
+end
+
+function net.encodeDiscard(cardPos, serial)
+  return pack("string", "<BBB", M.DISCARD, cardPos, serial)
+end
+
+function net.decodeDiscard(data)
+  local _, cardPos, serial = unpack("<BBB", data)
+  return cardPos, serial
 end
 
 function net.encodeVote(choice)

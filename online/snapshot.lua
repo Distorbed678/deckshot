@@ -55,8 +55,11 @@ function Snap.encode(world, events)
     for _, slot in ipairs(queued) do add("<B", slot) end
     add("<B", #pk.options)
     for _, c in ipairs(pk.options) do add("<B", c.index) end
+    local mask = 0
+    for i in pairs(pk.flipped or {}) do mask = mask + 2 ^ (i - 1) end
+    add("<BB", mask, pk.timeLeft and u8(math.ceil(pk.timeLeft)) or 255)
   else
-    add("<BBBBBBB", 0, 0, 0, 0, 0, 0, 0)
+    add("<BBBBBBBBB", 0, 0, 0, 0, 0, 0, 0, 0, 255)
   end
 
   for _, p in ipairs(world.players) do
@@ -161,6 +164,13 @@ function Snap.decode(data)
   for i = 1, nq do pk.queued[i], pos = unpack("<B", raw, pos) end
   no, pos = unpack("<B", raw, pos)
   for i = 1, no do pk.options[i], pos = unpack("<B", raw, pos) end
+  local mask, left
+  mask, left, pos = unpack("<BB", raw, pos)
+  pk.flipped = {}
+  for i = 1, 8 do
+    if math.floor(mask / 2 ^ (i - 1)) % 2 == 1 then pk.flipped[i] = true end
+  end
+  pk.timeLeft = left < 255 and left or nil
   v.pick = pk
 
   for i = 1, np do

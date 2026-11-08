@@ -23,6 +23,8 @@ Settings.PARTICLE_LEVELS = { { "Reduced", 0.5 }, { "Full", 1 } }
 Settings.ROUND_OPTIONS = { 3, 5, 7, 10, 15 }
 Settings.PICK_FROM = { min = 2, max = 6 }
 Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
+Settings.START_CARDS = { min = 0, max = 5 }
+Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
 
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
 Settings.BIND_SCHEMES = {
@@ -60,8 +62,12 @@ local defaults = {
   particles = 2,
   showFps = false,
   roundsToWin = 5,
-  pickFrom = 3,
+  pickFrom = 5,
   picksPerRound = 1,
+  startCards = 1,        -- cards everyone picks before round 1
+  pickTimer = 45,        -- seconds per pick online (0 = off); local play has no timer
+  allowDiscard = true,   -- "discard a card instead" on the pick screen
+  settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
   volSfx = 10,
@@ -114,6 +120,7 @@ function Settings.load()
   pcall(Settings.migrateOldSave)
   if not love.filesystem.getInfo(FILE) then return end
   local v = Settings.values
+  v.settingsVersion = 1 -- files written before versioning have no settingsVersion line
   local legacyVsync, legacyRes
   for line in love.filesystem.lines(FILE) do
     local scheme, action, b = line:match("^bind%.([%w_]+)%.([%w_]+)=(.*)$")
@@ -150,6 +157,12 @@ function Settings.load()
     end
   end
 
+  -- v0.4 and older: 3 cards per hand was the default; the new default is 5.
+  if (v.settingsVersion or 1) < 2 then
+    if v.pickFrom == 3 then v.pickFrom = 5 end
+    v.settingsVersion = 2
+  end
+
   -- Older settings files: vsync=true/false and resolution=<index>.
   if legacyVsync then v.vsyncMode = legacyVsync == "false" and 0 or 1 end
   if legacyRes then
@@ -166,6 +179,8 @@ function Settings.load()
   v.particles = clamp(v.particles, 1, #Settings.PARTICLE_LEVELS)
   v.pickFrom = clamp(math.floor(v.pickFrom), Settings.PICK_FROM.min, Settings.PICK_FROM.max)
   v.picksPerRound = clamp(math.floor(v.picksPerRound), Settings.PICKS_PER_ROUND.min, Settings.PICKS_PER_ROUND.max)
+  v.startCards = clamp(math.floor(v.startCards), Settings.START_CARDS.min, Settings.START_CARDS.max)
+  v.pickTimer = clamp(math.floor(v.pickTimer), 0, 255)
   for _, r in ipairs(Cards.RARITIES) do
     local key = "weight_" .. r.id
     v[key] = clamp(math.floor(v[key]), 0, 1000)
@@ -259,6 +274,9 @@ function Settings.resetGameplay()
   v.roundsToWin = defaults.roundsToWin
   v.pickFrom = defaults.pickFrom
   v.picksPerRound = defaults.picksPerRound
+  v.startCards = defaults.startCards
+  v.pickTimer = defaults.pickTimer
+  v.allowDiscard = defaults.allowDiscard
   for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
   v.cards = {}
   v.maps = {}
@@ -282,9 +300,11 @@ function Settings.enabledMapCount()
 end
 
 -- The gameplay rules (cards, picks, rarity weights and the map pool) described by these settings.
-function Settings.cardRules()
+-- online: the pick timer only applies to online matches.
+function Settings.cardRules(online)
   local v = Settings.values
-  local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {} }
+  local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
+    startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard }
   for i, r in ipairs(Cards.RARITIES) do rules.weights[i] = v["weight_" .. r.id] end
   for _, c in ipairs(Cards.list) do
     rules.rarity[c.index] = Settings.cardRarity(c)

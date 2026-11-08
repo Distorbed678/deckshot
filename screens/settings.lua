@@ -320,7 +320,7 @@ end
 
 function Screen:drawGameplay(x, y, w)
   local v = Settings.values
-  local h, gap = 44, 52
+  local h, gap = 38, 44
   local colW = (w - 30) / 2
   local d
 
@@ -340,6 +340,20 @@ function Screen:drawGameplay(x, y, w)
   local pr = Settings.PICKS_PER_ROUND
   d = ui.cycler("Picks per round", tostring(v.picksPerRound), lx, ly, colW, h)
   if d ~= 0 then v.picksPerRound = pr.min + cycle(v.picksPerRound - pr.min + 1, pr.max - pr.min + 1, d) - 1 end
+  ly = ly + gap
+
+  local sc = Settings.START_CARDS
+  d = ui.cycler("Starting cards", v.startCards == 0 and "None" or tostring(v.startCards), lx, ly, colW, h)
+  if d ~= 0 then v.startCards = sc.min + cycle(v.startCards - sc.min + 1, sc.max - sc.min + 1, d) - 1 end
+  ly = ly + gap
+
+  local timers = Settings.PICK_TIMER_OPTIONS
+  d = ui.cycler("Pick timer (online)", v.pickTimer == 0 and "Off" or (v.pickTimer .. "s"), lx, ly, colW, h)
+  if d ~= 0 then v.pickTimer = timers[cycle(indexOf(timers, v.pickTimer), #timers, d)] end
+  ly = ly + gap
+
+  d = ui.cycler("Allow discarding", v.allowDiscard and "On" or "Off", lx, ly, colW, h)
+  if d ~= 0 then v.allowDiscard = not v.allowDiscard end
   ly = ly + gap
 
   local enabled = 0
@@ -380,7 +394,7 @@ function Screen:drawGameplay(x, y, w)
   love.graphics.printf(
     "Online matches use the host's gameplay settings. Changes apply from the next match.\n" ..
     "A rarity's chance is its weight out of the total. Rarities with no enabled cards are skipped.",
-    x, y + 6 * gap + 16, w, "center")
+    x, y + 9 * gap + 8, w, "center")
 end
 
 ---------------------------------------------------------------- draw

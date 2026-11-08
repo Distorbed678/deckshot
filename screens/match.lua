@@ -35,8 +35,8 @@ local function newMatch(role)
 end
 
 -- Gameplay rules from this machine's settings (local play and the online host).
-local function settingsRules()
-  local rules = Settings.cardRules()
+local function settingsRules(online)
+  local rules = Settings.cardRules(online)
   Cards.applyRules(rules)
   return rules
 end
@@ -49,10 +49,10 @@ function Match.newLocal(winScore)
   m.world = World.new({
     { name = "Player 1", input = m.inputs[1] },
     { name = "Player 2", input = m.inputs[2] },
-  }, winScore, settingsRules())
+  }, winScore, settingsRules(false))
   m:hookWorld()
   fx.recorder = nil
-  m.world:startRound()
+  m.world:beginMatch()
   return m
 end
 
@@ -71,12 +71,12 @@ function Match.newHost(slots, winScore, transport, opts)
     defs[i] = { name = s.name, input = input, peer = s.peer }
     if i > 1 then m.peers[s.peer] = { slot = i, seq = -1 } end
   end
-  m.world = World.new(defs, winScore, settingsRules())
+  m.world = World.new(defs, winScore, settingsRules(true))
   m:hookWorld()
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
-  m.world:startRound()
+  m.world:beginMatch()
   return m
 end
 
@@ -91,7 +91,7 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.inputSeq = 0
   m.pending = pending
   m.view = { state = "countdown", timer = 0, winScore = winScore, mapIndex = 1, winner = 0,
-    pick = { slot = 0, queued = {}, options = {} } }
+    pick = { slot = 0, queued = {}, options = {}, flipped = {} } }
   m.proxies = {}
   for i, s in ipairs(slots) do m.proxies[i] = m:newProxy(i, s.name) end
   m.bulletViews, m.bulletList, m.wellList = {}, {}, {}
@@ -168,7 +168,7 @@ function Match:currentPick()
     for i, idx in ipairs(pk.options) do options[i] = Cards.list[idx] end
     return {
       slot = pk.slot, serial = pk.serial, hover = pk.hover, num = pk.num, total = pk.total,
-      queued = pk.queued, options = options,
+      queued = pk.queued, options = options, flipped = pk.flipped, timeLeft = pk.timeLeft,
     }
   end
   local w = self.world
@@ -176,7 +176,7 @@ function Match:currentPick()
   if w.state ~= "cardPick" or not pk then return nil end
   return {
     slot = pk.slot, serial = pk.serial, hover = pk.hover, num = pk.num, total = pk.total,
-    queued = w:queuedPickers(), options = pk.options,
+    queued = w:queuedPickers(), options = pk.options, flipped = pk.flipped, timeLeft = pk.timeLeft,
   }
 end
 
@@ -191,6 +191,7 @@ function Match:syncPick(dt)
   local cp = self:currentPick()
   if not cp or not self:controlsPick(cp.slot) then
     self.pickUI = nil
+    self.discardMode = false
     if self.myInput then self.myInput.pickHover = 0 end
     return
   end
@@ -199,6 +200,7 @@ function Match:syncPick(dt)
     pu = { slot = cp.slot, serial = cp.serial, index = math.max(1, math.min(#cp.options, cp.hover)),
       delay = PICK_DELAY, waiting = false }
     self.pickUI = pu
+    self.discardMode = false
   end
   pu.delay = math.max(0, pu.delay - dt)
   pu.index = math.max(1, math.min(#cp.options, pu.index))
@@ -222,9 +224,44 @@ function Match:choosePick(index)
   end
 end
 
+-- Discard an owned card (cardPos in the picker's card list) instead of taking one.
+function Match:discardCard(cardPos)
+  local pu = self.pickUI
+  if not pu or pu.delay > 0 or pu.waiting then return end
+  self.discardMode = false
+  if self.role == "client" then
+    pu.waiting = true
+    self.transport:send(self.hostPeer, net.encodeDiscard(cardPos, pu.serial), true)
+  else
+    self.world:discard(pu.slot, cardPos, pu.serial)
+    self.pickUI = nil
+  end
+end
+
+-- Can the current picker discard instead? (host rule, and they own a card)
+function Match:canDiscard(slot)
+  local p = self:players()[slot]
+  return Cards.rules.allowDiscard and p and #p.cards > 0
+end
+
+-- The picker's distinct owned cards: { { card, pos (first index), count } }.
+function Match:ownedCards(slot)
+  local p = self:players()[slot]
+  local list, seen = {}, {}
+  for i, c in ipairs(p and p.cards or {}) do
+    if seen[c] then
+      seen[c].count = seen[c].count + 1
+    else
+      seen[c] = { card = c, pos = i, count = 1 }
+      list[#list + 1] = seen[c]
+    end
+  end
+  return list
+end
+
 -- Host / local: re-read the gameplay rules from the settings (used for New Match).
 function Match:newMatch()
-  self.world:setRules(settingsRules())
+  self.world:setRules(settingsRules(self.role == "host"))
   self:broadcastRules()
   self.world:newMatch()
 end
@@ -447,6 +484,9 @@ function Match:hostNetwork(dt)
       elseif kind == net.MSG.CHOOSE then
         local index, serial = net.decodeChoose(msg.data)
         self.world:choose(info.slot, index, serial)
+      elseif kind == net.MSG.DISCARD then
+        local pos, serial = net.decodeDiscard(msg.data)
+        self.world:discard(info.slot, pos, serial)
       end
     end
   end
@@ -493,6 +533,7 @@ function Match:update(dt, isTop)
     if t.t <= 0 then table.remove(self.toasts, i) end
   end
 
+  self:updatePickAnim(dt)
   local mx, my = app.mouse()
   if self.role == "local" then
     for _, inp in ipairs(self.inputs) do Input.poll(inp, suppressed) end
@@ -537,13 +578,30 @@ function Match:keypressed(key)
     local cp = self:currentPick()
     local n = cp and #cp.options or 0
     if n == 0 then return end
-    local left, right, take = self:pickKeys(pu.slot)
+    local left, right, take, down = self:pickKeys(pu.slot)
+    if self.discardMode then
+      local owned = self:ownedCards(pu.slot)
+      local m = #owned
+      self.discardIndex = math.max(1, math.min(m, self.discardIndex or 1))
+      if m == 0 or down[key] then
+        self.discardMode = false
+      elseif left[key] then
+        self.discardIndex = (self.discardIndex - 2) % m + 1
+      elseif right[key] then
+        self.discardIndex = self.discardIndex % m + 1
+      elseif take[key] then
+        self:discardCard(owned[self.discardIndex].pos)
+      end
+      return
+    end
     if left[key] then
       pu.index = (pu.index - 2) % n + 1
     elseif right[key] then
       pu.index = pu.index % n + 1
     elseif take[key] then
       self:choosePick(pu.index)
+    elseif down[key] and self:canDiscard(pu.slot) then
+      self.discardMode, self.discardIndex = true, 1
     end
     return
   end
@@ -565,10 +623,11 @@ function Match:pickKeys(slot)
   end
   if self.role == "local" then
     local b = Settings.values.binds["p" .. slot] or Settings.values.binds.p1
-    return set(b.left), set(b.right), set(b.fire)
+    return set(b.left), set(b.right), set(b.fire), set(b.down)
   end
   local b = Settings.values.binds.online
-  return set(b.left, "left"), set(b.right, "right"), set(b.fire, b.jump, b.jump2, "return", "kpenter")
+  return set(b.left, "left"), set(b.right, "right"), set(b.fire, b.jump, b.jump2, "return", "kpenter"),
+    set(b.down, "down")
 end
 
 function Match:mousepressed(x, y, button)
@@ -576,6 +635,7 @@ function Match:mousepressed(x, y, button)
   local pu = self.pickUI
   if pu then
     local cp = self:currentPick()
+    if self.discardMode then return end -- the discard panel's buttons handle clicks
     if button == 1 and cp then
       for i, r in ipairs(hud.cardRects(#cp.options, pu.index)) do
         if x >= r[1] and x <= r[1] + r[3] and y >= r[2] and y <= r[2] + r[4] then
@@ -593,6 +653,114 @@ function Match:mousepressed(x, y, button)
 end
 
 ---------------------------------------------------------------- drawing
+---------------------------------------------------------------- card pick animation
+local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.07, 0.28, 0.2
+local REVEAL_SOUND = { rare = "revealRare", epic = "revealEpic", legendary = "revealLegendary" }
+
+local function ease(t)
+  t = math.max(0, math.min(1, t))
+  return 1 - (1 - t) ^ 3
+end
+
+-- Dealing, flipping and reveal sparkles; also cards flying to a player's panel after a pick.
+-- Sounds here are local (every machine animates the same pick), so they aren't recorded.
+function Match:updatePickAnim(dt)
+  local cp = self:currentPick()
+  local a = self.pickAnim
+  if cp then
+    if not a or a.serial ~= cp.serial or a.slot ~= cp.slot then
+      a = { serial = cp.serial, slot = cp.slot, t = 0, flip = {}, sparkles = {} }
+      self.pickAnim = a
+      sfx.play("cardDeal", nil, 1, 1, true)
+    end
+    a.t = a.t + dt
+    for i, card in ipairs(cp.options) do
+      local arrived = a.t > (i - 1) * DEAL_STAGGER + DEAL_TIME
+      if cp.flipped[i] and arrived then
+        local before = a.flip[i] or 0
+        a.flip[i] = math.min(1, before + dt / FLIP_TIME)
+        if before < 0.5 and a.flip[i] >= 0.5 then
+          sfx.play("cardFlip", nil, 0.8, 1, true)
+          if REVEAL_SOUND[card.rarity] then sfx.play(REVEAL_SOUND[card.rarity], nil, 1, 1, true) end
+          local n = ({ rare = 10, epic = 18, legendary = 32 })[card.rarity]
+          if n then
+            local r = hud.cardRects(#cp.options, i)[i]
+            local col = Cards.rarity[card.rarity].color
+            for _ = 1, n do
+              local ang = love.math.random() * math.pi * 2
+              local sp = 60 + love.math.random() * 220
+              a.sparkles[#a.sparkles + 1] = {
+                x = r[1] + love.math.random() * r[3], y = r[2] + love.math.random() * r[4],
+                vx = math.cos(ang) * sp, vy = math.sin(ang) * sp - 60, life = 0.6 + love.math.random() * 0.6,
+                max = 1.2, color = col, size = 2 + love.math.random() * 3,
+              }
+            end
+          end
+        end
+      end
+    end
+  elseif a then
+    self.pickAnim = nil
+  end
+  if a then
+    for i = #a.sparkles, 1, -1 do
+      local sp = a.sparkles[i]
+      sp.life = sp.life - dt
+      if sp.life <= 0 then
+        table.remove(a.sparkles, i)
+      else
+        sp.x, sp.y = sp.x + sp.vx * dt, sp.y + sp.vy * dt
+        sp.vx, sp.vy = sp.vx * (1 - 2 * dt), sp.vy * (1 - 2 * dt)
+      end
+    end
+  end
+
+  -- A player's card count went up: fly the new card to their score panel.
+  self.cardCounts = self.cardCounts or {}
+  self.flyers = self.flyers or {}
+  for i, p in ipairs(self:players()) do
+    local n = #p.cards
+    local before = self.cardCounts[i]
+    if before and n > before and p.cards[n] then
+      self.flyers[#self.flyers + 1] = { card = p.cards[n], slot = i, t = 0 }
+      sfx.play("cardPick", nil, 1, 1, true)
+    end
+    self.cardCounts[i] = n
+  end
+  for i = #self.flyers, 1, -1 do
+    local f = self.flyers[i]
+    f.t = f.t + dt
+    if f.t >= 0.6 then table.remove(self.flyers, i) end
+  end
+end
+
+-- Where a player's score panel is (for flying cards).
+function Match:panelPos(slot)
+  local n = #self:players()
+  if n <= 2 then return slot == 1 and 140 or app.W - 140, 60 end
+  local pw = math.floor((app.W - 48 - (n - 1) * 16) / n)
+  return 24 + (slot - 1) * (pw + 16) + pw / 2, 60
+end
+
+function Match:drawFlyers()
+  for _, f in ipairs(self.flyers or {}) do
+    local t = ease(f.t / 0.6)
+    local tx, ty = self:panelPos(f.slot)
+    local w, h = 230, 340
+    local sx = 1 - 0.85 * t
+    local cx = app.W / 2 + (tx - app.W / 2) * t
+    local cy = 380 + (ty - 380) * t
+    local p = self:players()[f.slot]
+    love.graphics.push()
+    love.graphics.translate(cx, cy)
+    love.graphics.scale(sx, sx)
+    love.graphics.translate(-w / 2, -h / 2)
+    love.graphics.setColor(1, 1, 1)
+    hud.drawCard(f.card, 0, 0, w, h, true, p and p.color or { 1, 1, 1 })
+    love.graphics.pop()
+  end
+end
+
 function Match:drawCardPick(st)
   love.graphics.setColor(0, 0, 0, 0.75)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
@@ -614,32 +782,50 @@ function Match:drawCardPick(st)
   else
     title = name .. " IS PICKING" .. count
   end
-  app.centered(title, app.fonts.big, 90, color)
+  app.centered(title, app.fonts.big, 80, color)
 
   local hint
+  local b = self.role == "local" and pu and (Settings.values.binds["p" .. pu.slot] or Settings.values.binds.p1)
+    or Settings.values.binds.online
   if pu then
-    local b = self.role == "local" and (Settings.values.binds["p" .. pu.slot] or Settings.values.binds.p1)
-      or Settings.values.binds.online
-    if self.role == "local" then
-      hint = Input.keyName(b.left) .. " / " .. Input.keyName(b.right) .. " to choose, " ..
+    if self.discardMode then
+      hint = "Choose a card to throw away  -  " .. Input.keyName(b.down) .. " to go back"
+    elseif self.role == "local" then
+      hint = Input.keyName(b.left) .. " / " .. Input.keyName(b.right) .. " to turn over and choose, " ..
         Input.keyName(b.fire) .. " to take"
     else
-      hint = "Click a card  -  or " .. Input.keyName(b.left) .. " / " .. Input.keyName(b.right) ..
-        " and " .. Input.keyName(b.jump)
+      hint = "Hover to turn a card over, click to take  -  or " .. Input.keyName(b.left) .. " / " ..
+        Input.keyName(b.right) .. " and " .. Input.keyName(b.jump)
     end
     if pu.waiting then hint = "Waiting for the host..." end
   else
     hint = "Watching " .. (p and p.name or "them") .. " choose"
   end
-  app.centered(hint, app.fonts.med, 140, { 1, 1, 1, 0.7 })
+  app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 })
+
+  -- Pick timer
+  if cp.timeLeft then
+    local total = math.max(1, Cards.rules.pickTimer or cp.timeLeft)
+    local frac = math.max(0, math.min(1, cp.timeLeft / total))
+    local bw = 420
+    love.graphics.setColor(1, 1, 1, 0.12)
+    love.graphics.rectangle("fill", (app.W - bw) / 2, 160, bw, 6, 3, 3)
+    love.graphics.setColor(frac < 0.25 and { 1, 0.35, 0.3 } or color)
+    love.graphics.rectangle("fill", (app.W - bw) / 2, 160, bw * frac, 6, 3, 3)
+    love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.printf(math.ceil(cp.timeLeft) .. "s", (app.W + bw) / 2 + 10, 154, 60, "left")
+  end
 
   if #cp.queued > 0 then
     local names = {}
     for _, slot in ipairs(cp.queued) do
       names[#names + 1] = players[slot] and players[slot].name or ("Player " .. slot)
     end
-    app.centered("Up next: " .. table.concat(names, ", "), app.fonts.med, 600, { 1, 1, 1, 0.55 })
+    app.centered("Up next: " .. table.concat(names, ", "), app.fonts.med, 676, { 1, 1, 1, 0.55 })
   end
+
+  if pu and self.discardMode then return self:drawDiscard(cp, color) end
 
   local index = pu and pu.index or cp.hover
   -- Mouse hover selects for whoever controls the pick (local player 1 can use the mouse too).
@@ -650,10 +836,76 @@ function Match:drawCardPick(st)
     end
     index = pu.index
   end
+  local a = self.pickAnim
   local rects = hud.cardRects(#cp.options, index)
   for i, card in ipairs(cp.options) do
     local r = rects[i]
-    hud.drawCard(card, r[1], r[2], r[3], r[4], i == index, color)
+    local appear = a and (a.t - (i - 1) * DEAL_STAGGER) / DEAL_TIME or 1
+    if appear > 0 then
+      local dx = (1 - ease(appear)) * 900
+      local flip = a and a.flip[i] or (cp.flipped[i] and 1 or 0)
+      local cx = r[1] + dx + r[3] / 2
+      local sx = flip < 0.5 and (1 - 2 * flip) or (2 * flip - 1)
+      love.graphics.push()
+      love.graphics.translate(cx, 0)
+      love.graphics.scale(math.max(0.02, sx), 1)
+      love.graphics.translate(-cx, 0)
+      if flip < 0.5 then
+        hud.drawCardBack(r[1] + dx, r[2], r[3], r[4], i == index, color)
+      else
+        hud.drawCard(card, r[1] + dx, r[2], r[3], r[4], i == index, color)
+      end
+      love.graphics.pop()
+    end
+  end
+  if a then
+    for _, sp in ipairs(a.sparkles) do
+      local c = sp.color
+      love.graphics.setColor(c[1], c[2], c[3], math.min(1, sp.life * 2))
+      love.graphics.circle("fill", sp.x, sp.y, sp.size)
+      love.graphics.setColor(1, 1, 1, math.min(1, sp.life * 2) * 0.8)
+      love.graphics.circle("fill", sp.x, sp.y, sp.size * 0.4)
+    end
+  end
+
+  if pu and not pu.waiting and self:canDiscard(pu.slot) then
+    local label = "Discard a card instead  (" .. Input.keyName(b.down) .. ")"
+    if ui.button(label, app.W / 2 - 180, 612, 360, 44, { font = app.fonts.med }) then
+      self.discardMode, self.discardIndex = true, 1
+    end
+  end
+end
+
+-- Discard mode: the picker's owned cards as buttons.
+function Match:drawDiscard(cp, color)
+  local pu = self.pickUI
+  local owned = self:ownedCards(pu.slot)
+  self.discardIndex = math.max(1, math.min(#owned, self.discardIndex or 1))
+  local cols = 4
+  local bw, bh, gap = 270, 46, 12
+  local rows = math.ceil(#owned / cols)
+  local x0 = (app.W - (math.min(cols, #owned) * (bw + gap) - gap)) / 2
+  local y0 = 200
+  local hovered
+  for i, o in ipairs(owned) do
+    local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+    local x, y = x0 + col * (bw + gap), y0 + row * (bh + gap)
+    local label = o.card.name .. (o.count > 1 and ("  x" .. o.count) or "")
+    local rc = Cards.rarity[o.card.rarity].color
+    if ui.button(label, x, y, bw, bh, { font = app.fonts.med, color = i == self.discardIndex and color or rc }) then
+      self:discardCard(o.pos)
+      return
+    end
+    local mx, my = app.mouse()
+    if mx >= x and mx <= x + bw and my >= y and my <= y + bh then hovered = o end
+  end
+  local show = hovered or owned[self.discardIndex]
+  if show then
+    local y = y0 + rows * (bh + gap) + 10
+    hud.drawCard(show.card, app.W / 2 - 115, math.min(y, 330), 230, 300, false, color)
+  end
+  if ui.button("Back to the cards", app.W / 2 - 150, 640, 300, 30, { font = app.fonts.small, back = true }) then
+    self.discardMode = false
   end
 end
 
@@ -826,9 +1078,9 @@ function Match:draw()
     end
   elseif st.state == "cardPick" then
     self:drawCardPick(st)
-  elseif st.state == "matchOver" then
-    self:drawMatchOver(st)
   end
+  self:drawFlyers()
+  if st.state == "matchOver" then self:drawMatchOver(st) end
 
   -- Hovering a card name in someone's score panel shows what it does.
   if not self.paused then

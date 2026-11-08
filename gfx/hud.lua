@@ -179,6 +179,31 @@ function hud.cardRects(n, selected)
   return rects
 end
 
+-- The back of a face-down card (rarity hidden until it is turned over).
+function hud.drawCardBack(x, y, w, h, selected, ownerColor)
+  love.graphics.setColor(0.16, 0.16, 0.22)
+  love.graphics.rectangle("fill", x, y, w, h, 14, 14)
+  love.graphics.setColor(1, 1, 1, 0.05)
+  for i = 0, math.floor((w + h) / 18) do
+    local o = i * 18
+    love.graphics.setLineWidth(6)
+    love.graphics.line(x + math.max(0, o - h), y + math.min(h, o), x + math.min(w, o), y + math.max(0, o - w))
+  end
+  love.graphics.setColor(0.24, 0.24, 0.32)
+  love.graphics.rectangle("fill", x + w / 2 - 34, y + h / 2 - 44, 68, 88, 10, 10)
+  love.graphics.setFont(app.fonts.big)
+  love.graphics.setColor(1, 1, 1, 0.5)
+  love.graphics.printf("?", x, y + h / 2 - app.fonts.big:getHeight() / 2, w, "center")
+  if selected then
+    love.graphics.setColor(ownerColor)
+    love.graphics.setLineWidth(5)
+  else
+    love.graphics.setColor(1, 1, 1, 0.18)
+    love.graphics.setLineWidth(2)
+  end
+  love.graphics.rectangle("line", x, y, w, h, 14, 14)
+end
+
 -- rarityId: optional override (the card pool editor shows the configured rarity).
 function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   rarityId = rarityId or card.rarity
