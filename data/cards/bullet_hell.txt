@@ -1,6 +1,7 @@
 deckshot-card 1
 name Bullet Hell
 rarity legendary
+art bullets flame blood
 row add bullets 3
 row mul fireDelay 0.555556
 row mul gunDamage 0.45

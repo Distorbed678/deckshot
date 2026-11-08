@@ -1,6 +1,7 @@
 deckshot-card 1
 name Wide Shot
 rarity common
+art spread
 row add bullets 2
 row add spread 0.3
 row mul gunDamage 0.7

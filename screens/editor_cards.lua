@@ -9,9 +9,15 @@ local Triggers = require "game.triggers"
 local hud = require "gfx.hud"
 local sfx = require "gfx.sfx"
 local Synergies = require "game.synergies"
+local CardArt = require "gfx.cardart"
 
 local CardEditor = {}
 CardEditor.__index = CardEditor
+CardEditor.noPadHints = true
+
+local BADGES, TINTS = { false }, { false }
+for _, n in ipairs(CardArt.NAMES) do BADGES[#BADGES + 1] = n end
+for _, n in ipairs(CardArt.TINT_NAMES) do TINTS[#TINTS + 1] = n end
 
 local RARITY_IDS = {}
 for i, r in ipairs(Cards.RARITIES) do RARITY_IDS[i] = r.id end
@@ -435,6 +441,19 @@ function CardEditor:draw()
   ui.panel(900, 104, 360, 600)
   label("PREVIEW", 916, 112)
   hud.drawCard(card, 940, 140, 280, 420, false, { 1, 1, 1 })
+  if not self.synergy then
+    local spec = CardArt.specOf(card)
+    local main, badge, tint = spec.main, spec.badge or false, spec.tint or false
+    local d1 = ui.cycler("Art", main, 912, 640, 336, 26)
+    local d2 = ui.cycler("Badge", badge or "None", 912, 672, 166, 26)
+    local d3 = ui.cycler("Tint", tint or "Rarity", 1084, 672, 164, 26)
+    if d1 ~= 0 then main = cycle(CardArt.NAMES, main, d1) end
+    if d2 ~= 0 then badge = cycle(BADGES, badge, d2) end
+    if d3 ~= 0 then tint = cycle(TINTS, tint, d3) end
+    if d1 ~= 0 or d2 ~= 0 or d3 ~= 0 then
+      def.art = main .. (badge and (" " .. badge) or "") .. (tint and (" " .. tint) or "")
+    end
+  end
   local problems = self:problems()
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(#problems == 0 and { 0.5, 1, 0.6 } or { 1, 0.55, 0.45 })

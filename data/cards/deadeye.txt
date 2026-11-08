@@ -1,5 +1,6 @@
 deckshot-card 1
 name Deadeye
 rarity uncommon
+art eye bullet gold
 row add crit 0.1
 row mul bulletSpeed 1.25

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Laser
 rarity legendary
+art laser pink
 row add laser 1
 note +your shots become instant laser beams
 note +beams bounce off walls

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Marksman
 rarity common
+art target plus gold
 row mul gunDamage 1.2
 row mul bulletSpeed 1.3
 row add ammo -1

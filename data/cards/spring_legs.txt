@@ -1,4 +1,5 @@
 deckshot-card 1
 name Spring Legs
 rarity common
+art spring up
 row mul jump 1.15

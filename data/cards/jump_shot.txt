@@ -1,4 +1,5 @@
 deckshot-card 1
 name Jump Shot
 rarity common
+art spring bullet fire
 trigger jump damage pct=15 shots=1 time=1

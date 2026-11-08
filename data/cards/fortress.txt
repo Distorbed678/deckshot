@@ -1,6 +1,7 @@
 deckshot-card 1
 name Fortress
 rarity rare
+art wall shield steel
 block
 row mul blockTime 2
 row mul blockCooldown 0.6

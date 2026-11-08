@@ -1,5 +1,6 @@
 deckshot-card 1
 name Hair Trigger
 rarity common
+art gun volt volt
 row mul fireDelay 0.909091
 row mul bulletSpeed 1.05

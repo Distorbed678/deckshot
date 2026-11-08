@@ -1,4 +1,5 @@
 deckshot-card 1
 name Quick Reload
 rarity common
+art mag clock sky
 row mul reloadTime 0.55

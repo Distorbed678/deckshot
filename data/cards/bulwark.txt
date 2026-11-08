@@ -1,6 +1,7 @@
 deckshot-card 1
 name Bulwark
 rarity common
+art shield up steel
 block
 row mul blockTime 1.6
 row mul speed 0.9

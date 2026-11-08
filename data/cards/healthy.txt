@@ -1,4 +1,5 @@
 deckshot-card 1
 name Healthy
 rarity common
+art heart plus blood
 row add maxHp 50

@@ -1,4 +1,5 @@
 deckshot-card 1
 name Retaliate
 rarity uncommon
+art burst heart blood
 trigger hurt nova count=3 cd=1

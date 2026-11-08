@@ -1,4 +1,5 @@
 deckshot-card 1
 name Smoke Dash
 rarity uncommon
+art cloud dash steel
 trigger dash mine cd=1

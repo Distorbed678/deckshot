@@ -1,6 +1,7 @@
 deckshot-card 1
 name Table Flip
 rarity epic
+art card swap gold
 special tableflip
 note Rerolls every card you own
 note Rarities stay the same

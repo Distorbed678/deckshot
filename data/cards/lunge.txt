@@ -1,5 +1,6 @@
 deckshot-card 1
 name Lunge
 rarity common
+art blade dash sky
 row mul heavyDash 1.4
 row mul meleeRange 1.1

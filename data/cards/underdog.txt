@@ -1,5 +1,6 @@
 deckshot-card 1
 name Underdog
 rarity uncommon
+art crown down gold
 row add underdog 1
 note +20% damage per point you're behind

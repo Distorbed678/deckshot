@@ -1,6 +1,7 @@
 deckshot-card 1
 name Last Round
 rarity common
+art bullet star gold
 row add lastRound 1
 note +the last bullet in your magazine deals +100% damage
 stack +100% more per extra copy

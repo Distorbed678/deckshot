@@ -1,6 +1,7 @@
 deckshot-card 1
 name Splitter
 rarity rare
+art fork sky
 row add split 1
 note +bullets split into 3 on their first wall hit
 stack splits again on 1 more wall hit per copy

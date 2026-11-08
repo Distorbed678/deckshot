@@ -1,5 +1,6 @@
 deckshot-card 1
 name Lucky Shot
 rarity epic
+art dice bullet gold
 row add crit 0.2
 note +crits deal 3x damage

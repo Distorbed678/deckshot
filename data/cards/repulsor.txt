@@ -1,5 +1,6 @@
 deckshot-card 1
 name Repulsor
 rarity rare
+art magnet sky
 row add repel 1
 note +enemy bullets curve away from you

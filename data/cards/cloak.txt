@@ -1,6 +1,7 @@
 deckshot-card 1
 name Cloak
 rarity uncommon
+art eye minus void
 block
 row add cloak 1.5
 note +blocking turns you nearly invisible for 1.5s

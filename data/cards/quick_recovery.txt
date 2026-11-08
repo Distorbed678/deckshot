@@ -1,4 +1,5 @@
 deckshot-card 1
 name Quick Recovery
 rarity common
+art hourglass down sky
 row mul stunTaken 0.7

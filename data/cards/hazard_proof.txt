@@ -1,4 +1,5 @@
 deckshot-card 1
 name Hazard Proof
 rarity common
+art saw shield steel
 row mul hazardTaken 0.6

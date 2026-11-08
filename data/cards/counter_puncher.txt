@@ -1,6 +1,7 @@
 deckshot-card 1
 name Counter Puncher
 rarity rare
+art fist bounce pink
 block
 trigger meleeBlocked melee
 trigger meleeBlocked invuln time=0.4

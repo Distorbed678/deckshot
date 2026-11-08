@@ -11,6 +11,7 @@ local sfx = require "gfx.sfx"
 
 local Editor = {}
 Editor.__index = Editor
+Editor.noPadHints = true
 
 local SCALE = 960 / Map.W
 local OX, OY = 150, 58               -- where the arena is drawn

@@ -2,6 +2,7 @@
 --   deckshot-card 1
 --   name Heavy Shot
 --   rarity common
+--   art bullet up fire             (optional: motif, badge, tint; see gfx/cardart.lua)
 --   block                          (optional: a block card, shown in the card's footer)
 --   special reroll                 (optional: reroll | tableflip | shrine)
 --   row mul gunDamage 1.7          (op add | mul | set, stat, value)
@@ -45,6 +46,8 @@ function CardData.parse(text)
       def.name = rest:sub(1, 32)
     elseif word == "rarity" then
       def.rarity = rest
+    elseif word == "art" then
+      def.art = rest
     elseif word == "block" then
       def.block = true
     elseif word == "special" then
@@ -82,6 +85,7 @@ end
 
 function CardData.serialize(def)
   local out = { CardData.HEADER, "name " .. def.name, "rarity " .. (def.rarity or "common") }
+  if def.art and def.art ~= "" then out[#out + 1] = "art " .. def.art end
   if def.block then out[#out + 1] = "block" end
   if def.special then out[#out + 1] = "special " .. def.special end
   for _, r in ipairs(def.rows) do

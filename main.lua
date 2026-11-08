@@ -6,6 +6,7 @@ local Settings = require "core.settings"
 local Bloom = require "gfx.bloom"
 local platform = require "core.platform"
 local sfx = require "gfx.sfx"
+local Glyphs = require "core.glyphs"
 
 -- A friendly crash screen: the error is saved to crash.txt in the save folder, and can be copied.
 function love.errorhandler(msg)
@@ -111,6 +112,7 @@ function love.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
+  Glyphs.use("keys")
   local alt = love.keyboard.isDown("lalt", "ralt")
   if not platform.web and not isrepeat and (key == "f11" or ((key == "return" or key == "kpenter") and alt)) then
     Settings.toggleFullscreen()
@@ -135,8 +137,13 @@ function love.wheelmoved(x, y)
   app.wheelmoved(x, y)
 end
 
-function love.mousemoved()
+function love.mousemoved(x, y, dx, dy)
+  if math.abs(dx or 0) + math.abs(dy or 0) > 2 then Glyphs.use("keys") end
   app.mousemoved()
+end
+
+function love.gamepadaxis(joystick, axis, value)
+  if math.abs(value) > 0.5 then Glyphs.use("pad", joystick) end
 end
 
 function love.textinput(t)
@@ -166,6 +173,7 @@ function love.touchreleased(id)
 end
 
 function love.gamepadpressed(joystick, button)
+  Glyphs.use("pad", joystick)
   app.gamepadpressed(joystick, button)
 end
 

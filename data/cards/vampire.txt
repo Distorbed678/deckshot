@@ -1,5 +1,6 @@
 deckshot-card 1
 name Vampire
 rarity epic
+art fang heart blood
 row add lifesteal 0.15
 trigger kill heal amount=25

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Combo
 rarity uncommon
+art fist x2 fire
 row add combo 1
 note +each hit within 2s of your last adds +10% damage (up to 5 hits)
 stack +10% per hit per copy

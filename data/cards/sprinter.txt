@@ -1,4 +1,5 @@
 deckshot-card 1
 name Sprinter
 rarity common
+art boot plus toxic
 row mul speed 1.1

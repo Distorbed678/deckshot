@@ -1,5 +1,6 @@
 deckshot-card 1
 name Frost Guard
 rarity common
+art snow shield ice
 block
 trigger block slow radius=200 time=1

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Phoenix
 rarity legendary
+art phoenix flame fire
 row add lives 1
 note +revive once per round at 50% HP

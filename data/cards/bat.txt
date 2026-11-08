@@ -1,5 +1,6 @@
 deckshot-card 1
 name Bat
 rarity common
+art bat gold
 row mul meleeKnockback 1.25
 row mul meleeDamage 1.1

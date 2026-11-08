@@ -1,4 +1,5 @@
 deckshot-card 1
 name Dash Strike
 rarity uncommon
+art dash hit fire
 trigger dash damage pct=25 shots=1 time=1

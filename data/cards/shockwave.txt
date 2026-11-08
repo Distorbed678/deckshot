@@ -1,6 +1,7 @@
 deckshot-card 1
 name Shockwave
 rarity uncommon
+art wave sky
 block
 row add shockwave 1
 note +blocking releases a shockwave

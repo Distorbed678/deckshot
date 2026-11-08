@@ -1,6 +1,7 @@
 deckshot-card 1
 name Heavy Shot
 rarity common
+art bullet hit fire
 row mul gunDamage 1.7
 row mul knockback 2
 row mul fireDelay 1.5

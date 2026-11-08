@@ -1,6 +1,7 @@
 deckshot-card 1
 name Blitz
 rarity rare
+art dash volt volt
 row add dashes 1
 row mul dashCooldown 0.7
 trigger dash shockwave damage=10 radius=110

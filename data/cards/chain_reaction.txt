@@ -1,4 +1,5 @@
 deckshot-card 1
 name Chain Reaction
 rarity rare
+art burst x2 fire
 trigger kill explode damage=35 radius=170

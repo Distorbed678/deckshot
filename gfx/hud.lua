@@ -3,6 +3,7 @@ local app = require "core.app"
 local ui = require "core.ui"
 local Map = require "game.map"
 local Cards = require "game.cards"
+local CardArt = require "gfx.cardart"
 
 local hud = {}
 
@@ -317,11 +318,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   local rc = rarity.color
   local t = love.timer.getTime()
 
-  if rarityId == "legendary" then
-    local pulse = 0.5 + 0.5 * math.sin(t * 3)
-    love.graphics.setColor(rc[1], rc[2], rc[3], 0.15 + 0.2 * pulse)
-    love.graphics.rectangle("fill", x - 8, y - 8, w + 16, h + 16, 18, 18)
-  end
+  CardArt.glow(x, y, w, h, rarityId, rc, t)
 
   love.graphics.setColor(0.12, 0.12, 0.16)
   love.graphics.rectangle("fill", x, y, w, h, 14, 14)
@@ -338,12 +335,13 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   end
   love.graphics.rectangle("line", x, y, w, h, 14, 14)
 
-  -- Narrow cards (5-6 on screen) use a smaller title font so long names fit.
+  -- Narrow cards (5-6 on screen) use a smaller title font so long names fit. The name sits above
+  -- the art medallion, which straddles the edge of the coloured band.
   local titleFont = app.fonts.title
   if titleFont:getWidth(card.name) > w - 20 then titleFont = app.fonts.med end
-  love.graphics.setFont(titleFont)
   love.graphics.setColor(0.08, 0.08, 0.1)
-  love.graphics.printf(card.name, x + 10, y + 40 - titleFont:getHeight() / 2, w - 20, "center")
+  ui.printFit(card.name, titleFont, x + 10, y + 20 - titleFont:getHeight() / 2, w - 20, "center")
+  CardArt.medal(card, x + w / 2, y + 66, 31, rc)
 
   -- Shrink the text until every line (and the stacking note) fits on the card.
   local stackH = 0
@@ -351,19 +349,36 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     local _, sw = app.fonts.small:getWrap("Stacking: " .. card.stack, w - 28)
     stackH = #sw * app.fonts.small:getHeight() + 6
   end
-  local synergyLine = #require("game.synergies").forCard(card, Cards.rules) > 0
-  local bottomGap = synergyLine and 56 or 40
-  local room = h - 100 - bottomGap - stackH
+  local showStack, showSynergy = card.stack ~= nil, #require("game.synergies").forCard(card, Cards.rules) > 0
   local font, gap
-  for _, f in ipairs({ { app.fonts.med, 10 }, { app.fonts.small, 6 }, { app.fonts.tiny, 3 } }) do
-    font, gap = f[1], f[2]
+  local scale = 1
+  local function textHeight(s)
     local total = 0
     for _, line in ipairs(card.lines) do
-      local _, wr = font:getWrap(line, w - 28)
-      total = total + #wr * font:getHeight() + gap
+      local _, wr = font:getWrap(line, (w - 28) / s)
+      total = total + (#wr * font:getHeight() + gap) * s
     end
-    if total <= room then break end
+    return total
   end
+  local function room() return h - 100 - (showSynergy and 56 or 40) - (showStack and stackH or 0) end
+  local function fits()
+    for _, f in ipairs({ { app.fonts.med, 10 }, { app.fonts.small, 6 }, { app.fonts.tiny, 3 } }) do
+      font, gap = f[1], f[2]
+      if textHeight(1) <= room() then return true end
+    end
+    return false
+  end
+  -- A very wordy card on a narrow slot gives up the extras (the library still shows them), then shrinks.
+  if not fits() then
+    showStack = false
+    if not fits() then
+      showSynergy = false
+      if not fits() then
+        while scale > 0.5 and textHeight(scale) > room() do scale = scale - 0.04 end
+      end
+    end
+  end
+  local bottomGap = showSynergy and 56 or 40
   love.graphics.setFont(font)
   local ly = y + 100
   for i, line in ipairs(card.lines) do
@@ -381,13 +396,13 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     else
       love.graphics.setColor(1, 1, 1)
     end
-    love.graphics.printf(line, x + 14, ly, w - 28, "center")
-    local _, wrapped = font:getWrap(line, w - 28)
-    ly = ly + #wrapped * font:getHeight() + gap
+    love.graphics.printf(line, x + 14, ly, (w - 28) / scale, "center", 0, scale, scale)
+    local _, wrapped = font:getWrap(line, (w - 28) / scale)
+    ly = ly + (#wrapped * font:getHeight() + gap) * scale
   end
 
   -- What extra copies do (for cards where it isn't just "the stats add up").
-  if card.stack then
+  if showStack then
     local sf = app.fonts.small
     love.graphics.setFont(sf)
     local _, wrapped = sf:getWrap("Stacking: " .. card.stack, w - 28)
@@ -397,7 +412,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
 
   -- Synergies this card is part of.
   local syns = require("game.synergies").forCard(card, Cards.rules)
-  if #syns > 0 then
+  if showSynergy and #syns > 0 then
     local names = {}
     for k = 1, math.min(2, #syns) do names[#names + 1] = require("game.synergies").partners(syns[k], card) end
     local text = "Synergy: " .. table.concat(names, ", ") .. (#syns > 2 and (" +" .. (#syns - 2)) or "")
@@ -412,6 +427,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(rc)
   love.graphics.printf(label, x, y + h - 30, w, "center")
+  CardArt.foil(x, y, w, h, rarityId, t)
 end
 
 -- The sudden-death barrier: darkness outside a pulsing red rect.

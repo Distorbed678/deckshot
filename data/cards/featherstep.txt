@@ -1,4 +1,5 @@
 deckshot-card 1
 name Featherstep
 rarity common
+art feather down sky
 row mul gravityMul 0.85

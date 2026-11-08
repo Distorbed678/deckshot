@@ -2,11 +2,12 @@
 # Builds release packages into dist/ (run on Linux):
 #   dist/Deckshot-x86_64.AppImage     Linux: one self-contained executable
 #   dist/Deckshot-windows-x64.zip     Windows: Deckshot.exe + DLLs, unzip and run
-#   dist/web/                            Browser version (love.js), served by GitHub Pages
+#   dist/web/                            Browser version (love.js)
+#   dist/site/                           GitHub Pages: the landing page, with the game under play/
 # The Linux and Windows packages also carry the browser version (web/ next to the game), which a
 # desktop LAN host serves so browsers on the network can join (online/lan.lua).
 #
-# Usage: ./build.sh [all|linux|windows|web|love]     (default: all)
+# Usage: ./build.sh [all|linux|windows|web|site|love]     (default: all)
 #   love = only build dist/Deckshot.love (runs anywhere with `love Deckshot.love`)
 #   all  = love + web + linux + windows (web is skipped when Node.js (npx) isn't installed)
 #
@@ -52,7 +53,7 @@ build_love() {
   log "Packing $NAME.love"
   rm -f "$out"
   (cd "$ROOT" && zip -9 -q -r "$out" . \
-    -x '.git/*' '.github/*' '.claude/*' 'build/*' 'dist/*' 'docs/*' 'lib/*' 'web/*' '*.md' '*.sh' '.gitignore' 'steam_appid.txt')
+    -x '.git/*' '.github/*' '.claude/*' 'build/*' 'dist/*' 'docs/*' 'lib/*' 'web/*' 'site/*' '*.md' '*.sh' '.gitignore' 'steam_appid.txt')
   local files
   files="$(unzip -Z1 "$out")"
   grep -qx 'main.lua' <<<"$files" || die "$NAME.love has no main.lua"
@@ -147,6 +148,21 @@ build_web() {
   [ -f "$DIST/web/love.wasm" ] && [ -f "$DIST/web/game.data" ] || die "web build is incomplete"
 }
 
+# The GitHub Pages site: the landing page (site/) at the root and the game under play/.
+build_site() {
+  log "Building the site"
+  local out="$DIST/site"
+  rm -rf "$out"
+  mkdir -p "$out/media" "$out/fonts"
+  cp "$ROOT/site/index.html" "$out/index.html"
+  cp "$ROOT"/docs/media/{logo,card-pick,arena-1,arena-2,arena-3,recap,editor,cut-glass_cannon,cut-hydra,cut-black_hole}.png "$out/media/"
+  cp "$ROOT/docs/media/gameplay.gif" "$out/media/"
+  cp "$ROOT/assets/icon.png" "$out/media/icon.png"
+  cp "$ROOT"/assets/fonts/*.ttf "$out/fonts/"
+  cp -r "$DIST/web" "$out/play"
+  touch "$out/.nojekyll"
+}
+
 # The browser version inside a desktop package (DIR/web), for LAN hosts to serve.
 copy_web() {
   if [ -f "$DIST/web/index.html" ]; then
@@ -168,8 +184,9 @@ case "$TARGET" in
   linux) build_love; maybe_web; build_linux ;;
   windows) build_love; maybe_web; build_windows ;;
   web) build_love; build_web ;;
+  site) build_love; build_web; build_site ;;
   love) build_love ;;
-  *) die "unknown target '$TARGET' (use all, linux, windows, web or love)" ;;
+  *) die "unknown target '$TARGET' (use all, linux, windows, web, site or love)" ;;
 esac
 
 log "Done:"

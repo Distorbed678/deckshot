@@ -1,6 +1,7 @@
 deckshot-card 1
 name Thunder God
 rarity epic
+art volt crown gold
 block
 row mul blockCooldown 1.25
 trigger block lightning damage=30 delay=0.35

@@ -1,4 +1,5 @@
 deckshot-card 1
 name Aerial Ace
 rarity uncommon
+art wing bullet sky
 row add airDamage 0.2

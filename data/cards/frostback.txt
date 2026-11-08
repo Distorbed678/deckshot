@@ -1,6 +1,7 @@
 deckshot-card 1
 name Frostback
 rarity uncommon
+art shield snow ice
 row add frostback 1.5
 note +enemies that hit you are slowed for 1.5s
 stack +1.5s per copy

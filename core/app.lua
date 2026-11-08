@@ -150,6 +150,7 @@ function app.draw()
     if ui.active then ui.beginFrame() end
     if s.draw then s:draw() end
   end
+  require("core.glyphs").drawMenuHints()
   ui.endFrame()
   love.graphics.setCanvas()
 

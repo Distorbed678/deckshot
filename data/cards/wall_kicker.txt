@@ -1,4 +1,5 @@
 deckshot-card 1
 name Wall Kicker
 rarity common
+art wall boot sky
 trigger wallJump dash

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Haymaker
 rarity common
+art fist hit fire
 row mul heavyCharge 0.75
 row mul meleeDamage 1.15

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Gravity Block
 rarity rare
+art shield down void
 block
 row add gravityBlock 1
 note +blocking opens a black hole at your position

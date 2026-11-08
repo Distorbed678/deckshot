@@ -1,6 +1,7 @@
 deckshot-card 1
 name Ricochet Seeker
 rarity rare
+art seek bounce sky
 row add seek 2
 row add bounces 1
 note +bullets home in on enemies after bouncing

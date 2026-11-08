@@ -1,6 +1,7 @@
 deckshot-card 1
 name Rubber Bullets
 rarity common
+art bullet bounce pink
 row add bounces 1
 row mul knockback 1.6
 row mul gunDamage 0.9

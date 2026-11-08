@@ -1,5 +1,6 @@
 deckshot-card 1
 name Gunslinger
 rarity common
+art gun star gold
 row add ammo 1
 row mul reloadTime 0.85

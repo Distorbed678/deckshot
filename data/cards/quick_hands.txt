@@ -1,4 +1,5 @@
 deckshot-card 1
 name Quick Hands
 rarity common
+art hand clock sky
 row mul fireDelay 0.75

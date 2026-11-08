@@ -1,5 +1,6 @@
 deckshot-card 1
 name Nova
 rarity epic
+art burst dash void
 trigger dash nova count=8
 stack +8 bullets per extra copy

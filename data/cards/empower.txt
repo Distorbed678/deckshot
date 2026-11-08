@@ -1,6 +1,7 @@
 deckshot-card 1
 name Empower
 rarity uncommon
+art star bullet gold
 block
 row add empower 1
 note +after blocking, your next shot deals double damage

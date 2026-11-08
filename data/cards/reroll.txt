@@ -1,5 +1,6 @@
 deckshot-card 1
 name Reroll
 rarity epic
+art dice gold
 special reroll
 note Reroll these cards

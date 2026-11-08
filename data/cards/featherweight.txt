@@ -1,6 +1,7 @@
 deckshot-card 1
 name Featherweight
 rarity common
+art feather dash sky
 row add dashes 1
 row mul speed 1.15
 row add maxHp -20

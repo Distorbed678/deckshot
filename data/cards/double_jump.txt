@@ -1,5 +1,6 @@
 deckshot-card 1
 name Double Jump
 rarity common
+art wing up sky
 row add airJumps 1
 row mul speed 1.1

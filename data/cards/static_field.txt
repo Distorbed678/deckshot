@@ -1,6 +1,7 @@
 deckshot-card 1
 name Static Field
 rarity uncommon
+art orbit volt volt
 row add static 8
 note +enemies near you take 8 damage per second
 stack +8 damage per second per copy

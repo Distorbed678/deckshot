@@ -1,4 +1,5 @@
 deckshot-card 1
 name Second Clip
 rarity common
+art mag skull gold
 trigger kill ammo amount=20

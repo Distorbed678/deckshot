@@ -1,4 +1,5 @@
 deckshot-card 1
 name Long Reach
 rarity common
+art fist dash steel
 row mul meleeRange 1.2

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Blood Pact
 rarity epic
+art drop heart blood
 row set fireDelay 0.06
 row add bloodPact 1
 note +fire as fast as your gun allows

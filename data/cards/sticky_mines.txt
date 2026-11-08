@@ -1,6 +1,7 @@
 deckshot-card 1
 name Sticky Mines
 rarity uncommon
+art mine drop toxic
 row add sticky 1
 note +spent bullets stick to walls as mines
 note +mines explode near the enemy

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Heavy Mag
 rarity common
+art mag down steel
 row add ammo 3
 row mul reloadTime 1.25

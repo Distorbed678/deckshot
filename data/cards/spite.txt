@@ -1,6 +1,7 @@
 deckshot-card 1
 name Spite
 rarity uncommon
+art heart bullet blood
 row add spite 1
 note +after you take damage, your next shot deals +60% damage
 stack +60% per copy

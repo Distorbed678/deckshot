@@ -1,6 +1,7 @@
 deckshot-card 1
 name Sniper
 rarity rare
+art target bullet steel
 row add distDamage 1
 row mul bulletSpeed 1.3
 row mul fireDelay 1.5

@@ -1,6 +1,7 @@
 deckshot-card 1
 name Sharpshooter
 rarity common
+art target up
 row mul bulletSpeed 1.4
 row mul spread 0.5
 row mul gunDamage 1.1

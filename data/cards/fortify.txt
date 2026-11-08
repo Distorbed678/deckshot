@@ -1,4 +1,5 @@
 deckshot-card 1
 name Fortify
 rarity common
+art heart shield steel
 row add maxHp 30

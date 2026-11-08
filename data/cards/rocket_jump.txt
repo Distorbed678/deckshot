@@ -1,6 +1,7 @@
 deckshot-card 1
 name Rocket Jump
 rarity common
+art rocket up fire
 row add recoil 450
 note +shooting blasts you backwards
 note +aim down to fly

@@ -5,6 +5,7 @@ local Logo = require "gfx.logo"
 
 local Splash = {}
 Splash.__index = Splash
+Splash.noPadHints = true
 
 local FADE_IN, MIN_LOAD, MAX_LOAD, FADE_OUT = 0.45, 1.2, 6, 0.27
 

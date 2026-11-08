@@ -1,6 +1,7 @@
 deckshot-card 1
 name Homing
 rarity rare
+art seek pink
 row add homing 1.6
 row mul bulletSpeed 0.8
 note +bullets gently curve toward the enemy

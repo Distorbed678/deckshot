@@ -1,6 +1,7 @@
 deckshot-card 1
 name Quickdraw
 rarity uncommon
+art gun clock gold
 row add quickdraw 1
 note +your first shot after a reload deals +50% damage
 stack +50% per copy

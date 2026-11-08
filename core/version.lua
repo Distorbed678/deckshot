@@ -3,9 +3,14 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.1",
+  VERSION = "0.6.0",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Every card has its own art now.",
+    "Rare, epic and legendary cards shimmer, and flash with a bigger sound when they turn over.",
+    "Match Recap at the end of a match: everyone's stats, builds and awards, saved as an image.",
+    "Controller button icons in menus, card picks, the tutorial and How to Play (Xbox, PlayStation or Nintendo).",
+    "Fixed: text overlapping on very wordy cards when five cards are dealt.",
     "Players are solid now, so you can stand on each other.",
     "Your weapon changes with your stats.",
     "Dashes always go where you aim, and heavy melee is a short step you can charge on the move.",

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Scavenger
 rarity common
+art crate bullet gold
 row add scavenger 1
 note +hits cancel your reload

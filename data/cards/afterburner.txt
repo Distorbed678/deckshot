@@ -1,5 +1,6 @@
 deckshot-card 1
 name Afterburner
 rarity common
+art boot flame sky
 row mul dashCooldown 0.85
 row mul dashSpeed 1.1

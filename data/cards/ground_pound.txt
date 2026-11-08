@@ -1,4 +1,5 @@
 deckshot-card 1
 name Ground Pound
 rarity uncommon
+art wave down fire
 trigger land shockwave damage=20 radius=110

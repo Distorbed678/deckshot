@@ -1,5 +1,6 @@
 deckshot-card 1
 name Big Mag
 rarity common
+art mag plus
 row add ammo 3
 row mul reloadTime 0.9

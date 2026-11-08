@@ -1,4 +1,5 @@
 deckshot-card 1
 name Slipstream
 rarity common
+art wing dash sky
 trigger dash speed pct=20 time=1.5

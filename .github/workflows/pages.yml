@@ -1,4 +1,4 @@
-# Builds the browser version (love.js) and publishes it to GitHub Pages.
+# Builds the landing page and the browser version (love.js) and publishes them to GitHub Pages.
 # Runs for every published release, or by hand from the Actions tab.
 name: Deploy web version
 
@@ -30,13 +30,13 @@ jobs:
           node-version: 20
 
       - name: Build web version
-        run: ./build.sh web
+        run: ./build.sh site
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/web
+          path: dist/site
 
       - name: Deploy to GitHub Pages
         id: deployment

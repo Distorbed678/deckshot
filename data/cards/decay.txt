@@ -1,6 +1,7 @@
 deckshot-card 1
 name Decay
 rarity rare
+art heart down toxic
 row add decay 1
 note +damage you take is dealt slowly over 4s
 stack +2s longer per extra copy

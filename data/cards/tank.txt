@@ -1,6 +1,7 @@
 deckshot-card 1
 name Tank
 rarity uncommon
+art body up steel
 row add maxHp 100
 row add radius 5
 row mul speed 0.85

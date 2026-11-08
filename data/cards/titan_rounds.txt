@@ -1,6 +1,7 @@
 deckshot-card 1
 name Titan Rounds
 rarity rare
+art orb up steel
 row mul bulletSize 2.5
 row mul gunDamage 1.5
 row mul fireDelay 1.428571

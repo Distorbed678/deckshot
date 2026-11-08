@@ -1,4 +1,5 @@
 deckshot-card 1
 name Vampiric Fists
 rarity uncommon
+art fist heart blood
 row add meleeLifesteal 0.1

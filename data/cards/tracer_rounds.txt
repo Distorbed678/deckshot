@@ -1,6 +1,7 @@
 deckshot-card 1
 name Tracer Rounds
 rarity common
+art bullet dash pink
 row mul bulletSpeed 1.15
 row mul bulletGravity 0.85
 row mul knockback 1.1

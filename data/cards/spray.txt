@@ -1,6 +1,7 @@
 deckshot-card 1
 name Spray
 rarity uncommon
+art bullets fire
 row mul fireDelay 0.3
 row add ammo 4
 row add spread 0.15

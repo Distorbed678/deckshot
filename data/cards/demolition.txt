@@ -1,5 +1,6 @@
 deckshot-card 1
 name Demolition
 rarity common
+art crate hit fire
 row mul objectDamage 2
 row mul knockback 1.1

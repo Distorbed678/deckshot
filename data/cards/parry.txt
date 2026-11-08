@@ -1,6 +1,7 @@
 deckshot-card 1
 name Parry
 rarity uncommon
+art blade shield gold
 block
 row add parry 1
 note +blocking an attack instantly recharges your block

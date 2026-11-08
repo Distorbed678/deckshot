@@ -1,6 +1,7 @@
 deckshot-card 1
 name Small Frame
 rarity common
+art body minus sky
 row add radius -3
 row mul speed 1.1
 row add maxHp -15

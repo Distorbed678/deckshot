@@ -1,6 +1,7 @@
 deckshot-card 1
 name Mine Layer
 rarity uncommon
+art mine down
 block
 row add mineLayer 1
 note +blocking drops a mine at your feet

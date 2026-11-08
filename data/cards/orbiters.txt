@@ -1,6 +1,7 @@
 deckshot-card 1
 name Orbiters
 rarity epic
+art orbit sky
 row add orbs 2
 note +orbs destroy enemy bullets
 note +orbs damage the enemy

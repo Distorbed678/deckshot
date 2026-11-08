@@ -24,9 +24,12 @@ local Music = require "gfx.music"
 local Atmosphere = require "gfx.atmosphere"
 local Chat = require "online.chat"
 local Cosmetics = require "core.cosmetics"
+local Glyphs = require "core.glyphs"
+local Recap = require "gfx.recap"
 
 local Match = {}
 Match.__index = Match
+Match.noPadHints = true
 
 local SNAPSHOT_INTERVAL = 1 / 30
 local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
@@ -1105,6 +1108,10 @@ function Match:drawCardChooser()
 end
 
 function Match:update(dt, isTop)
+  if self.recapOpen then
+    Recap.update(self)
+    if self:status().state ~= "matchOver" then self.recapOpen, self.recapShot = false, nil end
+  end
   self:updatePresence()
   self:updatePractice(dt)
   if self.cardChooser then isTop = false end -- the practice card chooser is open: hold everyone still
@@ -1367,13 +1374,13 @@ end
 
 ---------------------------------------------------------------- first-run tutorial
 local TUTORIAL = {
-  { id = "move", text = "Move left and right", key = function(n, b) return n(b.left) .. " / " .. n(b.right) end, pad = "Left stick", touch = "Drag on the left side" },
-  { id = "jump", text = "Jump", key = function(n, b) return n(b.up) end, pad = "A", touch = "Jump button" },
-  { id = "double", text = "Jump again in the air", key = function(n, b) return n(b.up) .. " twice" end, pad = "A twice", touch = "Jump button twice" },
-  { id = "fire", text = "Shoot", key = function(n, b) return n(b.fire) end, pad = "RT", touch = "Drag on the right side" },
-  { id = "block", text = "Block: it reflects bullets", key = function(n, b) return n(b.block) end, pad = "LT", touch = "Block button" },
-  { id = "dash", text = "Dash", key = function(n, b) return n(b.dash) end, pad = "B", touch = "Dash button" },
-  { id = "melee", text = "Melee: tap, or hold for a heavy hit", key = function(n, b) return n(b.melee) end, pad = "X", touch = "Melee button" },
+  { id = "move", text = "Move left and right", key = function(n, b) return n(b.left) .. " / " .. n(b.right) end, pad = "{ls} Left stick", touch = "Drag on the left side" },
+  { id = "jump", text = "Jump", key = function(n, b) return n(b.up) end, pad = "{a}", touch = "Jump button" },
+  { id = "double", text = "Jump again in the air", key = function(n, b) return n(b.up) .. " twice" end, pad = "{a} twice", touch = "Jump button twice" },
+  { id = "fire", text = "Shoot", key = function(n, b) return n(b.fire) end, pad = "{rt}", touch = "Drag on the right side" },
+  { id = "block", text = "Block: it reflects bullets", key = function(n, b) return n(b.block) end, pad = "{lt}", touch = "Block button" },
+  { id = "dash", text = "Dash", key = function(n, b) return n(b.dash) end, pad = "{b}", touch = "Dash button" },
+  { id = "melee", text = "Melee: tap, or hold for a heavy hit", key = function(n, b) return n(b.melee) end, pad = "{x}", touch = "Melee button" },
   { id = "hit", text = "Land a shot on the dummy", key = function() return "" end, pad = "", touch = "" },
 }
 
@@ -1439,7 +1446,11 @@ function Match:drawTutorial()
   love.graphics.setColor(1, 1, 1)
   ui.printFit(step.text, app.fonts.title, x + 20, y + 28, w - 160, "left")
   love.graphics.setColor(ui.GOLD)
-  ui.printFit(hint, app.fonts.med, x + 20, y + 68, w - 160, "left")
+  if kind == "pad" then
+    Glyphs.print(hint, app.fonts.med, x + 20, y + 68, w - 160, "left", ui.GOLD)
+  else
+    ui.printFit(hint, app.fonts.med, x + 20, y + 68, w - 160, "left")
+  end
   if ui.button("Skip", x + w - 120, y + 32, 100, 40, { font = app.fonts.small, back = true }) then
     app.switch(tu.returnTo and tu.returnTo() or require("screens.menu").new())
   end
@@ -1564,6 +1575,10 @@ function Match:keypressed(key)
     self.showScores = not self.showScores
     return
   end
+  if key == "escape" and self.recapOpen then
+    self.recapOpen = false
+    return
+  end
   if key == "escape" and self.showScores then
     self.showScores = false
     return
@@ -1622,6 +1637,7 @@ end
 
 -- Gamepad buttons in a match. Returns true when used (otherwise they drive the menus).
 function Match:gamepadpressed(j, button)
+  if self.recapOpen then return false end -- the recap is a menu: B and Start close it
   if button == "back" then
     if not Settings.values.scoreboardHold then self.showScores = not self.showScores end
     return true
@@ -1761,8 +1777,10 @@ function Match:updatePickAnim(dt)
         if before < 0.5 and a.flip[i] >= 0.5 then
           sfx.play("cardFlip", nil, 0.8, 1, true)
           if REVEAL_SOUND[card.rarity] then sfx.play(REVEAL_SOUND[card.rarity], nil, 1, 1, true) end
-          local n = ({ rare = 10, epic = 18, legendary = 32 })[card.rarity]
+          local n = ({ rare = 14, epic = 28, legendary = 56 })[card.rarity]
           if n then
+            a.flare = a.flare or {}
+            a.flare[i] = 1
             local r = hud.cardRects(#cp.options, i)[i]
             local col = Cards.rarity[card.rarity].color
             for _ = 1, n do
@@ -1782,6 +1800,7 @@ function Match:updatePickAnim(dt)
     self.pickAnim = nil
   end
   if a then
+    for k, v in pairs(a.flare or {}) do a.flare[k] = math.max(0, v - dt * 2.2) end
     for i = #a.sparkles, 1, -1 do
       local sp = a.sparkles[i]
       sp.life = sp.life - dt
@@ -1969,6 +1988,16 @@ function Match:drawCardPick(st)
     love.graphics.rotate(r.a * e)
     local s = (0.35 + 0.65 * e) * (1 + 0.08 * lift)
     love.graphics.scale(math.max(0.02, sx) * s, s)
+    -- A rare card flashes as it turns over.
+    local flare = a and a.flare and a.flare[i]
+    if flare and flare > 0 then
+      local fc = Cards.rarity[card.rarity].color
+      local grow = (1 - flare) * 54
+      love.graphics.setBlendMode("add")
+      love.graphics.setColor(fc[1], fc[2], fc[3], 0.6 * flare)
+      love.graphics.rectangle("fill", -w / 2 - grow, -h / 2 - grow, w + grow * 2, h + grow * 2, 14 + grow, 14 + grow)
+      love.graphics.setBlendMode("alpha")
+    end
     if flip < 0.5 then
       hud.drawCardBack(-w / 2, -h / 2, w, h, i == index, color)
     else
@@ -2009,15 +2038,32 @@ function Match:drawCardPick(st)
   fig.aimX, fig.aimY, fig.gunTarget = dx / d, dy / d, { tx, ty }
   require("game.body").drawFigure(fig, love.timer.getDelta())
 
+  if pu and not pu.waiting and self:isPadPicker(pu.slot) then
+    Glyphs.print("{dlr} Choose     {a} Take", app.fonts.med, app.W - 300, 646, 280, "right", { 1, 1, 1, 0.65 })
+  end
   if pu and not pu.waiting and self:canDiscard(pu.slot) then
     if self:usesTouch() then
       if ui.button("Discard instead", app.W - 256, 664, 236, 40, { font = app.fonts.med }) then
         self.discardMode, self.discardIndex = true, 1
       end
     else
-      love.graphics.setColor(1, 1, 1, 0.65)
-      ui.printFit(self:discardKeyName(pu.slot) .. ": discard instead", app.fonts.med, app.W - 300, 676, 280, "right")
+      self:drawDiscardHint(pu.slot, "discard instead")
     end
+  end
+end
+
+function Match:isPadPicker(slot)
+  local inp = self.role == "local" and self.world.players[slot].input or self.myInput
+  return inp and inp.kind == "pad"
+end
+
+-- "<discard control>: <what it does>", as an icon for a controller.
+function Match:drawDiscardHint(slot, what)
+  if self:isPadPicker(slot) then
+    Glyphs.print("{y} " .. what, app.fonts.med, app.W - 300, 676, 280, "right", { 1, 1, 1, 0.65 })
+  else
+    love.graphics.setColor(1, 1, 1, 0.65)
+    ui.printFit(self:discardKeyName(slot) .. ": " .. what, app.fonts.med, app.W - 300, 676, 280, "right")
   end
 end
 
@@ -2066,8 +2112,7 @@ function Match:drawDiscard(cp, color)
       self.discardMode = false
     end
   else
-    love.graphics.setColor(1, 1, 1, 0.65)
-    ui.printFit(self:discardKeyName(pu.slot) .. ": back to the cards", app.fonts.med, app.W - 300, 676, 280, "right")
+    self:drawDiscardHint(pu.slot, "back to the cards")
   end
 end
 
@@ -2460,6 +2505,7 @@ function Match:drawMatchOver(st)
 
   if self.role == "client" and self.mySlot == 0 then
     app.centered("You're watching - you'll play in the next match", app.fonts.med, 370, { 1, 1, 1, 0.7 })
+    if ui.button("Match Recap", x, 410, w, h) then self:openRecap() end
     return
   end
   if self.role == "client" then
@@ -2476,7 +2522,8 @@ function Match:drawMatchOver(st)
     app.centered("Vote for what's next - the host decides", app.fonts.med, 335, { 1, 1, 1, 0.7 })
     voteButton(continueText, World.VOTE_CONTINUE, 370)
     voteButton("New Match", World.VOTE_NEW, 432)
-    self:drawVotes(510)
+    self:drawVotes(498)
+    if ui.button("Match Recap", x, 540, w, h) then self:openRecap() end
     return
   end
   self.pendingVote = nil
@@ -2490,14 +2537,20 @@ function Match:drawMatchOver(st)
     self.world:continueMatch()
   end
   if ui.button(withVotes("New Match", tally[World.VOTE_NEW]), x, 432, w, h) then self:newMatch() end
+  local third = (w - 20) / 3
   if self.role == "host" then
-    if ui.button("Back to Lobby", x, 494, w / 2 - 5, h) then self:backToLobby() end
-    if ui.button("Scoreboard", x + w / 2 + 5, 494, w / 2 - 5, h) then self.showScores = not self.showScores end
-    self:drawVotes(568)
+    if ui.button("Back to Lobby", x, 494, third, h) then self:backToLobby() end
   else
-    if ui.button("Main Menu", x, 494, w / 2 - 5, h) then app.switch(require("screens.menu").new()) end
-    if ui.button("Scoreboard", x + w / 2 + 5, 494, w / 2 - 5, h) then self.showScores = not self.showScores end
+    if ui.button("Main Menu", x, 494, third, h) then app.switch(require("screens.menu").new()) end
   end
+  if ui.button("Scoreboard", x + third + 10, 494, third, h) then self.showScores = not self.showScores end
+  if ui.button("Match Recap", x + (third + 10) * 2, 494, third, h, { color = ui.ACCENT }) then self:openRecap() end
+  if self.role == "host" then self:drawVotes(568) end
+end
+
+function Match:openRecap()
+  self.recapOpen, self.recapShot, self.recapMessage, self.recapSaved = true, nil, nil, nil
+  self.showScores = false
 end
 
 function Match:drawPause()
@@ -2648,6 +2701,11 @@ function Match:draw()
     self:drawCardBan(st)
   end
   if st.state ~= "mapVote" then self:drawFlyers() end
+  if st.state == "matchOver" and self.recapOpen then
+    Recap.draw(self, st) -- covers the whole screen
+    ui.active = widgetsLive
+    return
+  end
   if st.state == "matchOver" then self:drawMatchOver(st) end
   ui.active = widgetsLive
 

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Haste
 rarity common
+art boot dash sky
 row mul speed 1.25
 row mul dashCooldown 0.75

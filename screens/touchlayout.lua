@@ -6,6 +6,7 @@ local Touch = require "core.touch"
 
 local Screen = {}
 Screen.__index = Screen
+Screen.noPadHints = true
 
 function Screen.new()
   return setmetatable({ sel = "jump", drag = nil }, Screen)

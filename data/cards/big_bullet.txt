@@ -1,6 +1,7 @@
 deckshot-card 1
 name Big Bullet
 rarity common
+art bullet up
 row mul bulletSize 1.6
 row mul gunDamage 1.25
 row mul bulletSpeed 0.85

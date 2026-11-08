@@ -1,6 +1,7 @@
 deckshot-card 1
 name Black Hole
 rarity legendary
+art blackhole void
 row add blackhole 1
 note +bullet impacts open a black hole
 note +black holes pull the enemy in

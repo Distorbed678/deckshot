@@ -1,5 +1,6 @@
 deckshot-card 1
 name Shield Generator
 rarity rare
+art shield volt sky
 row add shieldMax 60
 stack +60 shield per copy

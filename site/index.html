@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deckshot</title>
+<meta name="description" content="A chaotic 2-4 player arena shooter. Lose a round, pick a card, come back stronger. Free in your browser, on Windows and on Linux.">
+<meta property="og:title" content="Deckshot">
+<meta property="og:description" content="Lose a round. Pick a card. Come back stronger. A free 2-4 player arena shooter.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="media/card-pick.png">
+<meta name="theme-color" content="#121218">
+<link rel="icon" href="media/icon.png">
+<script>
+  // Installed to a phone's home screen before the game moved to /play/: go straight to the game.
+  if (window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches) location.replace("play/");
+</script>
+<style>
+  @font-face { font-family: "Russo One"; src: url("fonts/RussoOne-Regular.ttf"); font-display: swap; }
+  @font-face { font-family: "Barlow"; src: url("fonts/Barlow-Medium.ttf"); font-display: swap; }
+  :root {
+    --bg: #121218; --bg-2: #1a1a22; --bg-3: #24242e; --line: #33333f;
+    --text: #f2f2f6; --muted: #a5a5b4;
+    --orange: #ff8c26; --blue: #3f9bff; --purple: #bf59ff; --green: #5ce672; --gold: #ffc733;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 18px/1.55 "Barlow", system-ui, sans-serif; overflow-x: hidden; }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: "Russo One", system-ui, sans-serif; font-weight: 400; line-height: 1.12; margin: 0; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 16px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  header img { height: 34px; width: auto; }
+  header nav { display: flex; gap: 24px; font-size: 16px; }
+  header nav a { color: var(--muted); text-decoration: none; }
+  header nav a:hover { color: var(--text); }
+
+  .hero { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; align-items: center; padding: 40px 0 72px; }
+  .hero h1 { font-size: clamp(40px, 5.2vw, 64px); }
+  .hero h1 span { color: var(--orange); display: block; }
+  .hero p { color: var(--muted); font-size: 20px; margin: 20px 0 30px; max-width: 30em; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-block; font-family: "Russo One", sans-serif; text-decoration: none; padding: 15px 28px; border-radius: 10px; font-size: 18px; border: 2px solid transparent; transition: transform .12s ease, background .12s ease; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.play { background: var(--orange); color: #17120c; }
+  .btn.ghost { background: var(--bg-3); border-color: var(--line); }
+  .btn.ghost:hover { border-color: var(--muted); }
+  .note { color: var(--muted); font-size: 15px; margin-top: 14px; }
+
+  .stage { position: relative; }
+  .stage > .shot { border-radius: 14px; border: 2px solid var(--line); box-shadow: 0 24px 60px #0008; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .stage .peek { position: absolute; width: 27%; bottom: -13%; filter: drop-shadow(0 12px 22px #000a); }
+  .stage .p1 { right: 36%; transform: rotate(-12deg); }
+  .stage .p2 { right: 16%; transform: rotate(-1deg); bottom: -9%; }
+  .stage .p3 { right: -5%; transform: rotate(11deg); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-block: 1px solid var(--line); margin-top: 40px; }
+  .stats div { padding: 24px 8px; text-align: center; }
+  .stats b { display: block; font: 400 38px "Russo One", sans-serif; }
+  .stats div:nth-child(1) b { color: var(--orange); } .stats div:nth-child(2) b { color: var(--gold); }
+  .stats div:nth-child(3) b { color: var(--blue); } .stats div:nth-child(4) b { color: var(--green); }
+  .stats span { color: var(--muted); font-size: 16px; }
+
+  section.row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 72px 0; }
+  section.row.flip > :first-child { order: 2; }
+  section h2 { font-size: clamp(28px, 3.4vw, 40px); margin-bottom: 14px; }
+  section.row p { color: var(--muted); margin: 0 0 12px; }
+  section.row img { border-radius: 12px; border: 2px solid var(--line); }
+
+  .wide { padding: 24px 0 72px; }
+  .wide h2 { text-align: center; }
+  .wide > p { text-align: center; color: var(--muted); margin: 0 auto 32px; max-width: 38em; }
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .gallery img { border-radius: 10px; border: 2px solid var(--line); }
+
+  .ways { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .way { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  .way h3 { font-size: 20px; margin-bottom: 8px; }
+  .way p { color: var(--muted); font-size: 16px; margin: 0; }
+
+  .get { background: var(--bg-2); border-top: 1px solid var(--line); padding: 72px 0; text-align: center; }
+  .get h2 { margin-bottom: 26px; }
+  .get .cta { justify-content: center; }
+
+  footer { color: var(--muted); font-size: 15px; padding: 32px 0 44px; text-align: center; }
+  footer a { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } .btn:hover { transform: none; } }
+  @media (max-width: 860px) {
+    .hero, section.row { grid-template-columns: 1fr; gap: 32px; }
+    .hero { padding-bottom: 72px; }
+    .stage .p3 { right: 0; }
+    .stage .p2 { right: 20%; }
+    .stage .p1 { right: 40%; }
+    section.row { padding: 44px 0; }
+    section.row.flip > :first-child { order: 0; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .gallery { grid-template-columns: 1fr 1fr; }
+    .ways { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .gallery, .ways { grid-template-columns: 1fr; }
+    .btn { width: 100%; text-align: center; }
+    header nav a:not(:last-child) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="media/logo.png" alt="Deckshot">
+    <nav>
+      <a href="#cards">Cards</a>
+      <a href="#friends">Play with friends</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/Distorbed678/deckshot">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1>Lose a round. Pick a card. <span>Come back stronger.</span></h1>
+      <p>A chaotic 2-4 player arena shooter where every loss makes you weirder and more dangerous. Free, with no account needed.</p>
+      <div class="cta">
+        <a class="btn play" href="play/">Play in your browser</a>
+        <a class="btn ghost" href="#download">Download</a>
+      </div>
+      <p class="note">Works with keyboard, gamepads and touch.</p>
+    </div>
+    <div class="stage">
+      <picture>
+        <source srcset="media/arena-1.png" media="(prefers-reduced-motion: reduce)">
+        <img class="shot" src="media/gameplay.gif" alt="A full four-player round, from countdown to the winning kill">
+      </picture>
+      <img class="peek p1" src="media/cut-glass_cannon.png" alt="" loading="lazy">
+      <img class="peek p2" src="media/cut-hydra.png" alt="" loading="lazy">
+      <img class="peek p3" src="media/cut-black_hole.png" alt="" loading="lazy">
+    </div>
+  </div>
+
+  <div class="stats">
+    <div><b>150</b><span>upgrade cards</span></div>
+    <div><b>40</b><span>hidden synergies</span></div>
+    <div><b>55</b><span>hand-tuned arenas</span></div>
+    <div><b>2-4</b><span>players, or bots</span></div>
+  </div>
+
+  <section class="row" id="cards">
+    <div>
+      <h2>Every card stacks</h2>
+      <p>Whoever loses picks an upgrade. Bouncing rockets, black holes, lightning on block, a turret on your shoulder.</p>
+      <p>Take the same card three times and find out what happens. The right pair unlocks a synergy you didn't know was there.</p>
+    </div>
+    <img src="media/card-pick.png" alt="A player choosing between five upgrade cards" loading="lazy">
+  </section>
+
+  <section class="wide">
+    <h2>55 arenas that fight back</h2>
+    <p>Saws, lasers, crushers, acid, ropes and breakable everything. Play Elimination or King of the Hill, free-for-all or 2v2, with a closing barrier that ends the stalling.</p>
+    <div class="gallery">
+      <img src="media/arena-1.png" alt="A fight over acid in a jungle arena" loading="lazy">
+      <img src="media/arena-2.png" alt="Bullets crossing a neon city arena" loading="lazy">
+      <img src="media/arena-3.png" alt="King of the Hill in a desert arena" loading="lazy">
+    </div>
+  </section>
+
+  <section class="row flip">
+    <div>
+      <h2>Bragging rights included</h2>
+      <p>Every match ends with a recap: each player's numbers, final build and awards like Comeback Kid and Brick Wall. Save it as an image and send it to the friend you just beat.</p>
+    </div>
+    <img src="media/recap.png" alt="A match recap with stats, builds and awards for four players" loading="lazy">
+  </section>
+
+  <section class="row">
+    <div>
+      <h2>Make your own</h2>
+      <p>Build maps, cards and synergies in the built-in editors, then share them with a code. Vote on the next map, ban the card you hate, and earn about 60 cosmetics through 44 achievements.</p>
+    </div>
+    <img src="media/editor.png" alt="The map editor with an arena open" loading="lazy">
+  </section>
+
+  <section class="wide" id="friends">
+    <h2>Play with friends, however you can</h2>
+    <p>Everyone in the same match, whatever they're playing on.</p>
+    <div class="ways">
+      <div class="way"><h3>Same couch</h3><p>Up to 4 players on keyboard, gamepads or touch, with bots in any empty seat.</p></div>
+      <div class="way"><h3>Over Steam</h3><p>Host a lobby and share a 6-character code. No port forwarding. Windows and Linux play together.</p></div>
+      <div class="way"><h3>On your network</h3><p>LAN play with no accounts and no internet needed.</p></div>
+      <div class="way"><h3>On a phone</h3><p>Scan the QR code in a LAN lobby and join from the browser.</p></div>
+    </div>
+  </section>
+</div>
+
+<div class="get" id="download">
+  <div class="wrap">
+    <h2>Get Deckshot</h2>
+    <div class="cta">
+      <a class="btn play" href="play/">Play in your browser</a>
+      <a class="btn ghost" href="https://github.com/Distorbed678/deckshot/releases/latest/download/Deckshot-windows-x64.zip">Windows</a>
+      <a class="btn ghost" href="https://github.com/Distorbed678/deckshot/releases/latest/download/Deckshot-x86_64.AppImage">Linux</a>
+    </div>
+    <p class="note">Desktop versions update themselves with one click. Online play over Steam needs the desktop version.</p>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    Deckshot is a fan-made game heavily inspired by <a href="https://store.steampowered.com/app/1557740/ROUNDS/">ROUNDS</a> by Landfall Games, and isn't affiliated with or endorsed by them.<br>
+    Built with <a href="https://love2d.org/">LÖVE</a>. <a href="https://github.com/Distorbed678/deckshot">Source code</a> under the MIT License.
+  </div>
+</footer>
+</body>
+</html>

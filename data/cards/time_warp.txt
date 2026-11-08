@@ -1,6 +1,7 @@
 deckshot-card 1
 name Time Warp
 rarity rare
+art hourglass swirl void
 block
 row add timeWarp 1
 note +blocking slows every enemy bullet for 1.5s

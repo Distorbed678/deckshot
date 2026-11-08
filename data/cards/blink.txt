@@ -1,6 +1,7 @@
 deckshot-card 1
 name Blink
 rarity rare
+art swirl dash void
 block
 row add blink 220
 note +blocking teleports you where you aim

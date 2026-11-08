@@ -1,5 +1,6 @@
 deckshot-card 1
 name Toxic Guard
 rarity uncommon
+art drop shield toxic
 block
 trigger block poison damage=15 radius=180

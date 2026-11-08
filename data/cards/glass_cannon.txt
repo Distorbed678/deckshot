@@ -1,5 +1,6 @@
 deckshot-card 1
 name Glass Cannon
 rarity uncommon
+art cannon minus ice
 row mul gunDamage 2
 row mul maxHp 0.5

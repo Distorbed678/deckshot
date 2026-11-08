@@ -245,6 +245,14 @@
       print: function (text) {
         if (text.lastIndexOf("\x1bLAN ", 0) === 0) lanCommand(text);
         else if (text.lastIndexOf("\x1bKBD ", 0) === 0) kbdCommand(text);
+        else if (text.lastIndexOf("\x1bSAVEPNG ", 0) === 0) {
+          var link = document.createElement("a");
+          link.href = "data:image/png;base64," + text.substring(9);
+          link.download = "deckshot-recap.png";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
         else console.log(text);
       },
       printErr: console.error.bind(console),

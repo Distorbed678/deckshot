@@ -1,5 +1,6 @@
 deckshot-card 1
 name Bouncy
 rarity common
+art bounce sky
 row add bounces 2
 row mul gunDamage 1.1

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://distorbed678.github.io/deckshot/"><img src="https://img.shields.io/badge/PLAY%20IN%20YOUR%20BROWSER-ff8c26?style=for-the-badge" alt="Play in your browser"></a>
+  <a href="https://distorbed678.github.io/deckshot/play/"><img src="https://img.shields.io/badge/PLAY%20IN%20YOUR%20BROWSER-ff8c26?style=for-the-badge" alt="Play in your browser"></a>
   <a href="../../releases/latest"><img src="https://img.shields.io/badge/DOWNLOAD-Windows%20%7C%20Linux-3f9bff?style=for-the-badge" alt="Download for Windows or Linux"></a>
 </p>
 
@@ -26,6 +26,7 @@
 - **55 hand-tuned arenas** with saws, lasers, crushers, acid, ropes and breakable everything.
 - **Elimination or King of the Hill**, free-for-all or 2v2, with a sudden-death barrier that ends the stalling.
 - **Vote on the next map, ban the card you hate, chat with your friends.**
+- **A recap after every match** with everyone's stats, builds and awards, saved as an image to show off.
 - **Unlock about 60 hats, eyes, mouths and details** through 44 achievements.
 - **Make your own** maps, cards and synergies in the built-in editors, then share them with a code.
 
@@ -41,6 +42,10 @@
   <tr>
     <td><img src="docs/media/editor.png" alt="The map editor"></td>
     <td><img src="docs/media/lobby.png" alt="The lobby with QR code join"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/cards.png" alt="Cards of every rarity, from common to a shimmering legendary"></td>
+    <td><img src="docs/media/recap.png" alt="The match recap with stats, builds and awards"></td>
   </tr>
 </table>
 
@@ -63,7 +68,7 @@
 
 ### Browser
 
-Open **https://distorbed678.github.io/deckshot/**. Nothing to install. Play against bots, or share the keyboard. Gamepads work, and on a phone or tablet the touch controls appear when you touch the screen (turn it sideways; "Add to Home Screen" gives a full-screen app). Settings are saved in your browser. Steam play isn't available in the browser. To join a LAN game from a browser or phone, open the address (or scan the QR code) the desktop host's lobby shows (see [LAN play](#lan-play)).
+Open **https://distorbed678.github.io/deckshot/play/**. Nothing to install. Play against bots, or share the keyboard. Gamepads work, and on a phone or tablet the touch controls appear when you touch the screen (turn it sideways; "Add to Home Screen" gives a full-screen app). Settings are saved in your browser. Steam play isn't available in the browser. To join a LAN game from a browser or phone, open the address (or scan the QR code) the desktop host's lobby shows (see [LAN play](#lan-play)).
 
 On Windows and Linux the game checks for new versions and offers a one-click update from the main menu.
 
@@ -168,6 +173,7 @@ On Windows, use `lovec.exe .` if you want a console window for log output.
 ./build.sh linux      # AppImage only
 ./build.sh windows    # Windows zip only
 ./build.sh web        # browser version only
+./build.sh site       # the GitHub Pages site: landing page plus the browser version
 ./build.sh love       # just the .love file
 ```
 
@@ -179,8 +185,9 @@ Output goes to `dist/`:
 | `Deckshot-windows-x64.zip` | `Deckshot.exe` (LÖVE's `love.exe` with the game appended), LÖVE's DLLs, the Steam DLLs and `web/` (the browser version, served to browsers by a LAN host). |
 | `Deckshot.love` | The game files only. Runs anywhere with `love Deckshot.love`, but without Steam libraries. |
 | `web/` | The browser version: [love.js](https://github.com/Davidobot/love.js) (LÖVE compiled to WebAssembly) with the game, using the page in `web/index.html`. Serve the folder over HTTP to test it locally, e.g. `python3 -m http.server -d dist/web`. |
+| `site/` | What GitHub Pages serves: the landing page from `site/index.html` at the root, with the browser version under `play/`. |
 
-Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git push origin v1.2.3`) runs `.github/workflows/release.yml`, which builds both packages on Linux, publishes the GitHub release with the tag message as its notes (plus downloads and SHA-256 checksums), and then runs `.github/workflows/pages.yml` to deploy the browser version to GitHub Pages. You can also run the Pages workflow by hand from the Actions tab.
+Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git push origin v1.2.3`) runs `.github/workflows/release.yml`, which builds both packages on Linux, publishes the GitHub release with the tag message as its notes (plus downloads and SHA-256 checksums), and then runs `.github/workflows/pages.yml` to deploy the landing page and browser version to GitHub Pages. You can also run the Pages workflow by hand from the Actions tab.
 
 The LÖVE 11.5 runtimes and `appimagetool` are downloaded once from their official GitHub releases into `build/cache/`.
 
@@ -195,20 +202,25 @@ The LÖVE 11.5 runtimes and `appimagetool` are downloaded once from their offici
 deckshot/
 ├── main.lua, conf.lua   entry points (LÖVE needs them at the root), crash screen, window icon
 ├── core/                app (screen stack, virtual canvas, transitions), ui, input (keys, mouse, pads, touch,
-│                        bots), touch, settings, profile (codex stats), qr, version, webkeyboard
-├── game/                world (authoritative simulation), player, bullet, objects (hazards, breakables),
-│                        cards + carddata + stats + triggers + synergies (data-driven cards), map, bot
-├── gfx/                 fx (particles), sfx (synthesized sounds), bloom, hud
-├── online/              net (message codec), snapshot, session (Steam lobby), steam (library loader),
+│                        bots), touch, settings, profile (card stats), achievements, cosmetics, glyphs
+│                        (controller icons), qr, version, updater, webkeyboard, platform, bit
+├── game/                world (authoritative simulation), player, body (drawn limbs and gun), bullet, objects
+│                        (hazards, breakables), cards + carddata + stats + triggers + synergies (data-driven
+│                        cards), map, bot
+├── gfx/                 fx (particles), sfx (synthesized sounds), music, atmosphere (map backgrounds), logo,
+│                        bloom, hud, cardart (card medallions and foil), recap (end-of-match page)
+├── online/              net (message codec), chat, snapshot, session (Steam lobby), steam (library loader),
 │                        lan (LAN host/client/discovery), webbridge (browser LAN), active, presence
-├── screens/             menu, localsetup, match, practice, editor_hub, editor_map, editor_cards, codex,
-│                        howtoplay, credits, settings, touchlayout, cards, maps, synergies, online, lan,
-│                        lobby, reconnect
+├── screens/             splash, menu, whatsnew, update, confirm, localmenu, localsetup, match, practice,
+│                        customize, editor_hub, editor_map, editor_cards, howtoplay, credits, settings,
+│                        library (cards and synergies), maps, touchlayout, online, lan, lobby, reconnect
 ├── data/maps/           the built-in maps (map editor files)
 ├── data/cards/          the built-in cards (card editor files)
 ├── data/synergies/      the built-in synergies
 ├── lib/windows|linux/   Steam libraries
 ├── web/                 the browser version's page and manifest
+├── site/                the landing page on GitHub Pages
+├── docs/media/          README and landing page images
 ├── .github/workflows/   release builds and GitHub Pages deployment
 ├── build.sh             release builder
 └── steam_appid.txt      Spacewar app id for running from source
@@ -246,7 +258,8 @@ Everything is saved in the game's save folder:
 | File | What's in it |
 |---|---|
 | `settings.txt` | settings as `key=value` lines, key bindings (`bind.<scheme>.<action>=<key>`), card pool (`card.<id>=<rarity>,<on|off>`), map and synergy pools |
-| `profile.txt` | codex statistics per card |
+| `profile.txt` | statistics per card, and lifetime counts for achievements |
+| `recaps/` | match recaps saved as images |
 | `user/custom_maps/`, `user/custom_cards/`, `user/custom_synergies/` | things you made in the editors |
 | `user/maps/`, `user/cards/`, `user/synergies/` | your edits to built-in ones (delete a file, or use Reset, to undo) |
 | `crash.txt` | the last crash report |

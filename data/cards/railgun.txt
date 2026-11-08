@@ -1,6 +1,7 @@
 deckshot-card 1
 name Railgun
 rarity legendary
+art laser dash volt
 row first mul bulletSpeed 2.5
 row first set bulletGravity 0
 row first add pierce 10

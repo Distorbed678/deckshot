@@ -3,6 +3,7 @@ local app = require "core.app"
 local ui = require "core.ui"
 local Settings = require "core.settings"
 local Input = require "core.input"
+local Glyphs = require "core.glyphs"
 
 local Screen = {}
 Screen.__index = Screen
@@ -40,7 +41,11 @@ local function kv(lines, x, y, w)
     love.graphics.setColor(1, 0.8, 0.35)
     love.graphics.printf(l[1], x, y, 260, "right")
     love.graphics.setColor(1, 1, 1, 0.85)
-    love.graphics.printf(l[2], x + 290, y, w - 290, "left")
+    if l[2]:find("{", 1, true) then
+      Glyphs.print(l[2], app.fonts.med, x + 290, y, w - 290, "left", { 1, 1, 1, 0.85 })
+    else
+      love.graphics.printf(l[2], x + 290, y, w - 290, "left")
+    end
     local _, wrapped = app.fonts.med:getWrap(l[2], w - 290)
     y = y + math.max(1, #wrapped) * app.fonts.med:getHeight() + 14
   end
@@ -97,10 +102,10 @@ function Screen:draw()
       { "Fast fall / drop", name(o.down) .. "  (+ jump on a thin platform)" },
       { "Scoreboard", name(o.scoreboard) }, { "Chat", name(o.chat) }, { "Menu", "Esc" } }, x, y, w)
   elseif self.page == 4 then
-    kv({ { "Move", "left stick (down: fast fall / drop)" }, { "Aim", "right stick" }, { "Fire", "right trigger" },
-      { "Block", "left trigger or right bumper" }, { "Jump", "A" }, { "Dash", "B or left bumper" },
-      { "Melee", "X (hold for heavy)" }, { "Scoreboard", "Back" }, { "Pause", "Start" },
-      { "Menus", "d-pad and A, B to go back" } }, x, y, w)
+    kv({ { "Move", "{ls}  (down: fast fall / drop)" }, { "Aim", "{rs}" }, { "Fire", "{rt}" },
+      { "Block", "{lt}  or  {rb}" }, { "Jump", "{a}" }, { "Dash", "{b}  or  {lb}" },
+      { "Melee", "{x}  (hold for heavy)" }, { "Discard a card", "{y}" }, { "Scoreboard", "{back}" }, { "Pause", "{start}" },
+      { "Menus", "{dpad}  and  {a},  {b} to go back" } }, x, y, w)
   else
     kv({ { "Move", "drag on the left half (push up to jump, down to drop)" },
       { "Aim and fire", "drag on the right half; it fires while you hold. A quick tap fires once." },

@@ -1,4 +1,5 @@
 deckshot-card 1
 name Pickpocket
 rarity common
+art hand bullet gold
 trigger meleeHit ammo amount=1

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Trickster
 rarity uncommon
+art bounce star pink
 row add bounces 1
 row add bounceDamage 0.6

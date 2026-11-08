@@ -1,6 +1,7 @@
 deckshot-card 1
 name Rear Guard
 rarity uncommon
+art uturn bullet
 row add backShot 1
 note +also fires a shot behind you
 stack +1 back shot per copy

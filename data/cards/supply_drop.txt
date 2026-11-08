@@ -1,6 +1,7 @@
 deckshot-card 1
 name Supply Drop
 rarity uncommon
+art crate shield sky
 block
 row add blockReload 1
 row mul blockCooldown 0.9

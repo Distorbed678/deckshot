@@ -1,6 +1,7 @@
 deckshot-card 1
 name Stasis Field
 rarity rare
+art hourglass orb sky
 row add stasis 1
 note +enemy bullets near you slow down
 stack +35% field radius per extra copy

@@ -1,5 +1,6 @@
 deckshot-card 1
 name Poison
 rarity uncommon
+art drop skull toxic
 row add poison 0.6
 row mul gunDamage 0.85
