@@ -430,7 +430,7 @@ function Lobby:drawSteamInfo(session, rx, ry, rw, rh)
 end
 
 function Lobby:drawControls(session)
-  local by = 440
+  local by = 456
   if session.isHost then
     -- Bots fill empty seats (only the host's game runs them).
     session.bots = session.bots or {}
@@ -451,10 +451,10 @@ function Lobby:drawControls(session)
   end
 
   love.graphics.setColor(1, 1, 1, 0.75)
-  ui.printFit(Lobby.rulesText(), app.fonts.med, 50, by + 54, 570, "center")
+  ui.printFit(Lobby.rulesText(), app.fonts.med, 50, by + 52, 570, "center")
   if not session.isHost then
     love.graphics.setColor(1, 1, 1, 0.5)
-    ui.printFit("Waiting for the host to start...", app.fonts.small, 50, by + 80, 570, "center")
+    ui.printFit("Waiting for the host to start...", app.fonts.small, 50, by + 78, 570, "center")
   end
 
   local y = 620

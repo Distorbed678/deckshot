@@ -606,6 +606,7 @@ function Match:predictionWorld()
     self.predWorld = w
   end
   w.map, w.solids, w.rules = map, solids, Cards.rules
+  w.bodies = self.proxies -- other players are solid on your screen too
   return w
 end
 
@@ -622,6 +623,7 @@ function Match:predicted()
   if not pr or pr.cardKey ~= key then
     self.predInput = self.predInput or Input.remote()
     pr = Player.new(self.mySlot, me.color, self.predInput)
+    pr.slot = self.mySlot -- so your own copy isn't an obstacle to yourself
     for _, c in ipairs(me.cards) do pr.cards[#pr.cards + 1] = c end
     pr:recompute()
     pr.triggerList = {}
@@ -775,6 +777,11 @@ function Match:clientNetwork()
             p.disconnected = r.disconnected
             p.cards = {}
             for k, idx in ipairs(r.cards) do p.cards[k] = Cards.list[idx] end
+            -- The gun's look comes from stats, which clients work out from the cards.
+            local probe = Player.new(i, p.color, Input.remote())
+            for k, c in ipairs(p.cards) do probe.cards[k] = c end
+            probe:recompute()
+            p.weaponStats = probe.stats
           end
         end
       elseif kind == net.MSG.RULES then
@@ -841,7 +848,8 @@ function Match:hostNetwork(dt)
       elseif kind == net.MSG.CHAT then
         Chat.handle(active.get(), msg)
       elseif kind == net.MSG.MAPVOTE then
-        self.world:castMapVote(info.slot, net.decodeByte(msg.data))
+        local b = net.decodeByte(msg.data)
+        self.world:castMapVote(info.slot, b % 128, b >= 128)
       elseif kind == net.MSG.CARDBAN then
         self.world:castBan(info.slot, Cards.list[net.decodeByte(msg.data)])
       end
@@ -1181,12 +1189,31 @@ function Match:voterSlot(chosen)
   return nil
 end
 
-function Match:castMapVote(slot, option)
+function Match:castMapVote(slot, option, confirm)
   if self.role == "client" then
-    self.transport:send(self.hostPeer, net.encodeByte(net.MSG.MAPVOTE, option), true)
+    self.transport:send(self.hostPeer, net.encodeByte(net.MSG.MAPVOTE, option + (confirm and 128 or 0)), true)
   else
-    self.world:castMapVote(slot, option)
+    self.world:castMapVote(slot, option, confirm)
   end
+end
+
+-- Left / right (d = -1 / 1) and confirm on the map vote.
+function Match:moveVote(d)
+  local mv = self:status().mapVote
+  local slot = self.voteSlot
+  if not mv or not slot or mv.winner > 0 or self.voteLocked then return end
+  self.voteCursor = ((self.voteCursor or 1) - 1 + d) % #mv.options + 1
+  sfx.ui("uiHover")
+  self:castMapVote(slot, self.voteCursor, false)
+end
+
+function Match:confirmVote()
+  local mv = self:status().mapVote
+  local slot = self.voteSlot
+  if not mv or not slot or mv.winner > 0 or self.voteLocked then return end
+  sfx.ui("uiClick")
+  self:castMapVote(slot, self.voteCursor or 1, true)
+  if self.role ~= "local" then self.voteLocked = true end
 end
 
 function Match:drawMapVote(st)
@@ -1198,7 +1225,14 @@ function Match:drawMapVote(st)
   love.graphics.setColor(0, 0, 0, 0.82 * fadeK)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local players = self:players()
-  local slot = mv.winner == 0 and self:voterSlot(mv.votes) or nil
+  local slot = mv.winner == 0 and self:voterSlot(mv.confirmed or {}) or nil
+  if slot ~= self.voteSlot then
+    self.voteSlot = slot
+    if slot then
+      self.voteCursor = 1
+      self:castMapVote(slot, 1, false) -- the highlighted map counts if time runs out
+    end
+  end
   local title = "VOTE FOR THE NEXT MAP"
   if mv.winner > 0 then title = "NEXT MAP"
   elseif self.role == "local" and slot then title = (players[slot].name or "Player"):upper() .. ": VOTE FOR THE NEXT MAP" end
@@ -1220,10 +1254,16 @@ function Match:drawMapVote(st)
     local rise = ease((voteT - 0.18 - (i - 1) * 0.1) / 0.42)
     y = y + (1 - rise) * (app.H - y + 20)
     local map = Map.list[idx]
-    local mine = slot and mv.votes[slot] == i
+    local mine = slot and (self.voteCursor or 1) == i
     local won = mv.winner == i
-    local color = won and ui.GOOD or (mine and ui.ACCENT or nil)
-    if ui.button("", x, y, w, h, { color = color }) and slot then self:castMapVote(slot, i) end
+    local color = won and ui.GOOD or (mine and (self.voteLocked and ui.GOOD or ui.ACCENT) or nil)
+    self.voteRects = self.voteRects or {}
+    self.voteRects[i] = { x, y, w, h }
+    love.graphics.setColor(ui.WIDGET)
+    love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+    love.graphics.setColor(color or { 1, 1, 1, 0.12 })
+    love.graphics.setLineWidth(color and 3 or 2)
+    love.graphics.rectangle("line", x, y, w, h, 10, 10)
     if map then
       local thumbH = h - 62
       require("screens.editor_hub").drawThumb(map, x + 10, y + 10, w - 20, thumbH)
@@ -1429,6 +1469,7 @@ function Match:updateMapSlide(dt)
   local prev = self.slideState
   if state ~= prev then
     self.slideState = state
+    if state == "mapVote" then self.voteSlot, self.voteCursor, self.voteLocked = nil, 1, false end
     if NO_MAP_STATES[state] then
       if prev and not NO_MAP_STATES[prev] then
         self.mapSlide = { kind = "out", t = 0 }
@@ -1504,7 +1545,13 @@ function Match:keypressed(key)
     return
   end
   local stateNow = self:status().state
-  if (stateNow == "mapVote" or stateNow == "cardBan") and key ~= "escape" then return end
+  if stateNow == "mapVote" and key ~= "escape" then
+    if self.paused or not self.voteSlot then return end
+    local left, right, take = self:pickKeys(self.voteSlot)
+    if left[key] then self:moveVote(-1) elseif right[key] then self:moveVote(1) elseif take[key] then self:confirmVote() end
+    return
+  end
+  if stateNow == "cardBan" and key ~= "escape" then return end
   if self.practice and key == "c" then
     self.cardChooser = not self.cardChooser
     return
@@ -1537,12 +1584,12 @@ function Match:keypressed(key)
     local cp = self:currentPick()
     local n = cp and #cp.options or 0
     if n == 0 then return end
-    local left, right, take, down = self:pickKeys(pu.slot)
+    local left, right, take, discard = self:pickKeys(pu.slot)
     if self.discardMode then
       local owned = self:ownedCards(pu.slot)
       local m = #owned
       self.discardIndex = math.max(1, math.min(m, self.discardIndex or 1))
-      if m == 0 or down[key] then
+      if m == 0 or discard[key] then
         self.discardMode = false
       elseif left[key] then
         self.discardIndex = (self.discardIndex - 2) % m + 1
@@ -1559,7 +1606,7 @@ function Match:keypressed(key)
       pu.index = pu.index % n + 1
     elseif take[key] then
       self:choosePick(pu.index)
-    elseif down[key] and self:canDiscard(pu.slot) then
+    elseif discard[key] and self:canDiscard(pu.slot) then
       self.discardMode, self.discardIndex = true, 1
     end
     return
@@ -1586,7 +1633,17 @@ function Match:gamepadpressed(j, button)
   end
   if self.paused then return false end
   local st = self:status().state
-  if st == "matchOver" or st == "mapVote" or st == "cardBan" then return false end
+  if st == "mapVote" then
+    local slot = self.voteSlot
+    local inp = slot and (self.role == "local" and self.world.players[slot].input or self.myInput)
+    if inp and (self.role ~= "local" or (inp.kind == "pad" and inp.joystick == j)) then
+      if button == "dpleft" then self:moveVote(-1)
+      elseif button == "dpright" then self:moveVote(1)
+      elseif button == "a" then self:confirmVote() end
+    end
+    return true
+  end
+  if st == "matchOver" or st == "cardBan" then return false end
   local pu = self.pickUI
   if pu then
     -- Only the picker's own pad (local) or any pad (online, it's your pick) steers the pick.
@@ -1600,12 +1657,12 @@ function Match:gamepadpressed(j, button)
       if button == "dpleft" then self.discardIndex = (self.discardIndex - 2) % #owned + 1
       elseif button == "dpright" then self.discardIndex = self.discardIndex % #owned + 1
       elseif button == "a" and owned[self.discardIndex] then self:discardCard(owned[self.discardIndex].pos)
-      elseif button == "b" or button == "dpdown" then self.discardMode = false end
+      elseif button == "b" or button == "y" then self.discardMode = false end
     elseif n > 0 then
       if button == "dpleft" then pu.index = (pu.index - 2) % n + 1
       elseif button == "dpright" then pu.index = pu.index % n + 1
       elseif button == "a" then self:choosePick(pu.index)
-      elseif button == "dpdown" and self:canDiscard(pu.slot) then self.discardMode, self.discardIndex = true, 1 end
+      elseif button == "y" and self:canDiscard(pu.slot) then self.discardMode, self.discardIndex = true, 1 end
     end
     return true
   end
@@ -1625,15 +1682,24 @@ function Match:pickKeys(slot)
     local inp = self.world.players[slot] and self.world.players[slot].input
     if not inp or inp.kind ~= "keys" then return {}, {}, {}, {} end -- pads use gamepadpressed
     local b = inp.controls
-    return set(b.left), set(b.right), set(b.fire, b.up), set(b.down)
+    return set(b.left), set(b.right), set(b.fire, b.up), set(b.discard)
   end
   local b = Settings.values.binds.online
-  return set(b.left, "left"), set(b.right, "right"), set(b.jump), set(b.down, "down")
+  return set(b.left, "left"), set(b.right, "right"), set(b.jump), set(b.discard)
 end
 
 function Match:mousepressed(x, y, button)
   if self.paused or self.chatOpen then return end
   local stateNow = self:status().state
+  if stateNow == "mapVote" and self:usesTouch() and button == 1 then
+    -- Phones have no keys: a tap selects, a second tap confirms.
+    for i, r in ipairs(self.voteRects or {}) do
+      if x >= r[1] and x <= r[1] + r[3] and y >= r[2] and y <= r[2] + r[4] then
+        if i == self.voteCursor then self:confirmVote() else self:moveVote(i - (self.voteCursor or 1)) end
+        return
+      end
+    end
+  end
   if stateNow == "mapVote" or stateNow == "cardBan" then return end
   if self.cardChooser and button == 2 then self.rightClick = true end
   if self.cardChooser then return end
@@ -1886,7 +1952,7 @@ function Match:drawCardPick(st)
 
   local index = pu and pu.index or cp.hover
   local rects = hud.cardRects(#cp.options, index, a and a.lift)
-  local handX, handY = app.W / 2, 610
+  local handX, handY = app.W / 2, 560
   local function drawOne(i)
     local card, r = cp.options[i], rects[i]
     local appear = a and (a.t - (i - 1) * DEAL_STAGGER) / DEAL_TIME or 1
@@ -1932,7 +1998,7 @@ function Match:drawCardPick(st)
   -- The picker's character, aiming at the selected card.
   local fig = self.pickFig
   if not fig or fig.owner ~= cp.slot then
-    fig = { owner = cp.slot, x = app.W / 2, y = 590, r = 62, slot = cp.slot, facing = 1, aimX = 0, aimY = -1, armReach = 230 }
+    fig = { owner = cp.slot, x = app.W / 2, y = 556, r = 86, slot = cp.slot, facing = 1, aimX = 0, aimY = -1, armReach = 360, noGun = true }
     self.pickFig = fig
   end
   if p then fig.color, fig.hat, fig.eyes, fig.mouth, fig.detail = p.color, p.hat, p.eyes, p.mouth, p.detail end
@@ -1944,8 +2010,13 @@ function Match:drawCardPick(st)
   require("game.body").drawFigure(fig, love.timer.getDelta())
 
   if pu and not pu.waiting and self:canDiscard(pu.slot) then
-    if ui.button("Discard instead", app.W - 256, 664, 236, 40, { font = app.fonts.med }) then
-      self.discardMode, self.discardIndex = true, 1
+    if self:usesTouch() then
+      if ui.button("Discard instead", app.W - 256, 664, 236, 40, { font = app.fonts.med }) then
+        self.discardMode, self.discardIndex = true, 1
+      end
+    else
+      love.graphics.setColor(1, 1, 1, 0.65)
+      ui.printFit(self:discardKeyName(pu.slot) .. ": discard instead", app.fonts.med, app.W - 300, 676, 280, "right")
     end
   end
 end
@@ -1955,32 +2026,57 @@ function Match:drawDiscard(cp, color)
   local pu = self.pickUI
   local owned = self:ownedCards(pu.slot)
   self.discardIndex = math.max(1, math.min(#owned, self.discardIndex or 1))
+  local touch = self:usesTouch()
   local cols = 4
   local bw, bh, gap = 270, 46, 12
   local rows = math.ceil(#owned / cols)
   local x0 = (app.W - (math.min(cols, #owned) * (bw + gap) - gap)) / 2
-  local y0 = 200
-  local hovered
+  local y0 = 120
   for i, o in ipairs(owned) do
     local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
     local x, y = x0 + col * (bw + gap), y0 + row * (bh + gap)
     local label = o.card.name .. (o.count > 1 and ("  x" .. o.count) or "")
     local rc = Cards.rarity[o.card.rarity].color
-    if ui.button(label, x, y, bw, bh, { font = app.fonts.med, color = i == self.discardIndex and color or rc }) then
-      self:discardCard(o.pos)
-      return
+    local sel = i == self.discardIndex
+    if touch then
+      if ui.button(label, x, y, bw, bh, { font = app.fonts.med, color = sel and color or rc }) then
+        if sel then
+          self:discardCard(o.pos)
+          return
+        end
+        self.discardIndex = i
+      end
+    else
+      love.graphics.setColor(sel and ui.WIDGET_ON or ui.WIDGET)
+      love.graphics.rectangle("fill", x, y, bw, bh, 10, 10)
+      love.graphics.setColor(sel and color or rc)
+      love.graphics.setLineWidth(sel and 3 or 2)
+      love.graphics.rectangle("line", x, y, bw, bh, 10, 10)
+      love.graphics.setColor(1, 1, 1)
+      ui.printFit(label, app.fonts.med, x + 10, y + (bh - app.fonts.med:getHeight()) / 2, bw - 20, "center")
     end
-    local mx, my = app.mouse()
-    if mx >= x and mx <= x + bw and my >= y and my <= y + bh then hovered = o end
   end
-  local show = hovered or owned[self.discardIndex]
+  local show = owned[self.discardIndex]
   if show then
     local y = y0 + rows * (bh + gap) + 10
-    hud.drawCard(show.card, app.W / 2 - 115, math.min(y, 330), 230, 300, false, color)
+    hud.drawCard(show.card, app.W / 2 - 110, math.min(y, 390), 220, 300, false, color)
   end
-  if ui.button("Back to the cards", app.W / 2 - 150, 640, 300, 30, { font = app.fonts.small, back = true }) then
-    self.discardMode = false
+  if touch then
+    if ui.button("Back to the cards", app.W / 2 - 150, 690, 300, 26, { font = app.fonts.small, back = true }) then
+      self.discardMode = false
+    end
+  else
+    love.graphics.setColor(1, 1, 1, 0.65)
+    ui.printFit(self:discardKeyName(pu.slot) .. ": back to the cards", app.fonts.med, app.W - 300, 676, 280, "right")
   end
+end
+
+-- The discard control's name for whoever is choosing.
+function Match:discardKeyName(slot)
+  local inp = self.role == "local" and self.world.players[slot].input or self.myInput
+  if inp.kind == "pad" then return "Y" end
+  local b = (inp.kind == "keys" and inp.controls) or Settings.values.binds.online
+  return Input.keyName(b.discard)
 end
 
 ---------------------------------------------------------------- HUD
@@ -2246,17 +2342,21 @@ function Match:drawSubRound(st)
   local r, gap = 74, 40
   local total = #sides * r * 2 + (#sides - 1) * gap
   local x = (app.W - total) / 2 + r
-  local line
+  local line, point
   for _, p in ipairs(sides) do
     local fresh = st.winner and (p == st.winner or (st.winner.team and p.team == st.winner.team))
     hud.drawPie(x, 300, r * k, need, p.subWins or 0, p.color, k, fresh and ease((t - 0.2) / 0.45) or nil)
-    if (p.subWins or 0) == need - 1 and need > 1 then
-      local who = (p.team and World.TEAM_NAMES[p.team]) or p.name or "Player"
+    local who = (p.team and World.TEAM_NAMES[p.team]) or p.name or "Player"
+    if (p.subWins or 0) >= need then
+      point = who .. " takes the point!"
+    elseif (p.subWins or 0) == need - 1 and need > 1 then
       line = line and "Everyone is one win away" or (who .. " is one win away")
     end
     x = x + r * 2 + gap
   end
-  if line then
+  if point then
+    app.centered(point, app.fonts.title, 400, { 1, 1, 1, k })
+  elseif line then
     app.centered(line, app.fonts.title, 400, { 1, 1, 1, k })
   elseif st.winner == nil then
     app.centered("Draw", app.fonts.title, 400, { 1, 1, 1, k })
@@ -2518,6 +2618,9 @@ function Match:draw()
 
   self:drawVignette(players)
   self:drawKillFeed()
+  -- While paused only the pause menu's buttons can be used.
+  local widgetsLive = ui.active
+  if self.paused then ui.active = false end
   if st.state == "countdown" then
     if st.timer > World.COUNTDOWN then
       self:drawVersus(players, 1 - (st.timer - World.COUNTDOWN) / World.INTRO_TIME)
@@ -2546,6 +2649,7 @@ function Match:draw()
   end
   if st.state ~= "mapVote" then self:drawFlyers() end
   if st.state == "matchOver" then self:drawMatchOver(st) end
+  ui.active = widgetsLive
 
   -- Hovering a card name in someone's score panel shows what it does.
   if not self.paused then

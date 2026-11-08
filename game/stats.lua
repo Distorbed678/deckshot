@@ -61,7 +61,7 @@ Stats.LIST = {
   { "meleeRange", 55, "Melee", "pct", "high", "melee range" },
   { "meleeCooldown", 0.45, "Melee", "pct", "low", "melee cooldown" },
   { "heavyCharge", 0.6, "Melee", "pct", "low", "heavy charge time" },
-  { "heavyDash", 260, "Melee", "pct", "high", "heavy lunge" },
+  { "heavyDash", 90, "Melee", "pct", "high", "heavy lunge" },
   { "meleeStun", 0, "Melee", "pct", "high", "stun when you block melee" },
   { "meleeLifesteal", 0, "Melee", "pct", "high", "melee lifesteal" },
   { "stunTaken", 1, "Melee", "pct", "low", "stun when your melee is blocked" },

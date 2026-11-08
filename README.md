@@ -75,7 +75,7 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 |---|---|---|---|---|---|---|---|
 | **Local P1** | A / D | W | facing; hold W / S to aim up / down | Space | Left Shift | E | Q |
 | **Local P2** | ← / → | ↑ | facing; hold ↑ / ↓ to aim up / down | Right Ctrl | Right Shift | / | . |
-| **Online** | A / D | Space or W | Mouse | Left click | Right click | Left Shift | F |
+| **Online** | A / D | Space or W | Mouse | Left click | Right click | Left Shift | Q |
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
 - Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.

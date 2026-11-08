@@ -1,6 +1,7 @@
 -- Shared drawing helpers for the match: score panels, cards, black holes, crosshair.
 local app = require "core.app"
 local ui = require "core.ui"
+local Map = require "game.map"
 local Cards = require "game.cards"
 
 local hud = {}
@@ -258,8 +259,8 @@ end
 -- lift: card index -> 0..1, how far that card has slid out toward you.
 function hud.cardRects(n, selected, lift)
   local step = n <= 3 and 0.42 or n == 4 and 0.36 or n == 5 and 0.31 or 0.26
-  local cw, ch = n >= 6 and 190 or 215, n >= 6 and 265 or 300
-  local R, cy0 = 640, 930
+  local cw, ch = n >= 6 and 150 or n == 5 and 165 or 180, n >= 6 and 212 or n == 5 and 232 or 250
+  local R, cy0 = 640, 900
   local rects = {}
   for i = 1, n do
     local a = (i - (n + 1) / 2) * step
@@ -418,11 +419,14 @@ function hud.drawBarrier(b, glowOnly)
   local x0, y0, x1, y1 = b[1], b[2], b[3], b[4]
   local a = 0.6 + 0.25 * math.sin(love.timer.getTime() * 6)
   if not glowOnly then
+    -- World units, with a margin so screen shake can't show a gap at the edges.
+    local L, T, R, B = -60, -60, Map.W + 60, Map.H + 60
+    local top = math.max(T, y0)
     love.graphics.setColor(0.35, 0, 0, 0.35)
-    love.graphics.rectangle("fill", 0, 0, app.W, y0)
-    love.graphics.rectangle("fill", 0, y1, app.W, app.H - y1)
-    love.graphics.rectangle("fill", 0, y0, x0, y1 - y0)
-    love.graphics.rectangle("fill", x1, y0, app.W - x1, y1 - y0)
+    love.graphics.rectangle("fill", L, T, R - L, top - T)
+    love.graphics.rectangle("fill", L, y1, R - L, B - y1)
+    love.graphics.rectangle("fill", L, top, x0 - L, y1 - top)
+    love.graphics.rectangle("fill", x1, top, R - x1, y1 - top)
   end
   love.graphics.setColor(1, 0.15, 0.12, a)
   love.graphics.setLineWidth(glowOnly and 8 or 4)

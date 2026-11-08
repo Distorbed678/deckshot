@@ -38,22 +38,22 @@ Settings.MODE_NAMES = { elim = "Elimination", koth = "King of the Hill" }
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
 Settings.BIND_SCHEMES = {
   { id = "p1", name = "Player 1 (local)", group = "keyboard",
-    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
+    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee", "discard" } },
   { id = "p2", name = "Player 2 (local)", group = "keyboard",
-    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee" } },
+    actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee", "discard" } },
   { id = "online", name = "Online", group = "online",
-    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "scoreboard", "chat" } },
+    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "discard", "scoreboard", "chat" } },
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)", chat = "Chat",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)", chat = "Chat", discard = "Discard",
 }
 Settings.DEFAULT_BINDS = {
-  p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q" },
+  p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q", discard = "c" },
   p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift",
-    dash = "/", melee = "." },
+    dash = "/", melee = ".", discard = "," },
   online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2",
-    dash = "lshift", melee = "f", scoreboard = "tab", chat = "return" },
+    dash = "lshift", melee = "q", discard = "c", scoreboard = "tab", chat = "return" },
 }
 -- Keys that can't be bound (menu / fullscreen toggle).
 Settings.RESERVED_KEYS = { escape = true, f11 = true }
@@ -102,7 +102,7 @@ local defaults = {
   textSize = 2,          -- 1 small, 2 normal, 3 large (Settings.TEXT_SIZES)
   lastLanAddress = "",   -- the last LAN address you typed
   scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
-  settingsVersion = 5,
+  settingsVersion = 6,
   checkUpdates = true,   -- look for a new version on the main menu (desktop)
   tutorialOffered = false, -- the first-run tutorial has been offered
   hat = "none",          -- cosmetics (core/cosmetics.lua)
@@ -232,6 +232,10 @@ function Settings.load()
     -- A development build briefly moved the default to 3 (settings version 4).
     if v.settingsVersion == 4 and v.roundsToWin == 3 then v.roundsToWin = 5 end
     v.settingsVersion = 5
+  end
+  if v.settingsVersion < 6 then
+    if v.binds.online.melee == "f" then v.binds.online.melee = "q" end -- the new default
+    v.settingsVersion = 6
   end
 
   -- Older settings files: vsync=true/false and resolution=<index>.

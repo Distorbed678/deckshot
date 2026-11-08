@@ -288,16 +288,18 @@ function World:openMapVote()
   end
   -- The vote lasts as long as a card pick; with no pick timer it waits for everyone.
   local limit = self.rules.pickTimer or 0
-  self.mapVote = { options = options, votes = {}, timeLeft = limit > 0 and limit or nil, t = 0, winner = 0 }
+  self.mapVote = { options = options, votes = {}, confirmed = {}, timeLeft = limit > 0 and limit or nil, t = 0, winner = 0 }
   self.pick = nil
   self.state = "mapVote"
 end
 
-function World:castMapVote(slot, option)
+-- confirm: locks it in. An unconfirmed selection still counts when time runs out.
+function World:castMapVote(slot, option, confirm)
   local mv = self.mapVote
   local p = self.players[slot]
   if self.state ~= "mapVote" or not mv or mv.winner > 0 or not p or p.disconnected or not mv.options[option] then return end
   mv.votes[slot] = option
+  if confirm then mv.confirmed[slot] = true end
 end
 
 function World:updateMapVote(dt)
@@ -314,9 +316,10 @@ function World:updateMapVote(dt)
   if mv.timeLeft then mv.timeLeft = mv.timeLeft - dt end
   local allIn = true
   for _, p in ipairs(self.players) do
-    if not p.disconnected and not mv.votes[p.slot] then
+    if not p.disconnected and not mv.confirmed[p.slot] then
       if p.isBot and mv.t > 0.5 + p.slot * 0.35 then
         mv.votes[p.slot] = love.math.random(#mv.options)
+        mv.confirmed[p.slot] = true
       else
         allIn = false
       end
@@ -490,7 +493,7 @@ end
 function World:update(dt)
   if self.state == "subRound" then
     self.timer = self.timer - dt
-    if self.timer <= 0 then self:beginRound(true) end
+    if self.timer <= 0 then self:finishSubRound() end
   elseif self.state == "mapVote" then
     self:updateMapVote(dt)
   elseif self.state == "cardBan" then
@@ -652,35 +655,56 @@ function World:endRound(last)
         if p ~= last and p.team == last.team then p.subWins = (p.subWins or 0) + 1 end
       end
     end
-    if last.subWins >= need then
-      self.pointWon = true
-      for _, p in ipairs(self.players) do
-        if p == last or (self.rules.teams and last.team and p.team == last.team) then p.score = p.score + 1 end
-      end
-      for _, p in ipairs(self.players) do p.subWins = 0 end
-    end
-  end
-  if self.pointWon or need == 1 then
-    self.history = self.history or {}
-    self.history[#self.history + 1] = last and last.slot or 0
+    self.pointWon = last.subWins >= need
   end
   sfx.play("stingerRound")
   self.state = "roundOver"
   self.timer = 1.85
 end
 
-function World:afterRound()
+-- The point goes on the board and everyone's sub-round progress starts again.
+function World:applyPoint()
+  local last = self.roundWinner
+  if self.pointWon then
+    for _, p in ipairs(self.players) do
+      if p == last or (self.rules.teams and last.team and p.team == last.team) then p.score = p.score + 1 end
+    end
+    for _, p in ipairs(self.players) do p.subWins = 0 end
+  end
+  if self.pointWon or (self.rules.subRounds or 1) <= 1 then
+    self.history = self.history or {}
+    self.history[#self.history + 1] = last and last.slot or 0
+  end
+end
+
+function World:afterPoint()
   if self.pointWon and self.roundWinner.score >= self.winScore then
     self.state = "matchOver"
     self.votes = {}
     sfx.play("matchWin")
     self:emit("matchOver", self.roundWinner)
-  elseif not self.pointWon and (self.rules.subRounds or 1) > 1 then
-    -- Nobody has the point yet: show the progress, then the same map again.
-    self.state = "subRound"
-    self.timer = World.SUB_ROUND_TIME
   else
     self:openPicks()
+  end
+end
+
+function World:afterRound()
+  if (self.rules.subRounds or 1) > 1 then
+    -- Always show the progress first, including the win that completes a point.
+    self.state = "subRound"
+    self.timer = World.SUB_ROUND_TIME
+    return
+  end
+  self:applyPoint()
+  self:afterPoint()
+end
+
+function World:finishSubRound()
+  if self.pointWon then
+    self:applyPoint()
+    self:afterPoint()
+  else
+    self:beginRound(true)
   end
 end
 

@@ -36,13 +36,14 @@ local MELEE = {
   overHold = 0.35,       -- a full charge releases by itself after this extra hold
   cone = math.rad(75),
   lightStun = 0.25, heavyStunMin = 0.25, heavyStunMax = 0.8,
-  lungeTime = 0.12, swingShow = 0.16, chargeSpeedMul = 0.6,
+  lungeTime = 0.12, swingShow = 0.16, chargeSpeedMul = 0.85,
 }
 Player.MELEE = MELEE
 
 -- Arena edges (left, right, bottom): damage and a launch back in. The top is open.
 -- blockBounce: blocking at an edge throws you back in harder (enough to recover from the bottom).
-local EDGE = { damage = 30, launch = 900, launchUp = 650, bottomLaunch = 1150, cooldown = 0.3, blockBounce = 1.3 }
+local EDGE = { damage = 30, launch = 900, launchUp = 650, bottomLaunch = 1150, cooldown = 0.3, blockBounce = 1.3,
+  intoMul = 0.5 } -- holding your movement key into it halves the launch
 Player.EDGE = EDGE
 
 local ORB_DISTANCE = 55
@@ -392,7 +393,7 @@ function Player:update(dt, frozen)
       self.vx, self.vy = self.dashX, self.dashY
       self:meleeHitCheck()
       if self.lungeTimer <= 0 then
-        self.vx, self.vy = self.vx * 0.35, self.vy * 0.35
+        self.vx, self.vy = self.preLungeVx or self.vx * 0.35, self.vy * 0.35
         self:meleeHitCheck(true)
       end
     end
@@ -417,8 +418,9 @@ function Player:update(dt, frozen)
   local rects = game.solids or game.map.rects
   local wasGround = self.onGround
   local fallSpeed = self.vy
-  self:moveX(self.vx * dt, rects)
-  self:moveY(self.vy * dt, rects)
+  local solid = self:withBodies(rects, dt)
+  self:moveX(self.vx * dt, solid)
+  self:moveY(self.vy * dt, solid)
   self:senseWalls(rects)
   self:checkEdges()
   if self.dead then return end
@@ -584,6 +586,11 @@ function Player:checkBounds(x0, y0, x1, y1, top, damageMul)
   end
   if not side then return end
   local L = (self.stats.edgeLaunch or 1) * (self:isBlocking() and EDGE.blockBounce or 1)
+  local inp = self.input
+  if inp and not self:isBlocking() and ((side == "left" and inp.left) or (side == "right" and inp.right)
+      or (side == "bottom" and inp.down) or (side == "top" and (inp.up or inp.jumpHeld))) then
+    L = L * EDGE.intoMul
+  end
   if side == "left" then
     self.vx, self.vy = EDGE.launch * L, math.min(self.vy, -EDGE.launchUp * L)
   elseif side == "right" then
@@ -763,6 +770,34 @@ function Player:moveY(dy, rects)
   end
 end
 
+-- Terrain plus the other players, who are solid (you can stand on them). Bullets don't use this.
+-- Anyone already overlapping you is skipped and eased apart, so nobody gets stuck or flung.
+function Player:withBodies(rects, dt)
+  local game = self.game
+  local list = game.bodies or game.players
+  if not list or #list < 2 then return rects end
+  local out = self.solidBuf or {}
+  self.solidBuf = out
+  local n = #rects
+  for i = 1, n do out[i] = rects[i] end
+  local r, leg = self.r, self.leg
+  for _, o in ipairs(list) do
+    if o ~= self and not o.dead and not o.disconnected and o.slot ~= self.slot then
+      local b = o.bodyBox or {}
+      o.bodyBox = b
+      b.x, b.y, b.w, b.h = o.x - o.r, o.y - o.r, o.r * 2, o.r * 2 + (o.leg or 0)
+      if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
+        self.x = self.x + (self.x >= o.x and 1 or -1) * 120 * dt
+      else
+        n = n + 1
+        out[n] = b
+      end
+    end
+  end
+  for i = #out, n + 1, -1 do out[i] = nil end
+  return out
+end
+
 function Player:senseWalls(rects)
   local r = self.r
   self.wallDir = 0
@@ -835,15 +870,9 @@ end
 function Player:dashPressed()
   local s, inp = self.stats, self.input
   if self.dead or self.dashCd > 0 or self.dashesLeft <= 0 or self.lungeTimer > 0 then return end
-  local dx, dy = 0, 0
-  if inp.left then dx = dx - 1 end
-  if inp.right then dx = dx + 1 end
-  if inp.aim then
-    if dx == 0 then dx, dy = math.cos(inp.aim), math.sin(inp.aim) end
-  else
-    if inp.up then dy = dy - 1 end
-    if inp.down then dy = dy + 1 end
-  end
+  -- Always where you're aiming: the cursor or stick, otherwise the way you're facing.
+  local dx, dy = self.aimX, self.aimY
+  if inp.aim then dx, dy = math.cos(inp.aim), math.sin(inp.aim) end
   if dx == 0 and dy == 0 then dx = self.facing end
   local len = math.sqrt(dx * dx + dy * dy)
   dx, dy = dx / len, dy / len
@@ -880,6 +909,7 @@ function Player:meleeRelease()
     self.lungeHit = {}
     local dist = s.heavyDash * (0.45 + 0.55 * p)
     self.lungeTimer = MELEE.lungeTime
+    self.preLungeVx = self.vx -- you keep moving after the lunge
     self.dashX, self.dashY = self.aimX * dist / MELEE.lungeTime, self.aimY * dist / MELEE.lungeTime
     self.dashTimer = 0
     self:emitSound("meleeHeavy", 0.7 + 0.3 * p)
@@ -1110,7 +1140,7 @@ function Player:volley(primary, mult)
     self:spawnBullet(base + math.pi + (i - (s.backShot + 1) / 2) * 0.18, 1, empowered, mult)
   end
 
-  local mx, my = self.x + self.aimX * (self.r + 36), self.y + self.aimY * (self.r + 36)
+  local mx, my = self.x + self.aimX * Body.muzzleDist(self), self.y + self.aimY * Body.muzzleDist(self)
   fx.muzzle(mx, my, base, s.bulletSize / 5)
   fx.kick(-self.aimX * 1.5, -self.aimY * 1.5)
   self.shotT = 0.12

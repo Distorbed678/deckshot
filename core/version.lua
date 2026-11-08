@@ -6,6 +6,10 @@ local Version = {
   VERSION = "0.5.1",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Players are solid now, so you can stand on each other.",
+    "Your weapon changes with your stats.",
+    "Dashes always go where you aim, and heavy melee is a short step you can charge on the move.",
+    "Card and map selection use only your keys, with a new Discard key.",
     "Win 2 sub-rounds on the same map to take a point (the host can change how many). Losers then pick a card.",
     "New card screen: your character aims at the cards as you choose them with the keys.",
     "New in-round display with points and sub-round progress top left and cards top right.",

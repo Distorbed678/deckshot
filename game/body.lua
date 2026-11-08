@@ -2,6 +2,7 @@
 -- the round body. Everything is worked out on each machine from synced state (position, aim,
 -- blocking, melee), so it needs no network traffic and works the same for local, host and client.
 local Cosmetics = require "core.cosmetics"
+local Stats = require "game.stats"
 
 local Body = { showNames = false }
 
@@ -181,24 +182,52 @@ function Body.drawLegs(p, A)
   end
 end
 
+-- What the gun looks like, from your stats (clients work these out from your cards).
+local function weaponOf(p)
+  local s, b = p.weaponStats or p.stats or {}, Stats.BASE
+  local function ratio(key) return (s[key] or b[key]) / b[key] end
+  local w = {}
+  w.chunk = math.max(0.85, math.min(1.9, ratio("gunDamage") ^ 0.4 * ratio("bulletSize") ^ 0.3))
+  w.len = math.max(0.85, math.min(2.1, ratio("bulletSpeed") ^ 0.7))
+  w.barrels = math.max(1, math.min(4, s.bullets or 1))
+  w.mag = math.max(0, math.min(16, ((s.ammo or b.ammo) - b.ammo) * 2))
+  w.vents = math.max(0, math.min(5, math.floor((1 / ratio("fireDelay") - 1) * 4)))
+  if (s.laser or 0) > 0 then w.accent = { 0.35, 0.95, 1 }
+  elseif (s.explosion or 0) > 0 then w.accent = { 1, 0.55, 0.2 }
+  elseif (s.ghost or 0) > 0 then w.accent = { 0.9, 0.9, 1 }
+  elseif (s.homing or 0) > 0 then w.accent = { 0.8, 0.45, 1 }
+  elseif (s.bounces or 0) > 0 then w.accent = { 0.45, 1, 0.5 } end
+  return w
+end
+
+-- How far from the body's centre the barrel ends (where the flash goes).
+function Body.muzzleDist(p)
+  return p.r + 16 + 20 * weaponOf(p).len * (p.r / 20)
+end
+
 local function drawPistol(p, A)
   local b = p.body
   local s = p.r / 20
   local ax, ay = p.aimX or 1, p.aimY or 0
-  if p.gunTarget then
-    ax, ay = p.gunTarget[1] - b.gun.x, p.gunTarget[2] - b.gun.y
-    if ax == 0 and ay == 0 then ax = 1 end
-  end
+  local w = weaponOf(p)
+  local len, h = 26 * w.len, 8 * w.chunk
   love.graphics.push()
   love.graphics.translate(b.gun.x, b.gun.y)
   love.graphics.rotate(math.atan2(ay, ax))
   love.graphics.scale(s, ax < 0 and -s or s)
   love.graphics.setColor(0.2, 0.21, 0.25, A)
-  love.graphics.polygon("fill", -2, 1, 5, 1, 3, 11, -4, 11) -- grip
+  love.graphics.polygon("fill", -2, 1, 5, 1, 3, 11 + w.mag, -4, 11 + w.mag) -- grip and magazine
+  for i = 2, w.barrels do -- extra barrels stack on top
+    love.graphics.setColor(0.26, 0.27, 0.32, A)
+    love.graphics.rectangle("fill", 0, 2 - h - (i - 1) * 4, len - 8, 3, 1, 1)
+  end
   if p.empowered then love.graphics.setColor(1, 0.85, 0.35, A) else love.graphics.setColor(0.32, 0.33, 0.38, A) end
-  love.graphics.rectangle("fill", -6, -6, 26, 8, 2, 2)      -- slide
-  love.graphics.setColor(0.7, 0.72, 0.78, A)
-  love.graphics.rectangle("fill", -4, -5, 20, 2)
+  love.graphics.rectangle("fill", -6, 2 - h, len, h, 2, 2)
+  local stripe = w.accent or { 0.7, 0.72, 0.78 }
+  love.graphics.setColor(stripe[1], stripe[2], stripe[3], A)
+  love.graphics.rectangle("fill", -4, 3 - h, len - 6, math.max(2, h * 0.24))
+  love.graphics.setColor(0.13, 0.13, 0.16, A)
+  for i = 1, w.vents do love.graphics.rectangle("fill", i * 5 - 3, 3 - h + h * 0.4, 2.4, h * 0.42) end
   love.graphics.pop()
 end
 
@@ -211,9 +240,9 @@ function Body.drawArms(p, A)
   limbColor(p.color, A)
   noodle(p.x + side * r * 0.55, p.y + r * 0.05, b.gunE.x, b.gunE.y, b.gun.x, b.gun.y, w)
   noodle(p.x - side * r * 0.55, p.y + r * 0.05, b.offE.x, b.offE.y, b.off.x, b.off.y, w)
-  drawPistol(p, A)
+  if not p.noGun then drawPistol(p, A) end
   limbColor(p.color, A)
-  love.graphics.circle("fill", b.gun.x, b.gun.y, w * 1.2)
+  love.graphics.circle("fill", b.gun.x, b.gun.y, w * (p.noGun and 1.9 or 1.2))
 
   -- The block circle: white when ready, grey and refilling on cooldown, flashing as you block.
   local cr = r * 0.42
@@ -248,7 +277,7 @@ function Body.drawFigure(f, dt)
   Body.update(f, dt)
   Body.drawLegs(f, 1)
   -- An arm reaching across goes behind the body rather than over the face.
-  local behind = f.gunTarget and f.body.gun.x < f.x
+  local behind = f.noGun or (f.gunTarget and f.body.gun.x < f.x)
   if behind then Body.drawArms(f, 1) end
   love.graphics.setColor(f.color)
   love.graphics.circle("fill", f.x, f.y, f.r)

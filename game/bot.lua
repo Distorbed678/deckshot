@@ -309,6 +309,7 @@ function Bot.update(p, w, dt)
     elseif p.dashesLeft > 0 and p.dashCd <= 0 and love.math.random() < dt * 6 then
       dir = p.x < Map.W / 2 and 1 or -1
       inp.up = true
+      inp.aim = -math.pi / 2 + dir * 0.45 -- dashes follow the aim
       press(inp, "dashCount")
     end
     dir = p.x < Map.W / 2 and 1 or -1
