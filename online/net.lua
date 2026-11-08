@@ -23,6 +23,7 @@ net.MSG = {
   SYNERGIES = 13, -- host -> clients: the synergy list (full text for custom / edited ones), zlib
   PING = 14,    -- client -> host: a timestamp, echoed back as PONG (round-trip time)
   PONG = 15,
+  STREAKS = 16, -- host -> clients: lobby win counts and streaks, by current peer id
 }
 local M = net.MSG
 
@@ -220,6 +221,24 @@ function net.decodeMaps(data)
 end
 
 net.decodeCards = function(data) return net.decodeMaps(data) end
+
+-- list: { { id = peer, wins = n, streak = n } }
+function net.encodeStreaks(list)
+  local parts = { pack("string", "<BB", M.STREAKS, #list) }
+  for _, e in ipairs(list) do parts[#parts + 1] = pack("string", "<s1HH", e.id:sub(1, 255), e.wins, e.streak) end
+  return table.concat(parts)
+end
+
+function net.decodeStreaks(data)
+  local _, n, pos = unpack("<BB", data)
+  local out = {}
+  for i = 1, n do
+    local id, wins, streak
+    id, wins, streak, pos = unpack("<s1HH", data, pos)
+    out[id] = { wins = wins, streak = streak }
+  end
+  return out
+end
 
 function net.encodePing(kind, t)
   return pack("string", "<Bd", kind, t)

@@ -85,12 +85,18 @@ function Lobby:start()
   for i = 2, #slots do
     if not slots[i].bot then session.transport:send(slots[i].peer, data, true) end
   end
-  session.setJoinable(false)
+  -- (The lobby stays joinable: people who join mid-match watch until the next one.)
   app.switch(require("screens.match").newHost(slots, session.rounds, session.transport))
 end
 
 function Lobby:update(dt)
   local session = active.get()
+  require("online.presence").set("In a lobby (" .. #session.members .. "/" .. session.MAX_PLAYERS .. ")")
+  if session.isHost and session.autoStart then
+    session.autoStart = false
+    self:start()
+    return
+  end
   if not session.inLobby() then
     app.switch(require("screens.menu").new(session.error or "You left the lobby"))
     return
@@ -112,13 +118,11 @@ function Lobby:update(dt)
       for k, s in ipairs(slots) do
         if s.peer == me then mySlot = k end
       end
-      if mySlot then
-        -- Hand any messages that arrived right after START to the match.
-        local rest = {}
-        for k = i + 1, #msgs do rest[#rest + 1] = msgs[k] end
-        app.switch(require("screens.match").newClient(slots, mySlot, winScore, session.transport, msg.from, rest))
-        return
-      end
+      -- Not in the slots: the match is already running, so we watch it until the next one.
+      local rest = {}
+      for k = i + 1, #msgs do rest[#rest + 1] = msgs[k] end
+      app.switch(require("screens.match").newClient(slots, mySlot or 0, winScore, session.transport, msg.from, rest))
+      return
     end
   end
 
@@ -169,7 +173,14 @@ function Lobby:draw()
       love.graphics.circle("fill", lx + 58, ry + 23, 2.5)
       love.graphics.setFont(app.fonts.title)
       love.graphics.setColor(1, 1, 1)
-      love.graphics.print(sl.name, lx + 84, ry + 12)
+      love.graphics.print(sl.name, lx + 84, ry + 4)
+      -- Wins in this lobby and the current streak.
+      local st = (session.peerStreaks or {})[sl.peer] or (session.peerStreaks or {})[sl.name]
+      love.graphics.setFont(app.fonts.tiny)
+      love.graphics.setColor(1, 0.8, 0.35, st and 0.9 or 0.35)
+      local text = st and (st.wins .. (st.wins == 1 and " win" or " wins") .. (st.streak > 1 and ("   " .. st.streak .. " in a row!") or ""))
+        or "no wins yet"
+      love.graphics.print(text, lx + 86, ry + 34)
       local tags = {}
       if sl.peer == session.hostId then tags[#tags + 1] = "HOST" end
       if sl.peer == me then tags[#tags + 1] = "YOU" end

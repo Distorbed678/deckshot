@@ -27,6 +27,7 @@ Match.__index = Match
 local SNAPSHOT_INTERVAL = 1 / 30
 local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
 local PING_EVERY = 1
+local RECONNECT_TIME = 60     -- seconds a dropped player's slot is kept for them
 local PICK_DELAY = 0.4 -- ignore "take" presses right after a hand appears
 
 local function newMatch(role)
@@ -137,6 +138,12 @@ function Match.newHost(slots, winScore, transport, opts)
   end
   World.setSlotColors(colors)
   m.world = World.new(defs, winScore, settingsRules(true))
+  m.slots = slots
+  local ok, session = pcall(active.get)
+  if not ok or not session then session = {} end
+  for i, s in ipairs(slots) do
+    m.world.players[i].key = session.playerKey and session.playerKey(s.peer) or s.peer
+  end
   m:hookWorld()
   m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
   m:broadcast(net.encodeCards(Cards.sessionEntries()), true)
@@ -206,7 +213,10 @@ function Match:hookWorld()
   w.on.roster = function()
     if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true) end
   end
-  w.on.matchOver = function() ui.reset() end
+  w.on.matchOver = function(winner)
+    ui.reset()
+    if self.role == "host" then self:recordStreaks(winner) end
+  end
 end
 
 -- What to draw and the round status, for any role.
@@ -351,7 +361,12 @@ function Match:ownedCards(slot)
 end
 
 -- Host / local: re-read the gameplay rules from the settings (used for New Match).
+-- Online with people watching, New Match goes through the lobby so they're in it.
 function Match:newMatch()
+  if self.role == "host" and self:hasSpectators() then
+    active.get().autoStart = true
+    return self:backToLobby()
+  end
   self.world:setRules(settingsRules(self.role == "host"))
   self:broadcastRules()
   self.world:newMatch()
@@ -675,6 +690,9 @@ function Match:clientNetwork()
           self.objMap = nil
         end
         self.mapsReady = true
+      elseif kind == net.MSG.STREAKS then
+        local ok, st = pcall(net.decodeStreaks, msg.data)
+        if ok then active.get().peerStreaks = st end
       elseif kind == net.MSG.PONG then
         local rtt = (love.timer.getTime() - net.decodePing(msg.data)) * 1000
         self.rtt = self.rtt and (self.rtt * 0.7 + rtt * 0.3) or rtt
@@ -704,7 +722,13 @@ function Match:clientNetwork()
 
   for _, ev in ipairs(self.popEvents()) do
     if ev.type == "hostLeft" then
-      active.get().leave()
+      local session = active.get()
+      if session.kind == "lan" and self.mySlot > 0 then
+        -- Lost the connection: keep trying to get back in (the host keeps our slot for a minute).
+        app.switch(require("screens.reconnect").new(session.lastAddress))
+        return
+      end
+      session.leave()
       app.switch(require("screens.menu").new("The host left the game"))
       return
     end
@@ -750,14 +774,21 @@ function Match:hostNetwork(dt)
     if ev.type == "left" and self.peers[ev.id] and not self.peers[ev.id].gone then
       local info = self.peers[ev.id]
       info.gone = true
-      local p = self.world.players[info.slot]
-      self.world:disconnect(info.slot)
-      self.world:toast((p.name or "A player") .. " left the game", info.slot)
-      self.world:emit("roster")
-      if self.world:connectedCount() < 2 then
-        self:backToLobby("Everyone else left the game")
-        return
+      if info.spectator then
+        self.peers[ev.id] = nil
+      else
+        local p = self.world.players[info.slot]
+        self.world:disconnect(info.slot)
+        p.reconnectUntil = love.timer.getTime() + RECONNECT_TIME
+        self.world:toast((p.name or "A player") .. " disconnected - " .. RECONNECT_TIME .. "s to reconnect", info.slot)
+        self.world:emit("roster")
+        if self.world:connectedCount() < 2 then
+          self:backToLobby("Everyone else left the game")
+          return
+        end
       end
+    elseif ev.type == "joined" then
+      self:peerJoined(ev.id)
     end
   end
 
@@ -768,6 +799,67 @@ function Match:hostNetwork(dt)
     fx.recorder = {}
     self:broadcast(data, false)
   end
+end
+
+-- Everything a newcomer needs to follow the match: the slots, maps, cards, synergies, rules, roster.
+function Match:sendSetup(peer)
+  local t = self.transport
+  t:send(peer, net.encodeStart(self.world.winScore, self.slots), true)
+  t:send(peer, net.encodeMaps(Map.sessionEntries()), true)
+  t:send(peer, net.encodeCards(Cards.sessionEntries()), true)
+  t:send(peer, net.encodeSynergies(require("game.synergies").sessionEntries()), true)
+  t:send(peer, net.encodeRules(self.world.rules, Cards.list, Cards.RARITIES), true)
+  t:send(peer, net.encodeRoster(self.world.players), true)
+end
+
+-- Someone joined the lobby mid-match: give a dropped player their slot back, or let them watch.
+function Match:peerJoined(peer)
+  local session = active.get()
+  local key = session.playerKey and session.playerKey(peer) or peer
+  for slot, p in ipairs(self.world.players) do
+    if p.disconnected and p.key == key and (p.reconnectUntil or 0) > love.timer.getTime() then
+      p.disconnected, p.reconnectUntil, p.peer = false, nil, peer
+      self.slots[slot].peer = peer
+      self.peers[peer] = { slot = slot, seq = -1 }
+      self:sendSetup(peer)
+      self.world:toast((p.name or "A player") .. " reconnected (back next round)", slot)
+      self.world:emit("roster")
+      return
+    end
+  end
+  self.peers[peer] = { slot = 0, spectator = true, seq = -1 }
+  self:sendSetup(peer)
+  local name = session.memberName and session.memberName(peer) or "Someone"
+  self.world:toast(name .. " is watching and joins next match")
+end
+
+-- Lobby win streaks (host): kept by player key for this lobby, sent to everyone by peer id.
+function Match:recordStreaks(winner)
+  local session = active.get()
+  session.streaks = session.streaks or {}
+  local list = {}
+  for _, p in ipairs(self.world.players) do
+    local key = p.key or p.name
+    local st = session.streaks[key] or { wins = 0, streak = 0 }
+    local won = p == winner or (self.world.rules.teams and winner and p.team == winner.team)
+    if won then
+      st.wins, st.streak = st.wins + 1, st.streak + 1
+    else
+      st.streak = 0
+    end
+    session.streaks[key] = st
+    list[#list + 1] = { id = p.peer or p.name, wins = st.wins, streak = st.streak }
+  end
+  session.peerStreaks = {}
+  for _, e in ipairs(list) do session.peerStreaks[e.id] = e end
+  self:broadcast(net.encodeStreaks(list), true)
+end
+
+function Match:hasSpectators()
+  for _, info in pairs(self.peers or {}) do
+    if info.spectator and not info.gone then return true end
+  end
+  return false
 end
 
 function Match:backToLobby(message)
@@ -788,7 +880,20 @@ function Match:usesTouch()
   return self.myInput and self.myInput.kind == "touch"
 end
 
+-- "Round 3 - 2-1" for the friends list (only changes when the score does).
+function Match:updatePresence()
+  local players = self:players()
+  local scores, total = {}, 0
+  for _, p in ipairs(players) do
+    scores[#scores + 1] = tostring(p.score)
+    total = total + p.score
+  end
+  local kind = self.role == "local" and "Local match" or "Online match"
+  require("online.presence").set(kind .. ": round " .. (total + 1) .. ", " .. table.concat(scores, "-"))
+end
+
 function Match:update(dt, isTop)
+  self:updatePresence()
   if self:usesTouch() and require("core.touch").takePause() and isTop then
     self.paused = not self.paused
     ui.reset()
@@ -819,6 +924,10 @@ function Match:update(dt, isTop)
   else
     self:clientNetwork()
     if self.closed then return end -- switched to the lobby/menu
+    if self.mySlot == 0 then -- spectating: no input of our own
+      self:clientInterpolate(dt)
+      return
+    end
     local me = self.proxies[self.mySlot]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
     self:syncPick(dt)
@@ -1311,6 +1420,10 @@ function Match:drawMatchOver(st)
   local nextScore = st.winScore + World.CONTINUE_ROUNDS
   local continueText = "Continue  (+" .. World.CONTINUE_ROUNDS .. " rounds, first to " .. nextScore .. ")"
 
+  if self.role == "client" and self.mySlot == 0 then
+    app.centered("You're watching - you'll play in the next match", app.fonts.med, 370, { 1, 1, 1, 0.7 })
+    return
+  end
   if self.role == "client" then
     -- Players vote; the host sees the tally and decides.
     local mine = self:votes()[self.mySlot] or self.pendingVote

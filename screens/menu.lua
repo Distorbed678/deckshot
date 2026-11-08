@@ -13,6 +13,7 @@ end
 
 function Menu:enter()
   love.mouse.setVisible(true)
+  require("online.presence").set("In the menus")
 end
 
 -- One line per control scheme, built from the current key bindings.

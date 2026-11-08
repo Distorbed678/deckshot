@@ -71,6 +71,10 @@ local function myName()
   return lan.cleanName(require("core.settings").values.playerName)
 end
 
+local function myToken()
+  return require("core.settings").values.clientToken or ""
+end
+
 ---------------------------------------------------------------- connections (desktop sockets)
 local Conn = {}
 Conn.__index = Conn
@@ -381,7 +385,7 @@ local function hostMessage(c, data)
   local kind = data:byte(1)
   if kind == CTL.HELLO then
     if c.peer then return end
-    local ok, _, ver, name = pcall(unpack, "<Bs1s1", data)
+    local ok, _, ver, name, token = pcall(unpack, "<Bs1s1s1", data)
     if not ok then
       c.closed = true
       return
@@ -389,8 +393,6 @@ local function hostMessage(c, data)
     local reason
     if ver ~= session.PROTOCOL then
       reason = "Version mismatch: you and the host have different game versions"
-    elseif not lan.joinable then
-      reason = "A match is running. Try again when the host is back in the lobby"
     elseif #lan.members >= session.MAX_PLAYERS then
       reason = "That game is full"
     end
@@ -402,7 +404,7 @@ local function hostMessage(c, data)
     lan.nextPeer = lan.nextPeer + 1
     c.peer = "lan" .. lan.nextPeer
     lan.byPeer[c.peer] = c
-    lan.members[#lan.members + 1] = { id = c.peer, name = lan.cleanName(name) }
+    lan.members[#lan.members + 1] = { id = c.peer, name = lan.cleanName(name), token = token }
     c:sendMsg(pack("string", "<Bs1", CTL.WELCOME, c.peer), true)
     push({ type = "joined", id = c.peer })
     broadcastMembers()
@@ -501,7 +503,7 @@ local function clientUpdate()
     local ok, err = c:checkConnected()
     if ok then
       lan.helloSent = true
-      c:sendMsg(pack("string", "<Bs1s1", CTL.HELLO, session.PROTOCOL, myName()), true)
+      c:sendMsg(pack("string", "<Bs1s1s1", CTL.HELLO, session.PROTOCOL, myName(), myToken()), true)
       c.heard = t
       lan.deadline = t + CONNECT_TIMEOUT
     elseif ok == nil then
@@ -606,6 +608,7 @@ end
 function lan.join(address)
   if lan.busy or not lan.available then return end
   lan.leave()
+  lan.lastAddress = address
   lan.error = nil
   if platform.web then
     lan.target = "the host"
@@ -640,6 +643,7 @@ function lan.join(address)
 end
 
 function lan.leave()
+  lan.streaks, lan.bots = nil, nil -- win streaks and bots belong to this lobby only
   if lan.conn then lan.conn:close() end
   lan.conn = nil
   if lan.server then
@@ -667,6 +671,15 @@ function lan.publishRules(rules)
 end
 
 -- New players can't join while a match is running.
+-- A key that stays the same for a player across reconnects (host side).
+function lan.playerKey(peer)
+  if peer == lan.hostId then return "host" end
+  for _, m in ipairs(lan.members) do
+    if m.id == peer then return (m.token and m.token ~= "") and m.token or m.name end
+  end
+  return peer
+end
+
 -- Your colour in the lobby (palette index).
 function lan.setColor(idx)
   lan.myColor = idx

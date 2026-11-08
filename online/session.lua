@@ -162,7 +162,9 @@ function session.host(rounds, rules)
   session.error = nil
   session.status = "Creating lobby..."
   local Steam = S()
-  Steam.Matchmaking.CreateLobby(Steam.k_ELobbyTypePublic, session.MAX_PLAYERS, function(data, ioFail)
+  local vis = require("core.settings").values.lobbyVisibility
+  local lobbyType = vis == "friends" and Steam.k_ELobbyTypeFriendsOnly or Steam.k_ELobbyTypePublic
+  Steam.Matchmaking.CreateLobby(lobbyType, session.MAX_PLAYERS, function(data, ioFail)
     session.busy = false
     if ioFail or not data or data.m_eResult ~= Steam.k_EResultOK then
       session.status = nil
@@ -176,6 +178,9 @@ function session.host(rounds, rules)
     MM.SetLobbyData(L, "code", makeCode())
     MM.SetLobbyData(L, "host", steam.myId())
     MM.SetLobbyData(L, "rounds", tostring(rounds or 5))
+    MM.SetLobbyData(L, "name", Steam.Friends.GetPersonaName())
+    local vis = require("core.settings").values.lobbyVisibility
+    MM.SetLobbyData(L, "listed", vis == "public" and "1" or "0")
     enter(L, true)
     if rules then session.publishRules(rules) end
   end)
@@ -250,6 +255,7 @@ function session.setColor(idx)
 end
 
 function session.leave()
+  session.streaks, session.bots = nil, nil -- win streaks and bots belong to this lobby only
   if not session.lobby then return end
   local Steam = S()
   for _, m in ipairs(session.members) do
@@ -284,7 +290,52 @@ function session.publishRules(rules)
   end
 end
 
--- Lobbies are closed to new joiners while a match is running.
+-- A key that stays the same for a player across reconnects (their Steam ID).
+function session.playerKey(peer)
+  return peer
+end
+
+-- Public lobbies for the lobby browser. callback(list) with
+-- { { lobby = id, name, players, max, code } }.
+function session.listLobbies(callback)
+  if not steam.available or session.listing then return end
+  local Steam = S()
+  local MM = Steam.Matchmaking
+  session.listing = true
+  MM.AddRequestLobbyListStringFilter("game", session.GAME_TAG, Steam.k_ELobbyComparisonEqual)
+  MM.AddRequestLobbyListStringFilter("ver", session.PROTOCOL, Steam.k_ELobbyComparisonEqual)
+  MM.AddRequestLobbyListStringFilter("listed", "1", Steam.k_ELobbyComparisonEqual)
+  MM.AddRequestLobbyListDistanceFilter(Steam.k_ELobbyDistanceFilterWorldwide)
+  MM.RequestLobbyList(function(data, ioFail)
+    session.listing = false
+    local list = {}
+    if not ioFail and data then
+      for i = 0, (data.m_nLobbiesMatching or 0) - 1 do
+        local L = MM.GetLobbyByIndex(i)
+        list[#list + 1] = {
+          lobby = L, name = MM.GetLobbyData(L, "name"), code = MM.GetLobbyData(L, "code"),
+          players = MM.GetNumLobbyMembers(L), max = MM.GetLobbyMemberLimit(L),
+        }
+      end
+    end
+    callback(list)
+  end)
+end
+
+-- Steam friends list status ("In a lobby (2/4)", "Round 3, 2-1") and "Join game".
+function session.setPresence(text)
+  if not steam.available then return end
+  local F = S().Friends
+  pcall(F.SetRichPresence, "status", text or "")
+  pcall(F.SetRichPresence, "steam_display", "#Status")
+  if session.lobby then
+    pcall(F.SetRichPresence, "connect", "+connect_lobby " .. tostring(session.lobby))
+  else
+    pcall(F.SetRichPresence, "connect", "")
+  end
+end
+
+-- Lobbies stay open during matches: people who join then watch until the next match.
 function session.setJoinable(on)
   if session.isHost and session.lobby then
     S().Matchmaking.SetLobbyJoinable(session.lobby, on)

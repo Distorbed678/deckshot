@@ -79,6 +79,8 @@ local defaults = {
   touchOpacity = 0.5,
   mobileDefaults = false, -- lighter effects were applied for a touch device
   padOnline = false,     -- play online with the first gamepad instead of mouse + keys
+  clientToken = "",      -- random id, so a LAN host can give you your slot back after a disconnect
+  lobbyVisibility = "public", -- Steam lobbies: public (listed), friends, code (unlisted)
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -174,6 +176,9 @@ function Settings.load()
   end
 
   -- v0.4 and older: 3 cards per hand was the default; the new default is 5.
+  if v.clientToken == "" then
+    v.clientToken = string.format("%08x%08x", love.math.random(0, 0x7fffffff), love.math.random(0, 0x7fffffff))
+  end
   if (v.settingsVersion or 1) < 2 then
     if v.pickFrom == 3 then v.pickFrom = 5 end
     v.settingsVersion = 2
