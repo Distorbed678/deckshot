@@ -1,6 +1,6 @@
 # v0.5 Plan (Deckshot): rename, movement, melee, map objects, editors, 50 maps, 150 cards, bots, mobile, game feel
 
-Status: **draft for review.** Nothing below has been built yet. Every question and suggestion from the first draft has been answered and is folded in below. Edit anything, then tell me to start.
+Status: **implemented in v0.5.0** (see the release notes). Kept for reference.
 
 ## Decisions
 
