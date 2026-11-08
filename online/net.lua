@@ -21,6 +21,8 @@ net.MSG = {
   MAPS = 11,    -- host -> clients: the map list (full text for custom / edited maps), zlib
   CARDS = 12,   -- host -> clients: the card list (full text for custom / edited cards), zlib
   SYNERGIES = 13, -- host -> clients: the synergy list (full text for custom / edited ones), zlib
+  PING = 14,    -- client -> host: a timestamp, echoed back as PONG (round-trip time)
+  PONG = 15,
 }
 local M = net.MSG
 
@@ -38,14 +40,17 @@ end
 function net.encodeInput(s, seq)
   local flags = bit.bor(
     s.left and 1 or 0, s.right and 2 or 0, s.down and 4 or 0,
-    s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0)
-  return pack("string", "<BI4BfI4I4I4I4B", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
-    s.dashCount or 0, s.meleeCount or 0, math.max(0, math.min(255, s.pickHover or 0)))
+    s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0, s.up and 64 or 0)
+  return pack("string", "<BI4BfI4I4I4I4BH", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
+    s.dashCount or 0, s.meleeCount or 0, math.max(0, math.min(255, s.pickHover or 0)),
+    math.max(0, math.min(65535, math.floor(s.ping or 0))))
 end
 
 -- Returns the packet's sequence number.
 function net.decodeInput(data, s)
-  local _, seq, flags, aim, jc, bc, dc, mc, hover = unpack("<BI4BfI4I4I4I4B", data)
+  local _, seq, flags, aim, jc, bc, dc, mc, hover, ping = unpack("<BI4BfI4I4I4I4BH", data)
+  s.ping = ping
+  s.up = bit.band(flags, 64) ~= 0
   s.left = bit.band(flags, 1) ~= 0
   s.right = bit.band(flags, 2) ~= 0
   s.down = bit.band(flags, 4) ~= 0
@@ -215,6 +220,15 @@ function net.decodeMaps(data)
 end
 
 net.decodeCards = function(data) return net.decodeMaps(data) end
+
+function net.encodePing(kind, t)
+  return pack("string", "<Bd", kind, t)
+end
+
+function net.decodePing(data)
+  local _, t = unpack("<Bd", data)
+  return t
+end
 
 function net.encodeVote(choice)
   return pack("string", "<BB", M.VOTE, choice)

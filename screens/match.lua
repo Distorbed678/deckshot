@@ -25,6 +25,8 @@ local Match = {}
 Match.__index = Match
 
 local SNAPSHOT_INTERVAL = 1 / 30
+local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
+local PING_EVERY = 1
 local PICK_DELAY = 0.4 -- ignore "take" presses right after a hand appears
 
 local function newMatch(role)
@@ -391,13 +393,14 @@ function Match:applySnapshot(v)
       p = self:newProxy(i, "Player " .. i)
       self.proxies[i] = p
     end
-    local jump = math.abs(pv.x - p.x) + math.abs(pv.y - p.y) > 250
-    if p.dead or pv.dead or jump then
-      p.fromX, p.fromY = pv.x, pv.y
-    else
-      p.fromX, p.fromY = p.x, p.y
-    end
-    p.toX, p.toY = pv.x, pv.y
+    -- Position history for interpolation (cleared on teleports, deaths and respawns).
+    p.hist = p.hist or {}
+    local last = p.hist[#p.hist]
+    if p.dead or pv.dead or (last and math.abs(pv.x - last.x) + math.abs(pv.y - last.y) > 250) then p.hist = {} end
+    table.insert(p.hist, { t = now, x = pv.x, y = pv.y })
+    if #p.hist > 12 then table.remove(p.hist, 1) end
+    if #p.hist == 1 then p.x, p.y = pv.x, pv.y end
+    p.ping = pv.ping
     p.aimX, p.aimY = math.cos(pv.aim), math.sin(pv.aim)
     p.facing = pv.facing
     p.hp = pv.hp
@@ -499,15 +502,140 @@ function Match:applySnapshot(v)
     end
   end
 
+  self:reconcile(v.players[self.mySlot] or { dead = true })
   self.snapTime = now
 end
 
+---------------------------------------------------------------- client prediction
+-- Your own player is simulated here as soon as you press something; the host stays authoritative.
+-- Each snapshot says which of our inputs the host has applied (ack). We reset to the host's state,
+-- replay the inputs it hasn't seen yet, and blend away any small difference.
+local PREDICT_FIELDS = { "left", "right", "up", "down", "jumpHeld", "meleeHeld", "aim", "jumpCount", "dashCount",
+  "meleeCount" }
+
+function Match:predictionWorld()
+  local map = Map.list[self.view.mapIndex] or Map.list[1]
+  local solids = {}
+  for i, r in ipairs(map.rects) do solids[i] = r end
+  for _, o in ipairs(self.objViews or {}) do
+    if o.alive and o.solid and not (o.type == "crumble" and o.s == 2) then solids[#solids + 1] = o end
+  end
+  local w = self.predWorld
+  if not w then
+    w = { players = {}, bullets = {}, wells = {}, objects = {}, effects = {}, pendingBlasts = {}, time = 0,
+      enemiesOf = function() return {} end, nearestEnemy = function() return nil end,
+      addBullet = function() end, isEnemy = function() return false end }
+    self.predWorld = w
+  end
+  w.map, w.solids, w.rules = map, solids, Cards.rules
+  return w
+end
+
+-- Make (or refresh) the predicted player for our slot. Returns nil when we shouldn't predict.
+function Match:predicted()
+  local st = self.view.state
+  local me = self.proxies[self.mySlot]
+  if not me or me.dead or (st ~= "playing" and st ~= "countdown" and st ~= "roundOver") then
+    self.pred, self.predHistory = nil, {}
+    return nil
+  end
+  local pr = self.pred
+  local key = #me.cards .. ":" .. (me.cards[#me.cards] and me.cards[#me.cards].id or "")
+  if not pr or pr.cardKey ~= key then
+    self.predInput = self.predInput or Input.remote()
+    pr = Player.new(self.mySlot, me.color, self.predInput)
+    for _, c in ipairs(me.cards) do pr.cards[#pr.cards + 1] = c end
+    pr:recompute()
+    pr.triggerList = {}
+    pr:spawn(me.x, me.y, me.facing or 1, self:predictionWorld())
+    pr.cardKey = key
+    self.pred = pr
+    self.predHistory = {}
+    self.predErrX, self.predErrY = 0, 0
+  end
+  return pr
+end
+
+local function copyInput(dst, src)
+  for _, k in ipairs(PREDICT_FIELDS) do dst[k] = src[k] end
+  dst.fire = false
+  dst.blockCount = dst.blockCount or 0
+end
+
+function Match:predictStep(dt, frozen)
+  local pr = self:predicted()
+  if not pr then return end
+  pr.game = self:predictionWorld()
+  copyInput(self.predInput, self.myInput)
+  local sample = {}
+  copyInput(sample, self.myInput)
+  table.insert(self.predHistory, { seq = self.inputSeq, dt = dt, frozen = frozen, input = sample })
+  if #self.predHistory > 240 then table.remove(self.predHistory, 1) end
+  fx.mute, sfx.silent = true, true
+  pr.invuln = 999
+  pr:update(dt, frozen)
+  fx.mute, sfx.silent = false, false
+end
+
+-- A snapshot arrived: reset the prediction to the host's state and replay newer inputs.
+function Match:reconcile(pv)
+  local pr = self.pred
+  if not pr or pv.dead then return end
+  local oldX, oldY = pr.x + (self.predErrX or 0), pr.y + (self.predErrY or 0)
+  pr.x, pr.y, pr.vx, pr.vy = pv.x, pv.y, pv.vx, pv.vy
+  pr.jumpsLeft, pr.dashesLeft = pv.jumpsLeft, pv.dashesLeft
+  pr.onGround, pr.jumping, pr.groundOneway = pv.onGround, pv.jumping, pv.groundOneway
+  pr.dashTimer, pr.dashCd = pv.dashT, pv.dashCd2
+  if pr.dashTimer > 0 then pr.dashX, pr.dashY = pv.vx, pv.vy end
+  pr.facing = pv.facing
+  local hist, keep = self.predHistory, {}
+  for _, e in ipairs(hist) do
+    if e.seq == pv.ack then
+      local inp = e.input
+      pr.seenJump, pr.seenDash, pr.seenMelee = inp.jumpCount, inp.dashCount, inp.meleeCount
+      pr.jumpWasHeld = inp.jumpHeld
+    elseif e.seq > pv.ack then
+      keep[#keep + 1] = e
+    end
+  end
+  self.predHistory = keep
+  pr.game = self:predictionWorld()
+  fx.mute, sfx.silent = true, true
+  for _, e in ipairs(keep) do
+    copyInput(self.predInput, e.input)
+    pr:update(e.dt, e.frozen)
+  end
+  fx.mute, sfx.silent = false, false
+  copyInput(self.predInput, self.myInput)
+  local ex, ey = oldX - pr.x, oldY - pr.y
+  if ex * ex + ey * ey > 140 * 140 then ex, ey = 0, 0 end
+  self.predErrX, self.predErrY = ex, ey
+end
+
+---------------------------------------------------------------- client interpolation
 function Match:clientInterpolate(dt)
-  local t = math.min(1, (love.timer.getTime() - self.snapTime) / SNAPSHOT_INTERVAL)
-  for _, p in ipairs(self.proxies) do
-    if p.toX then
-      p.x = p.fromX + (p.toX - p.fromX) * t
-      p.y = p.fromY + (p.toY - p.fromY) * t
+  local now = love.timer.getTime()
+  local renderT = now - INTERP_DELAY
+  for i, p in ipairs(self.proxies) do
+    local h = p.hist
+    if i == self.mySlot and self.pred then
+      -- Our own player: the prediction, with the last correction fading out.
+      local k = math.exp(-dt * 12)
+      self.predErrX, self.predErrY = (self.predErrX or 0) * k, (self.predErrY or 0) * k
+      p.x, p.y = self.pred.x + self.predErrX, self.pred.y + self.predErrY
+      p.vy = self.pred.vy
+      if self.myInput.aim then p.aimX, p.aimY = math.cos(self.myInput.aim), math.sin(self.myInput.aim) end
+    elseif h and #h > 0 then
+      local a, b = h[1], nil
+      for k = 1, #h do
+        if h[k].t <= renderT then a = h[k] else b = h[k] break end
+      end
+      if b and a.t <= renderT then
+        local f = (renderT - a.t) / math.max(0.001, b.t - a.t)
+        p.x, p.y = a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f
+      else
+        p.x, p.y = (b or a).x, (b or a).y
+      end
     end
     p.hitFlash = math.max(0, p.hitFlash - dt)
     p.swingTimer = math.max(0, (p.swingTimer or 0) - dt)
@@ -547,6 +675,9 @@ function Match:clientNetwork()
           self.objMap = nil
         end
         self.mapsReady = true
+      elseif kind == net.MSG.PONG then
+        local rtt = (love.timer.getTime() - net.decodePing(msg.data)) * 1000
+        self.rtt = self.rtt and (self.rtt * 0.7 + rtt * 0.3) or rtt
       elseif kind == net.MSG.SNAPSHOT then
         -- Snapshots refer to the host's map list, so wait for it.
         local ok, v = pcall(Snap.decode, msg.data)
@@ -593,12 +724,16 @@ function Match:hostNetwork(dt)
         if seq > info.seq then
           info.seq = seq
           local inp = self.world.players[info.slot].input
-          for _, k in ipairs({ "left", "right", "down", "fire", "jumpHeld", "meleeHeld", "aim", "jumpCount", "blockCount",
-            "dashCount", "meleeCount" }) do
+          for _, k in ipairs({ "left", "right", "up", "down", "fire", "jumpHeld", "meleeHeld", "aim", "jumpCount",
+            "blockCount", "dashCount", "meleeCount" }) do
             inp[k] = scratch[k]
           end
+          local hp = self.world.players[info.slot]
+          hp.ack, hp.ping = seq, scratch.ping
           if scratch.pickHover > 0 then self.world:hover(info.slot, scratch.pickHover) end
         end
+      elseif kind == net.MSG.PING then
+        self.transport:send(msg.from, net.encodePing(net.MSG.PONG, net.decodePing(msg.data)), false)
       elseif kind == net.MSG.VOTE then
         self.world:vote(info.slot, net.decodeVote(msg.data))
       elseif kind == net.MSG.CHOOSE then
@@ -688,7 +823,15 @@ function Match:update(dt, isTop)
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
     self:syncPick(dt)
     self.inputSeq = self.inputSeq + 1
+    -- Round-trip time, measured with PING / PONG and reported to the host in INPUT.
+    self.pingTimer = (self.pingTimer or 0) - dt
+    if self.pingTimer <= 0 then
+      self.pingTimer = PING_EVERY
+      self.transport:send(self.hostPeer, net.encodePing(net.MSG.PING, love.timer.getTime()), false)
+    end
+    self.myInput.ping = self.rtt or 0
     self.transport:send(self.hostPeer, net.encodeInput(self.myInput, self.inputSeq), false)
+    self:predictStep(dt, self.view.state == "countdown")
     self:clientInterpolate(dt)
   end
 
@@ -1301,6 +1444,22 @@ function Match:draw()
     local mx, my = app.mouse()
     local item = hud.cardAt(cardItems, mx, my)
     if item then hud.drawCardTooltip(item) end
+  end
+
+  -- Connection trouble (clients): high ping or no snapshots for a while.
+  if self.role == "client" then
+    local stall = love.timer.getTime() - (self.snapTime or 0)
+    if (self.rtt or 0) > 200 or stall > 0.5 then
+      local x, y = app.W / 2 + 60, 14
+      love.graphics.setColor(1, 0.75, 0.2, 0.9)
+      love.graphics.polygon("fill", x, y + 18, x + 10, y, x + 20, y + 18)
+      love.graphics.setColor(0.1, 0.1, 0.1)
+      love.graphics.rectangle("fill", x + 9, y + 5, 2, 7)
+      love.graphics.rectangle("fill", x + 9, y + 14, 2, 2)
+      love.graphics.setFont(app.fonts.small)
+      love.graphics.setColor(1, 0.75, 0.2, 0.9)
+      love.graphics.print(stall > 0.5 and "connection lost?" or (math.floor(self.rtt) .. " ms"), x + 26, y + 1)
+    end
   end
 
   if self:usesTouch() and not self.paused and (st.state == "countdown" or st.state == "playing" or st.state == "roundOver") then

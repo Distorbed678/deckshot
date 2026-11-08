@@ -18,7 +18,9 @@ fx.record = record
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick.
 
+-- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
+  if fx.mute then return end
   count = count or 12
   speed = speed or 250
   size = size or 4
@@ -41,6 +43,7 @@ end
 -- A cone of particles: angle (radians), spread (radians), gravity multiplier.
 -- Used for wall sparks (along the surface normal), dust puffs and muzzle flashes.
 function fx.spray(x, y, angle, spread, color, count, speed, size, gravity)
+  if fx.mute then return end
   record({ 6, x, y, angle, spread, color, count, speed, size, gravity or 1 })
   count = math.max(1, math.floor(count * fx.particleScale + 0.5))
   for _ = 1, count do
@@ -57,6 +60,7 @@ end
 
 -- A fading copy of a player's body (dash afterimages).
 function fx.ghost(x, y, r, color)
+  if fx.mute then return end
   record({ 7, x, y, r, color })
   table.insert(fx.ghosts, { x = x, y = y, r = r, color = color, life = 0.22, max = 0.22 })
 end
@@ -96,6 +100,7 @@ function fx.offset()
 end
 
 function fx.ring(x, y, radius, color)
+  if fx.mute then return end
   record({ 2, x, y, radius, color })
   table.insert(fx.rings, { x = x, y = y, r = radius, life = 0.25, max = 0.25, color = color })
 end

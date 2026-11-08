@@ -35,7 +35,9 @@ end
 
 -- ..., score, stasis copies, match-over vote, shield, sentries, melee/dash flags, melee charge,
 -- swing timer, swing power, melee range, heavy charge time, vertical speed
-local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBh"
+-- ..., then for client prediction: last input applied (ack), vx, air jumps left, dashes left,
+-- movement flags, dash time left, dash cooldown, and the player's ping in ms.
+local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBH"
 local BULLET_FMT = "<HhhhhBBB"
 
 function Snap.encode(world, events)
@@ -81,7 +83,10 @@ function Snap.encode(world, events)
       bit.bor((p.stunTimer or 0) > 0 and 1 or 0, p.charging and 2 or 0, p.swingHeavy and 4 or 0,
         (p.dashTimer or 0) > 0 and 8 or 0),
       u8((p.meleeCharge or 0) * 100), u8((p.swingTimer or 0) * 800), u8((p.swingPower or 0) * 255),
-      u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy))
+      u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy),
+      p.ack or 0, i16(p.vx), u8(p.jumpsLeft), u8(p.dashesLeft),
+      bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0),
+      u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping))
   end
 
   local bullets = world.bullets
@@ -198,12 +203,18 @@ function Snap.decode(data)
 
   for i = 1, np do
     local p = {}
-    local flags, flags2
+    local flags, flags2, mflags
     p.x, p.y, p.aim, p.facing, p.hp, p.maxHp, p.r, flags,
     p.invuln, p.ammo, p.maxAmmo, p.reload, p.blockCd,
     p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry,
-    flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy, pos =
+    flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy,
+    p.ack, p.vx, p.jumpsLeft, p.dashesLeft, mflags, p.dashT, p.dashCd2, p.ping, pos =
       unpack(PLAYER_FMT, raw, pos)
+    p.onGround = bit.band(mflags, 1) ~= 0
+    p.jumping = bit.band(mflags, 2) ~= 0
+    p.groundOneway = bit.band(mflags, 4) ~= 0
+    p.dashT = p.dashT / 1000
+    p.dashCd2 = p.dashCd2 / 100
     p.stunned = bit.band(flags2, 1) ~= 0
     p.charging = bit.band(flags2, 2) ~= 0
     p.swingHeavy = bit.band(flags2, 4) ~= 0
