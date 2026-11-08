@@ -432,6 +432,7 @@ function Match:newProxy(slot, name)
 end
 
 function Match:applySnapshot(v)
+  self.snapped = true
   local now = love.timer.getTime()
   local view = self.view
   view.state, view.timer, view.winScore = v.state, v.timer, v.winScore
@@ -1080,10 +1081,7 @@ function Match:update(dt, isTop)
   self:updatePresence()
   self:updatePractice(dt)
   if self.cardChooser then isTop = false end -- the practice card chooser is open: hold everyone still
-  -- A new round slides in like a new screen.
-  local stNow = self:status().state
-  if stNow == "countdown" and self.slideState and self.slideState ~= "countdown" then app.slide() end
-  self.slideState = stNow
+  self:updateMapSlide(dt)
   if self:usesTouch() and require("core.touch").takePause() and isTop then
     self.paused = not self.paused
     ui.reset()
@@ -1350,6 +1348,47 @@ function Match:scoreboardVisible()
     if j:isGamepadDown("back") then return true end
   end
   return false
+end
+
+-- The arena slides out to the left when a round gives way to card picks or the map vote, stays
+-- away while they're on screen, and the next map slides in from the right. The HUD stays put.
+local MAP_SLIDE_TIME = 0.55
+local NO_MAP_STATES = { cardPick = true, mapVote = true, cardBan = true }
+
+function Match:updateMapSlide(dt)
+  if self.role == "client" and not self.snapped then return end -- nothing from the host yet
+  local state = self:status().state
+  local prev = self.slideState
+  if state ~= prev then
+    self.slideState = state
+    if NO_MAP_STATES[state] then
+      if prev and not NO_MAP_STATES[prev] then
+        self.mapSlide = { kind = "out", t = 0 }
+      elseif not prev then
+        self.mapHidden = true
+      end
+    elseif state == "countdown" and prev and prev ~= "countdown" then
+      self.mapHidden, self.mapSlide = false, { kind = "in", t = 0 }
+    end
+  end
+  local s = self.mapSlide
+  if s then
+    s.t = s.t + dt
+    if s.t >= MAP_SLIDE_TIME then
+      if s.kind == "out" then self.mapHidden = true end
+      self.mapSlide = nil
+    end
+  end
+end
+
+-- How far the arena is drawn from its place (screen units), and how far a slide has got (0-1).
+function Match:mapOffset()
+  local s = self.mapSlide
+  if not s then return 0, 1 end
+  local k = math.min(1, s.t / MAP_SLIDE_TIME)
+  local e = 1 - (1 - k) ^ 3
+  if s.kind == "out" then return -app.W * e, k end
+  return app.W * (1 - e), k
 end
 
 -- Music follows sudden death; sound muffles when you're nearly or just dead; the background shifts.
@@ -1709,7 +1748,9 @@ function Match:drawFlyers()
 end
 
 function Match:drawCardPick(st)
-  love.graphics.setColor(0, 0, 0, 0.75)
+  -- Lighter while the arena is still sliding away, so you can see it go.
+  local _, slideK = self:mapOffset()
+  love.graphics.setColor(0, 0, 0, self.mapSlide and (0.35 + 0.4 * slideK) or 0.75)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
 
   local cp = st.pick
@@ -2272,8 +2313,10 @@ function Match:draw()
   local sx, sy = fx.offset()
 
   local objs, effects, barrier = self:sceneObjects()
+  local slideX = self:mapOffset()
+  if not self.mapHidden then
   love.graphics.push()
-  love.graphics.translate(sx, sy)
+  love.graphics.translate(sx + slideX, sy)
   love.graphics.scale(Map.VIEW)
   Map.draw(map)
   if st.hill then hud.drawHill(st.hill, players, World.HILL) end
@@ -2288,7 +2331,7 @@ function Match:draw()
   love.graphics.pop()
 
   Bloom.draw(function()
-    love.graphics.translate(sx, sy)
+    love.graphics.translate(sx + slideX, sy)
     love.graphics.scale(Map.VIEW)
     Objects.drawGlow(objs, effects)
     if barrier then hud.drawBarrier(barrier, true) end
@@ -2296,6 +2339,7 @@ function Match:draw()
     for _, p in ipairs(players) do p:drawGlow() end
     fx.draw()
   end, app.canvas)
+  end
 
   local cardItems = hud.drawScores(players, st.winScore)
   if st.state == "playing" or st.state == "countdown" or st.state == "roundOver" then hud.drawTimer(st.suddenLeft) end
