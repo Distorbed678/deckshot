@@ -70,7 +70,7 @@ local defaults = {
   shake = 3,
   particles = 2,
   showFps = false,
-  roundsToWin = 3,
+  roundsToWin = 5,
   subRounds = 2,         -- sub-round wins needed for a point
   pickFrom = 5,
   picksPerRound = 1,
@@ -102,7 +102,7 @@ local defaults = {
   textSize = 2,          -- 1 small, 2 normal, 3 large (Settings.TEXT_SIZES)
   lastLanAddress = "",   -- the last LAN address you typed
   scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
-  settingsVersion = 4,
+  settingsVersion = 5,
   checkUpdates = true,   -- look for a new version on the main menu (desktop)
   tutorialOffered = false, -- the first-run tutorial has been offered
   hat = "none",          -- cosmetics (core/cosmetics.lua)
@@ -228,9 +228,10 @@ function Settings.load()
     if legacyBarrierOff then v.suddenDeath = 0 end
     v.settingsVersion = 3
   end
-  if v.settingsVersion < 4 then
-    if v.roundsToWin == 5 then v.roundsToWin = 3 end -- points now take 2 sub-round wins each
-    v.settingsVersion = 4
+  if v.settingsVersion < 5 then
+    -- A development build briefly moved the default to 3 (settings version 4).
+    if v.settingsVersion == 4 and v.roundsToWin == 3 then v.roundsToWin = 5 end
+    v.settingsVersion = 5
   end
 
   -- Older settings files: vsync=true/false and resolution=<index>.
