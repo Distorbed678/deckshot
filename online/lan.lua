@@ -290,7 +290,7 @@ local function serveFile(c, method, path)
   if not body then
     status, ctype = "404 Not Found", "text/plain; charset=utf-8"
     body = dir and "Not found" or
-      "This Rounds Clone host doesn't have the browser version (the web folder next to the game). " ..
+      "This Deckshot host doesn't have the browser version (the web folder next to the game). " ..
       "Desktop players can still join from Online Play > LAN."
   end
   c:write("HTTP/1.1 " .. status .. "\r\nContent-Type: " .. ctype .. "\r\nContent-Length: " .. #body ..

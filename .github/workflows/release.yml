@@ -37,14 +37,14 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          ./RoundsClone-x86_64.AppImage --appimage-extract > /dev/null
-          for f in RoundsClone.love libsteam_api.so luasteam.so web/index.html web/love.wasm web/game.data; do
+          ./Deckshot-x86_64.AppImage --appimage-extract > /dev/null
+          for f in Deckshot.love libsteam_api.so luasteam.so web/index.html web/love.wasm web/game.data; do
             test -s "squashfs-root/$f" || { echo "AppImage is missing $f"; exit 1; }
           done
           grep -q '^FUSE_PATH=' squashfs-root/AppRun
-          files="$(unzip -Z1 RoundsClone-windows-x64.zip)"
-          for f in RoundsClone.exe steam_api64.dll luasteam.dll web/index.html web/love.wasm web/game.data; do
-            grep -qx "RoundsClone/$f" <<< "$files" || { echo "Windows zip is missing $f"; exit 1; }
+          files="$(unzip -Z1 Deckshot-windows-x64.zip)"
+          for f in Deckshot.exe steam_api64.dll luasteam.dll web/index.html web/love.wasm web/game.data; do
+            grep -qx "Deckshot/$f" <<< "$files" || { echo "Windows zip is missing $f"; exit 1; }
           done
           rm -rf squashfs-root
 
@@ -59,19 +59,19 @@ jobs:
 
           | Platform | File | How to run |
           |---|---|---|
-          | Browser | — | https://distorbed678.github.io/rounds-clone/ |
-          | Linux (x86-64) | `RoundsClone-x86_64.AppImage` | `chmod +x RoundsClone-x86_64.AppImage && ./RoundsClone-x86_64.AppImage` |
-          | Windows (64-bit) | `RoundsClone-windows-x64.zip` | Unzip, then run `RoundsClone\RoundsClone.exe` (keep the DLLs next to it) |
+          | Browser | — | https://distorbed678.github.io/deckshot/ |
+          | Linux (x86-64) | `Deckshot-x86_64.AppImage` | `chmod +x Deckshot-x86_64.AppImage && ./Deckshot-x86_64.AppImage` |
+          | Windows (64-bit) | `Deckshot-windows-x64.zip` | Unzip, then run `Deckshot\Deckshot.exe` (keep the DLLs next to it) |
 
           ## SHA-256
           EOF
-          { echo '```'; (cd dist && sha256sum RoundsClone-windows-x64.zip RoundsClone-x86_64.AppImage); echo '```'; } >> notes.md
+          { echo '```'; (cd dist && sha256sum Deckshot-windows-x64.zip Deckshot-x86_64.AppImage); echo '```'; } >> notes.md
           cat notes.md
 
       - name: Publish release
         run: |
-          gh release create "$TAG" dist/RoundsClone-x86_64.AppImage dist/RoundsClone-windows-x64.zip \
-            --verify-tag --title "Rounds Clone $TAG" --notes-file notes.md
+          gh release create "$TAG" dist/Deckshot-x86_64.AppImage dist/Deckshot-windows-x64.zip \
+            --verify-tag --title "Deckshot $TAG" --notes-file notes.md
 
       - name: Deploy browser version
         run: gh workflow run pages.yml --ref "$TAG"

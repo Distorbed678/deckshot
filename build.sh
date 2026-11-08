@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Builds release packages into dist/ (run on Linux):
-#   dist/RoundsClone-x86_64.AppImage     Linux: one self-contained executable
-#   dist/RoundsClone-windows-x64.zip     Windows: RoundsClone.exe + DLLs, unzip and run
+#   dist/Deckshot-x86_64.AppImage     Linux: one self-contained executable
+#   dist/Deckshot-windows-x64.zip     Windows: Deckshot.exe + DLLs, unzip and run
 #   dist/web/                            Browser version (love.js), served by GitHub Pages
 # The Linux and Windows packages also carry the browser version (web/ next to the game), which a
 # desktop LAN host serves so browsers on the network can join (online/lan.lua).
 #
 # Usage: ./build.sh [all|linux|windows|web|love]     (default: all)
-#   love = only build dist/RoundsClone.love (runs anywhere with `love RoundsClone.love`)
+#   love = only build dist/Deckshot.love (runs anywhere with `love Deckshot.love`)
 #   all  = love + web + linux + windows (web is skipped when Node.js (npx) isn't installed)
 #
 # Needs: curl, zip, unzip (and Node.js for web). The LÖVE runtimes and appimagetool are
 # downloaded on the first build into build/cache/ (gitignored); love.js comes from npm.
 set -euo pipefail
 
-NAME="RoundsClone"
-TITLE="Rounds Clone"
+NAME="Deckshot"
+TITLE="Deckshot"
 LOVE_VERSION="11.5"
 LOVEJS_VERSION="11.4.1" # love.js (LÖVE 11 for the browser), from npm
 

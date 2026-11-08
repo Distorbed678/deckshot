@@ -1,15 +1,15 @@
-# Rounds Clone
+# Deckshot
 
-A fan-made clone of [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/), built with [LÖVE](https://love2d.org/) 11.5. It's a 2D side-view shooter for 2 to 4 players: when you lose a round, you pick an upgrade card. Cards stack, builds get silly, and the first player to the target score wins.
+A fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/) by Landfall Games, built with [LÖVE](https://love2d.org/) 11.5. It's a 2D side-view shooter for 2 to 4 players: when you lose a round, you pick an upgrade card. Cards stack, builds get silly, and the first player to the target score wins.
 
 - **Local play:** 2 players on one keyboard.
 - **Online play:** up to 4 players over Steam, joining with a 6-character lobby code.
 - **LAN play:** up to 4 players on the same network, no Steam needed. Browsers on the network can join a desktop host.
 - **Platforms:** Windows and Linux (64-bit), plus a browser version for local play and joining LAN games.
 
-**▶ Play in your browser: https://distorbed678.github.io/rounds-clone/** (local 2-player; Steam play needs the desktop version)
+**▶ Play in your browser: https://distorbed678.github.io/deckshot/** (local 2-player; Steam play needs the desktop version)
 
-> This project is not affiliated with or endorsed by Landfall Games, the makers of ROUNDS.
+> Deckshot started life as "Rounds Clone". It is not affiliated with or endorsed by Landfall Games, the makers of ROUNDS.
 
 ## Features
 
@@ -28,22 +28,22 @@ A fan-made clone of [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/)
 
 ### Linux (AppImage)
 
-1. Download `RoundsClone-x86_64.AppImage` (see [Releases](../../releases), or [build it yourself](#building-releases)).
+1. Download `Deckshot-x86_64.AppImage` (see [Releases](../../releases), or [build it yourself](#building-releases)).
 2. Make it executable and run it:
    ```sh
-   chmod +x RoundsClone-x86_64.AppImage
-   ./RoundsClone-x86_64.AppImage
+   chmod +x Deckshot-x86_64.AppImage
+   ./Deckshot-x86_64.AppImage
    ```
-   If it fails to start because FUSE is missing, run `./RoundsClone-x86_64.AppImage --appimage-extract-and-run` instead.
+   If it fails to start because FUSE is missing, run `./Deckshot-x86_64.AppImage --appimage-extract-and-run` instead.
 
 ### Windows
 
-1. Download `RoundsClone-windows-x64.zip` (see [Releases](../../releases), or [build it yourself](#building-releases)).
-2. Unzip it anywhere and run `RoundsClone\RoundsClone.exe`. Keep the DLLs next to the exe.
+1. Download `Deckshot-windows-x64.zip` (see [Releases](../../releases), or [build it yourself](#building-releases)).
+2. Unzip it anywhere and run `Deckshot\Deckshot.exe`. Keep the DLLs next to the exe.
 
 ### Browser
 
-Open **https://distorbed678.github.io/rounds-clone/**. Nothing to install. Both players share the keyboard, settings are saved in your browser, and the **Fullscreen** button above the game gives a bigger view. Steam play isn't available in the browser. To join a LAN game from a browser, open the address the desktop host's lobby shows (see [LAN play](#lan-play)).
+Open **https://distorbed678.github.io/deckshot/**. Nothing to install. Both players share the keyboard, settings are saved in your browser, and the **Fullscreen** button above the game gives a bigger view. Steam play isn't available in the browser. To join a LAN game from a browser, open the address the desktop host's lobby shows (see [LAN play](#lan-play)).
 
 ### Run from source
 
@@ -119,9 +119,9 @@ Output goes to `dist/`:
 
 | File | What it is |
 |---|---|
-| `RoundsClone-x86_64.AppImage` | Single-file Linux executable. LÖVE's AppImage with the game, the Steam libraries and the browser version (served to browsers by a LAN host). |
-| `RoundsClone-windows-x64.zip` | `RoundsClone.exe` (LÖVE's `love.exe` with the game appended), LÖVE's DLLs, the Steam DLLs and `web/` (the browser version, served to browsers by a LAN host). |
-| `RoundsClone.love` | The game files only. Runs anywhere with `love RoundsClone.love`, but without Steam libraries. |
+| `Deckshot-x86_64.AppImage` | Single-file Linux executable. LÖVE's AppImage with the game, the Steam libraries and the browser version (served to browsers by a LAN host). |
+| `Deckshot-windows-x64.zip` | `Deckshot.exe` (LÖVE's `love.exe` with the game appended), LÖVE's DLLs, the Steam DLLs and `web/` (the browser version, served to browsers by a LAN host). |
+| `Deckshot.love` | The game files only. Runs anywhere with `love Deckshot.love`, but without Steam libraries. |
 | `web/` | The browser version: [love.js](https://github.com/Davidobot/love.js) (LÖVE compiled to WebAssembly) with the game, using the page in `web/index.html`. Serve the folder over HTTP to test it locally, e.g. `python3 -m http.server -d dist/web`. |
 
 Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git push origin v1.2.3`) runs `.github/workflows/release.yml`, which builds both packages on Linux, publishes the GitHub release with the tag message as its notes (plus downloads and SHA-256 checksums), and then runs `.github/workflows/pages.yml` to deploy the browser version to GitHub Pages. You can also run the Pages workflow by hand from the Actions tab.
@@ -133,7 +133,7 @@ The LÖVE 11.5 runtimes and `appimagetool` are downloaded once from their offici
 ### Project layout
 
 ```
-rounds-clone/
+deckshot/
 ├── main.lua, conf.lua   entry points (LÖVE needs them at the root)
 ├── core/                app (screen stack, virtual canvas), ui, input, settings
 ├── game/                world (authoritative simulation), player, bullet, cards, map
@@ -176,8 +176,8 @@ The two libraries must come from matching SDK versions. When running from source
 
 Settings are saved as plain `key=value` lines in `settings.txt`:
 
-- **Windows:** `%APPDATA%\LOVE\rounds_clone\` when run from source, `%APPDATA%\rounds_clone\` for the packaged exe
-- **Linux:** `~/.local/share/love/rounds_clone/` when run from source, `~/.local/share/rounds_clone/` for the AppImage
+- **Windows:** `%APPDATA%\LOVE\deckshot\` when run from source, `%APPDATA%\deckshot\` for the packaged exe
+- **Linux:** `~/.local/share/love/deckshot/` when run from source, `~/.local/share/deckshot/` for the AppImage
 
 Key bindings are stored as `bind.<scheme>.<action>=<key>`, and card pool overrides as `card.<id>=<rarity>,<on|off>`.
 

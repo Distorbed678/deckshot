@@ -75,7 +75,7 @@ function Online:draw()
     love.graphics.printf("Steam matches need Steam, which a browser can't use. Download the Windows or " ..
       "Linux version from the game's GitHub releases page to play over Steam:", app.W / 2 - 360, 280, 720, "center")
     love.graphics.setColor(1, 0.85, 0.4)
-    love.graphics.printf("github.com/Distorbed678/rounds-clone/releases", app.W / 2 - 360, 360, 720, "center")
+    love.graphics.printf("github.com/Distorbed678/deckshot/releases", app.W / 2 - 360, 360, 720, "center")
     if ui.button("Back", x, 470, w, 54) then back() end
     return
   end

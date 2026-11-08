@@ -12,7 +12,7 @@ local LIBS = {
 }
 
 -- Folder holding the Steam libraries: lib/<platform>/ in the repo when run with `love .`,
--- the executable's folder for a packaged build (RoundsClone.exe / inside the AppImage).
+-- the executable's folder for a packaged build (Deckshot.exe / inside the AppImage).
 local function libDir(libs)
   local src = love.filesystem.getSource()
   if love.filesystem.isFused() or src:match("%.love$") then

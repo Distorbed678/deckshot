@@ -41,7 +41,7 @@ function Menu:draw()
     love.graphics.circle("fill", x, y, 18 + (i % 4) * 10)
   end
 
-  app.centered("ROUNDS CLONE", app.fonts.huge, 80)
+  app.centered("DECKSHOT", app.fonts.huge, 80)
   app.centered("Lose a round, pick a card. Up to 4 players online.", app.fonts.med, 192, { 1, 1, 1, 0.55 })
 
   local w, h = 340, 58

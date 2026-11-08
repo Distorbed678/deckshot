@@ -89,7 +89,22 @@ local function validBinding(b)
   return (pcall(love.keyboard.isDown, b))
 end
 
+-- The game used to be called "Rounds Clone" (save identity "rounds_clone"). On the first run
+-- under the new name, copy the old settings file over once. The old folder is left alone.
+function Settings.migrateOldSave()
+  if love.filesystem.getInfo(FILE) then return end
+  local dir = love.filesystem.getSaveDirectory()
+  local oldDir = dir and dir:gsub("deckshot$", "rounds_clone")
+  if not oldDir or oldDir == dir then return end
+  local f = io.open(oldDir .. "/" .. FILE, "rb")
+  if not f then return end
+  local data = f:read("*a")
+  f:close()
+  if data and #data > 0 then love.filesystem.write(FILE, data) end
+end
+
 function Settings.load()
+  pcall(Settings.migrateOldSave)
   if not love.filesystem.getInfo(FILE) then return end
   local v = Settings.values
   local legacyVsync, legacyRes

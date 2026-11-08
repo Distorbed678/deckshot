@@ -22,8 +22,8 @@ local session = {
   onEntered = nil,    -- set by main.lua: switch to the lobby screen
 }
 
-session.GAME_TAG = "rounds_love_clone"
-session.PROTOCOL = "4"
+session.GAME_TAG = "deckshot"
+session.PROTOCOL = "5"
 session.MAX_PLAYERS = 4
 
 local CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

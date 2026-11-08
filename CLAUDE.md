@@ -1,9 +1,9 @@
-# Rounds Clone (LÖVE 11.5 / LuaJIT)
+# Deckshot (LÖVE 11.5 / LuaJIT)
 
 A clone of the game ROUNDS: 2D side-view duels where the round loser picks an upgrade card. Local play is 2 players on one keyboard. Online play supports up to 4 players over Steam (AppID 480 "Spacewar") or LAN (Online Play → Steam / LAN); both use the Online control scheme.
 
 ## Running and checking
-- **Linux dev machine (current):** `love` 11.5 and `luajit` are on the PATH and Steam is installed. Run with `love .` from the repo root. Check syntax with `luajit -bl file.lua > /dev/null`. Headless harnesses run with `love <harnessDir>`. Save folder: `~/.local/share/love/rounds_clone/`.
+- **Linux dev machine (current):** `love` 11.5 and `luajit` are on the PATH and Steam is installed. Run with `love .` from the repo root. Check syntax with `luajit -bl file.lua > /dev/null`. Headless harnesses run with `love <harnessDir>`. Save folder: `~/.local/share/love/deckshot/`.
 - **Windows PC:** LÖVE 11.5 may be at `%LOCALAPPDATA%\Programs\love-11.5-win64` (`love.exe`, plus `lovec.exe`, which prints to the console); if it isn't, download `love-11.5-win64.zip` into the scratchpad and syntax-check by `loadfile`-ing every file in a harness. Steam is **not installed** there, and neither are `zip`, `gh` or Python (Windows' `tar.exe -a -c -f x.zip` makes zips; Node and Chrome are installed). Checked-out files use CRLF (`core.autocrlf=true`). From Git Bash, `npx love.js` silently does nothing: run `node <npm-cache>/_npx/*/node_modules/love.js/index.js` instead. Put `io.stdout:setvbuf("no")` in harnesses, or redirected output is lost.
 - The desktop game runs on **LuaJIT (Lua 5.1)**, so don't use `//`, `&`/`|` or other 5.4 features. Use `love.data.pack`, and get bit operations with `require "core.bit"` (never `require "bit"` directly).
 - **The game also runs in the browser** (love.js, plain Lua 5.1: no JIT, no `ffi`, no `bit`, no `goto`, no luasocket). `core/platform.lua` sets `platform.web` (from `love._os == "Web"`). On the web: no Steam, LAN join only (through `online/webbridge.lua`), no custom `love.run` (love.js drives frames), `Settings.applyWindow` does nothing (the page owns the canvas), the Video tab shows only the effects options, and Quit is hidden. Anything new that touches the window, files outside the save folder, native libraries or `ffi` must be guarded with `platform.web`.
@@ -11,12 +11,12 @@ A clone of the game ROUNDS: 2D side-view duels where the round loser picks an up
 
 ## Building releases
 `./build.sh [all|linux|windows|web|love]` (Linux; needs curl, zip, unzip, and Node.js for `web`) writes to `dist/`:
-- `RoundsClone.love`: the game files (everything except `lib/`, `*.md`, `*.sh`, `steam_appid.txt` and build output).
-- `RoundsClone-x86_64.AppImage`: LÖVE's AppImage with `RoundsClone.love`, the Steam `.so` files and `web/` at the AppDir root. `FUSE_PATH` is set in `AppRun`, so the game runs fused.
-- `RoundsClone-windows-x64.zip`: `RoundsClone.exe` (love.exe with the .love appended), LÖVE's DLLs, the Steam DLLs and `web/`.
+- `Deckshot.love`: the game files (everything except `lib/`, `*.md`, `*.sh`, `steam_appid.txt` and build output).
+- `Deckshot-x86_64.AppImage`: LÖVE's AppImage with `Deckshot.love`, the Steam `.so` files and `web/` at the AppDir root. `FUSE_PATH` is set in `AppRun`, so the game runs fused.
+- `Deckshot-windows-x64.zip`: `Deckshot.exe` (love.exe with the .love appended), LÖVE's DLLs, the Steam DLLs and `web/`.
 - Both desktop packages carry the browser build in `web/` (`copy_web`; the web build runs first) so a LAN host can serve it to browsers.
 - `web/`: `npx love.js@11.4.1 -c` output (compatibility mode: no SharedArrayBuffer, so it works on GitHub Pages) with `web/index.html` replacing love.js's page. The page sizes the canvas drawing buffer to its on-screen size and sends a `resize` event so LÖVE renders at native resolution. It also stops `fullscreenchange` events before SDL sees them, because otherwise SDL treats the page's fullscreen as its own and stops following the canvas size.
-- **GitHub Pages:** `.github/workflows/pages.yml` runs `./build.sh web` and deploys `dist/web` on every published release and on manual dispatch (`release.yml` dispatches it, because a release created with the workflow token doesn't fire the release event). Live at https://distorbed678.github.io/rounds-clone/. The `github-pages` environment allows deploys from `main` and from tags matching `v*` (releases run from their tag); a new tag scheme needs adding under Settings → Environments.
+- **GitHub Pages:** `.github/workflows/pages.yml` runs `./build.sh web` and deploys `dist/web` on every published release and on manual dispatch (`release.yml` dispatches it, because a release created with the workflow token doesn't fire the release event). Live at https://distorbed678.github.io/deckshot/. The `github-pages` environment allows deploys from `main` and from tags matching `v*` (releases run from their tag); a new tag scheme needs adding under Settings → Environments.
 
 The LÖVE runtimes and appimagetool are downloaded once into `build/cache/` (gitignored). If you add asset folders, make sure `build_love` doesn't exclude them.
 
@@ -31,7 +31,7 @@ The LÖVE runtimes and appimagetool are downloaded once into `build/cache/` (git
    - The tag message is the release notes: what was fixed or changed, and whether online play is still compatible with the previous version (if `session.PROTOCOL` was bumped, say so). The workflow appends the download table and SHA-256 checksums. `--cleanup=verbatim` keeps `#` headings (git would strip them as comments).
    - On Linux you can still build and smoke-test locally first (`./build.sh all`, launch the AppImage and confirm it loads the bundled Steam libraries). If the change could affect the browser version, test a web build in headless Firefox/Chrome (see Testing).
 4. Versioning: bump the patch version (v0.1.1 → v0.1.2) for fixes and small changes, and the minor version (v0.1.x → v0.2.0) for feature batches. Check the latest tag with `git ls-remote --tags origin`.
-5. Check the runs: `gh run list --repo Distorbed678/rounds-clone --limit 2`, or without `gh`, `curl -s https://api.github.com/repos/Distorbed678/rounds-clone/actions/runs?per_page=3` (public repo).
+5. Check the runs: `gh run list --repo Distorbed678/deckshot --limit 2`, or without `gh`, `curl -s https://api.github.com/repos/Distorbed678/deckshot/actions/runs?per_page=3` (public repo).
 
 ## Architecture
 `main.lua` and `conf.lua` stay at the repo root (LÖVE requires it). Modules are required by dotted path, e.g. `require "game.world"`, `require "online.net"`.
