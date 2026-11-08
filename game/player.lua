@@ -1,6 +1,7 @@
 local Map = require "game.map"
 local fx = require "gfx.fx"
 local Bullet = require "game.bullet"
+local sfx = require "gfx.sfx"
 
 local Player = {}
 Player.__index = Player
@@ -224,10 +225,12 @@ function Player:update(dt, frozen)
     if self.reloadTimer <= 0 then
       self.reloadTimer = 0
       self.ammo = s.ammo
+      self:emitSound("reloaded", 0.7)
       self:reloaded()
     end
   elseif self.ammo < s.ammo and self.sinceShot > 1.0 then
     self.reloadTimer = s.reloadTime
+    self:emitSound("reload", 0.6)
   end
 
   -- Damage over time: poison and Decay
@@ -293,7 +296,9 @@ function Player:update(dt, frozen)
 
   -- Melee charge: release (or overholding a full charge) swings.
   if self.charging then
+    local before = self.meleeCharge
     self.meleeCharge = self.meleeCharge + dt
+    if before < MELEE.lightThreshold and self.meleeCharge >= MELEE.lightThreshold then self:emitSound("meleeCharge") end
     if not inp.meleeHeld or self.meleeCharge >= MELEE.lightThreshold + s.heavyCharge + MELEE.overHold then
       self:meleeRelease()
     end
@@ -348,6 +353,7 @@ function Player:update(dt, frozen)
 
   local rects = game.solids or game.map.rects
   local wasGround = self.onGround
+  local fallSpeed = self.vy
   self:moveX(self.vx * dt, rects)
   self:moveY(self.vy * dt, rects)
   self:senseWalls(rects)
@@ -369,7 +375,31 @@ function Player:update(dt, frozen)
     self.jumpsLeft = s.airJumps
     if self.dashTimer <= 0 and self.dashesLeft < s.dashes then self.dashesLeft = s.dashes end
   end
-  if self.onGround and not wasGround then self:landed() end
+  if self.onGround and not wasGround then self:landed(fallSpeed) end
+  self.landSquash = math.max(0, (self.landSquash or 0) - dt * 2.5)
+
+  -- Footstep dust, wall-slide sparks, dash afterimages, refilled dash.
+  if self.onGround and math.abs(self.vx) > 250 and love.math.random() < dt * 7 then
+    fx.spray(self.x, self.y + self.r, self.vx > 0 and math.pi * 1.15 or -math.pi * 0.15, 0.5,
+      { 0.7, 0.7, 0.75 }, 2, 90, 2.5, 0.15)
+  end
+  if self.wallDir ~= 0 and not self.onGround and self.vy >= MOVE.wallSlide - 1 and love.math.random() < dt * 14 then
+    fx.spray(self.x + self.wallDir * self.r, self.y + self.r * 0.5, self.wallDir > 0 and math.pi or 0, 1.2,
+      { 1, 0.85, 0.5 }, 1, 120, 2, 0.6)
+  end
+  if self.dashTimer > 0 or self.lungeTimer > 0 then
+    self.ghostTimer = (self.ghostTimer or 0) - dt
+    if self.ghostTimer <= 0 then
+      self.ghostTimer = 0.03
+      fx.ghost(self.x, self.y, self.r, self.color)
+    end
+  end
+  if self.dashesLeft > 0 and self.hadNoDash and self.dashCd <= 0 then
+    self.hadNoDash = false
+    fx.ring(self.x, self.y, self.r + 8, self.color)
+    self:emitSound("dashReady", 0.6)
+  end
+  if self.dashesLeft == 0 then self.hadNoDash = true end
   -- A buffered jump fires as soon as it can.
   if self.jumpBuffer > 0 and acting and (self.onGround or self.wallDir ~= 0) then self:jumpPressed(true) end
 
@@ -454,8 +484,15 @@ function Player:runPhysics(dt, dir, speed, acting)
   end
 end
 
--- Just touched the ground.
-function Player:landed()
+-- Just touched the ground. fallSpeed: vertical speed just before landing.
+function Player:landed(fallSpeed)
+  if fallSpeed > 250 then
+    local k = math.min(1, (fallSpeed - 250) / 900)
+    fx.spray(self.x - self.r * 0.6, self.y + self.r, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
+    fx.spray(self.x + self.r * 0.6, self.y + self.r, 0, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
+    self:emitSound("land", 0.35 + 0.65 * k, 1.1 - 0.3 * k)
+  end
+  self.landSquash = math.min(0.35, fallSpeed / 3000)
 end
 
 -- Left, right and bottom edges hurt and launch you back in; blocking makes it a free bounce.
@@ -498,10 +535,8 @@ function Player:checkEdges()
   self:hit(EDGE.damage, 0, 0, 0, nil, "edge")
 end
 
--- Sound hook (filled in by gfx/sfx.lua when it is loaded).
 function Player:emitSound(name, volume, pitch)
-  local sfx = package.loaded["gfx.sfx"]
-  if sfx then sfx.play(name, self.x, volume, pitch) end
+  sfx.play(name, self.x, volume, pitch)
 end
 
 function Player:updateOrbs(dt)
@@ -821,6 +856,7 @@ function Player:blockPressed()
   self.blockTimer = s.blockTime
   self.blockCd = s.blockCooldown
   fx.ring(self.x, self.y, self.r + 18, { 1, 1, 1 })
+  self:emitSound("block", 0.45, 1.25)
 
   if s.blockHeal > 0 then
     self:heal(s.blockHeal)
@@ -899,6 +935,10 @@ end
 
 function Player:tryFire()
   local s = self.stats
+  if self.ammo <= 0 and self.fireTimer <= 0 and (self.emptyCd or 0) <= love.timer.getTime() then
+    self.emptyCd = love.timer.getTime() + 0.35
+    self:emitSound("empty", 0.7)
+  end
   if self.fireTimer > 0 or self.ammo <= 0 then return end
 
   local delay = s.fireDelay
@@ -925,6 +965,7 @@ function Player:tryFire()
   self.fireTimer = delay
   self.sinceShot = 0
   self.reloadTimer = (self.ammo == 0) and s.reloadTime or 0
+  if self.ammo == 0 then self:emitSound("reload", 0.6) end
 
   self:volley(true, mult)
   if s.burst > 0 then
@@ -954,7 +995,17 @@ function Player:volley(primary, mult)
     self:spawnBullet(base + math.pi + (i - (s.backShot + 1) / 2) * 0.18, 1, empowered, mult)
   end
 
-  fx.burst(self.x + self.aimX * (self.r + 12), self.y + self.aimY * (self.r + 12), { 1, 0.95, 0.7 }, 4, 150, 2)
+  local mx, my = self.x + self.aimX * (self.r + 12), self.y + self.aimY * (self.r + 12)
+  fx.spray(mx, my, base, 0.5, { 1, 0.95, 0.7 }, 5, 260, 2.5, 0.1)
+  fx.kick(-self.aimX * 1.5, -self.aimY * 1.5)
+  local size = s.bulletSize / 5
+  if s.laser > 0 then
+    self:emitSound("laser")
+  elseif s.bullets >= 3 then
+    self:emitSound("shotgun", 0.8)
+  else
+    self:emitSound("shoot", primary and 0.8 or 0.5, math.max(0.55, math.min(1.4, 1 / size ^ 0.4)))
+  end
 
   if s.recoil > 0 then
     if self.aimY > 0 and self.vy > 0 then self.vy = 0 end
@@ -1018,6 +1069,7 @@ end
 function Player:blocked()
   local s = self.stats
   if s.parry > 0 then
+    self:emitSound("parry")
     self.blockCd = 0
     if s.parry > 1 then self:heal(10 * (s.parry - 1)) end
   end
@@ -1032,6 +1084,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
   self.lastHitKind = kind
   if self:isBlocking() then
     fx.burst(self.x, self.y, { 1, 1, 1 }, 8, 200, 3)
+    self:emitSound("block")
     self:blocked()
     return false
   end
@@ -1063,6 +1116,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
     end
   end
   self.hitFlash = 0.1
+  if kind ~= "melee" and kind ~= "edge" then self:emitSound("hit", math.min(1, 0.5 + taken / 60)) end
   fx.burst(self.x, self.y, self.color, 10, 220, 4)
   fx.addShake(4)
   local len = math.sqrt(dx * dx + dy * dy)
@@ -1098,6 +1152,7 @@ function Player:die(outOfBounds)
     self.invuln = 1
     fx.ring(self.x, self.y, 70, { 1, 1, 1 })
     fx.burst(self.x, self.y, { 1, 0.95, 0.6 }, 20, 300, 4)
+    self:emitSound("revive", 0.7, 1.4)
     return
   end
 
@@ -1117,12 +1172,15 @@ function Player:die(outOfBounds)
     end
     fx.ring(self.x, self.y, 90, { 1, 0.6, 0.15 })
     fx.burst(self.x, self.y, { 1, 0.7, 0.2 }, 30, 350, 5)
+    self:emitSound("revive")
     return
   end
 
   self.dead = true
   self.hp = 0
   fx.burst(self.x, self.y, { 1, 1, 1 }, 15, 300, 4)
+  fx.debris(self.x, self.y, self.color, 8, 9)
+  self:emitSound("death")
 
   if self.stats.martyr > 0 then
     local radius = 200
@@ -1275,7 +1333,12 @@ function Player:draw()
   else
     love.graphics.setColor(c[1], c[2], c[3], A)
   end
-  love.graphics.circle("fill", self.x, self.y, r)
+  -- Squash and stretch: stretched while moving fast vertically, squashed on landing.
+  local stretch = math.min(0.18, math.abs(self.vy or 0) / 5000) - (self.landSquash or 0)
+  local sy = 1 + stretch
+  local sx = 1 / sy
+  local by0 = self.y + r * (1 - sy) -- keep the feet in place
+  love.graphics.ellipse("fill", self.x, by0, r * sx, r * sy)
   if self.slowTimer > 0 then
     love.graphics.setColor(0.7, 0.9, 1, 0.7 * A)
     love.graphics.setLineWidth(2)
@@ -1285,8 +1348,8 @@ function Player:draw()
   -- Eyes
   love.graphics.setColor(0.1, 0.1, 0.12, A)
   local ex = self.x + self.facing * r * 0.3
-  love.graphics.circle("fill", ex - 5, self.y - r * 0.25, r * 0.13)
-  love.graphics.circle("fill", ex + 5, self.y - r * 0.25, r * 0.13)
+  love.graphics.circle("fill", ex - 5, by0 - r * 0.25 * sy, r * 0.13)
+  love.graphics.circle("fill", ex + 5, by0 - r * 0.25 * sy, r * 0.13)
 
   -- HP bar (pending Decay damage shown faded)
   local pending = 0

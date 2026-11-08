@@ -16,6 +16,11 @@ local ui = {
 ui.ACCENT = { 1, 0.55, 0.15 }
 
 local function app() return require "core.app" end
+local function sound(name)
+  local sfx = package.loaded["gfx.sfx"]
+  if sfx then sfx.ui(name) end
+end
+local prevFocus = 1
 
 function ui.reset()
   ui.capturing = false
@@ -30,6 +35,8 @@ function ui.beginFrame()
 end
 
 function ui.endFrame()
+  if ui.focus ~= prevFocus and ui.count > 0 then sound("uiHover") end
+  prevFocus = ui.focus
   ui.lastCount = ui.count
   if ui.lastCount > 0 and ui.focus > ui.lastCount then ui.focus = ui.lastCount end
   ui.click = nil
@@ -108,6 +115,7 @@ function ui.button(label, x, y, w, h, opts)
       ui.key = nil
     end
   end
+  if pressed then sound(opts.back and "uiBack" or "uiClick") end
   local bg, border, fg = panelColors(focused, opts.disabled)
   if opts.color and not opts.disabled then border = opts.color end
   love.graphics.setColor(bg)

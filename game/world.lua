@@ -4,6 +4,7 @@ local Player = require "game.player"
 local Map = require "game.map"
 local Cards = require "game.cards"
 local fx = require "gfx.fx"
+local sfx = require "gfx.sfx"
 
 local World = {}
 World.__index = World
@@ -113,9 +114,16 @@ end
 
 function World:update(dt)
   if self.state == "countdown" then
+    local before = math.ceil(self.timer / 0.8)
     self.timer = self.timer - dt
     for _, p in ipairs(self.players) do p:update(dt, true) end
-    if self.timer <= 0 then self.state = "playing" end
+    local now = math.ceil(self.timer / 0.8)
+    if self.timer <= 0 then
+      self.state = "playing"
+      sfx.play("fight")
+    elseif now ~= before then
+      sfx.play("beep")
+    end
   elseif self.state == "playing" or self.state == "roundOver" then
     local sdt = (self.state == "roundOver") and dt * 0.35 or dt
     for _, p in ipairs(self.players) do p:update(sdt, false) end
@@ -159,6 +167,7 @@ function World:checkRoundEnd()
   if alive > 1 then return end
   self.roundWinner = last
   if last then last.score = last.score + 1 end
+  sfx.play("roundWin")
   self.state = "roundOver"
   self.timer = 1.6
 end
@@ -167,6 +176,7 @@ function World:afterRound()
   if self.roundWinner and self.roundWinner.score >= self.winScore then
     self.state = "matchOver"
     self.votes = {}
+    sfx.play("matchWin")
     self:emit("matchOver", self.roundWinner)
   else
     self:openPicks()

@@ -1,5 +1,6 @@
 local Map = require "game.map"
 local fx = require "gfx.fx"
+local sfx = require "gfx.sfx"
 
 local Bullet = {}
 Bullet.__index = Bullet
@@ -260,7 +261,7 @@ function Bullet:step(dt, game)
     else
       self.x = self.x - mx
       self.vx = -self.vx
-      if not self:bounce(game) then return end
+      if not self:bounce(game, mx > 0 and math.pi or 0) then return end
     end
   end
 
@@ -271,7 +272,7 @@ function Bullet:step(dt, game)
     else
       self.y = self.y - my
       self.vy = -self.vy
-      if not self:bounce(game) then return end
+      if not self:bounce(game, my > 0 and -math.pi / 2 or math.pi / 2) then return end
     end
   end
 
@@ -296,7 +297,8 @@ function Bullet:step(dt, game)
 end
 
 -- Returns false if the bullet stops (dies or turns into a mine).
-function Bullet:bounce(game)
+-- normal: direction (radians) pointing away from the surface that was hit.
+function Bullet:bounce(game, normal)
   self.bounced = true
   self.bounces = self.bounces - 1
   if self.laser then table.insert(self.points, { self.x, self.y }) end
@@ -304,17 +306,21 @@ function Bullet:bounce(game)
     self.splitsLeft = self.splitsLeft - 1
     self:spawnFragments(game)
   end
-  if not self.laser then fx.burst(self.x, self.y, self.color, 4, 120, 2) end
+  if not self.laser and normal then
+    fx.spray(self.x, self.y, normal, 1.3, { 1, 0.9, 0.6 }, 4, 260, 2, 0.4)
+  end
 
   if self.bounces < 0 then
     if self.sticky > 0 and not self.laser then
       self:becomeMine()
     else
       self.dead = true
+      if not self.laser and not self.isChild then sfx.play("impact", self.x, 0.5) end
       self:impact(game)
     end
     return false
   end
+  if not self.laser then sfx.play("bounce", self.x, 0.5) end
   if self.bounceDamage > 0 then self.damage = self.damage * (1 + self.bounceDamage) end
   return true
 end
@@ -343,6 +349,7 @@ end
 function Bullet:becomeMine()
   local mult = extra(self.sticky, 0.4)
   self.mine = true
+  sfx.play("mineArm", self.x, 0.6)
   self.vx, self.vy = 0, 0
   self.life = 6
   self.armTime = 0.4
@@ -370,6 +377,7 @@ function Bullet:hitPlayer(p, game)
     self.y = p.y + dy / d * (p.r + 20 + self.r)
     if self.laser then table.insert(self.points, { self.x, self.y }) end
     fx.burst(self.x, self.y, { 1, 1, 1 }, 8, 200, 3)
+    sfx.play("reflect", self.x)
     p:blocked()
     if not self.laser then
       local n = p.stats.reflect
@@ -399,7 +407,10 @@ function Bullet:hitPlayer(p, game)
       o.ammo = math.min(o.stats.ammo, o.ammo + self.scavenger)
       o.reloadTimer = 0
     end
-    if self.crit then fx.burst(p.x, p.y, CRIT_COLOR, 14, 300, 4) end
+    if self.crit then
+      fx.burst(p.x, p.y, CRIT_COLOR, 14, 300, 4)
+      sfx.play("crit", p.x)
+    end
     if os.combo > 0 then
       o.comboCount = o.comboCount + 1
       o.comboTimer = 2
@@ -436,6 +447,7 @@ function Bullet:impact(game, hitPlayer)
   if self.blackhole > 0 then
     -- Extra Black Hole copies: +30% pull radius and strength each.
     local mult = extra(self.blackhole, 0.3)
+    sfx.play("blackhole", self.x)
     table.insert(game.wells, {
       x = self.x, y = self.y, t = 1.4, max = 1.4, owner = self.owner,
       radius = WELL_RADIUS * mult, strength = WELL_STRENGTH * mult,
@@ -457,6 +469,7 @@ function Bullet:explode(game, mult)
   fx.ring(self.x, self.y, self.explosion, self.color)
   fx.burst(self.x, self.y, self.color, 16, 300, 4)
   fx.addShake(5)
+  if not self.isCluster then sfx.play(self.explosion > 100 and "explosion" or "explosionSmall", self.x) end
   local dmg = self:currentDamage() * (mult or 0.5)
   for _, p in ipairs(game.players) do
     if p ~= self.owner and not p.dead then

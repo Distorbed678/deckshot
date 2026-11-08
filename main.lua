@@ -5,6 +5,7 @@ local lan = require "online.lan"
 local Settings = require "core.settings"
 local Bloom = require "gfx.bloom"
 local platform = require "core.platform"
+local sfx = require "gfx.sfx"
 
 function love.load(args)
   love.keyboard.setKeyRepeat(false)
@@ -13,6 +14,7 @@ function love.load(args)
   app.load()
   app.showFps = Settings.values.showFps
   Bloom.load(app.W, app.H)
+  sfx.load()
 
   steam.init() -- normally already done in conf.lua; this is a no-op then
   session.init()
@@ -39,6 +41,7 @@ function love.update(dt)
   session.update()
   lan.update()
   Settings.update()
+  sfx.update()
   app.update(dt)
   lan.flush()
 end
@@ -78,6 +81,10 @@ end
 
 function love.textinput(t)
   app.textinput(t)
+end
+
+function love.focus(focused)
+  sfx.focus(focused, Settings.values.muteUnfocused)
 end
 
 -- LÖVE 11.5's default loop plus an optional frame cap (Settings.values.maxFps).

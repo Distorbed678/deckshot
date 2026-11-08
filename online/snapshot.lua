@@ -119,6 +119,20 @@ function Snap.encode(world, events)
       add("<BhhHBBB", 2, i16(e[2]), i16(e[3]), u16(e[4]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255))
     elseif kind == 3 then
       add("<BB", 3, u8(e[2]))
+    elseif kind == 5 then
+      add("<BBhBB", 5, u8(e[2]), i16(e[3]), u8(e[4] * 100), u8(e[5] * 100))
+    elseif kind == 6 then
+      local c = e[6]
+      add("<BhhhBBBBBHBB", 6, i16(e[2]), i16(e[3]), i16(e[4] * 1000), u8(e[5] * 40),
+        u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[7]), u16(e[8]), u8(e[9] * 10), u8(e[10] * 50))
+    elseif kind == 7 then
+      local c = e[5]
+      add("<BhhBBBB", 7, i16(e[2]), i16(e[3]), u8(e[4]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255))
+    elseif kind == 8 then
+      local c = e[4]
+      add("<BhhBBBBB", 8, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
+    elseif kind == 9 then
+      add("<Bhh", 9, i16(e[2] * 10), i16(e[3] * 10))
     else
       add("<B", 4)
     end
@@ -230,6 +244,26 @@ function Snap.decode(data)
       local amount
       amount, pos = unpack("<B", raw, pos)
       v.fx[i] = { 3, amount }
+    elseif kind == 5 then
+      local id, x, vol, pitch
+      id, x, vol, pitch, pos = unpack("<BhBB", raw, pos)
+      v.fx[i] = { 5, id, x, vol / 100, pitch / 100 }
+    elseif kind == 6 then
+      local x, y, ang, spread, r, g, b, count, speed, size, grav
+      x, y, ang, spread, r, g, b, count, speed, size, grav, pos = unpack("<hhhBBBBBHBB", raw, pos)
+      v.fx[i] = { 6, x, y, ang / 1000, spread / 40, { r / 255, g / 255, b / 255 }, count, speed, size / 10, grav / 50 }
+    elseif kind == 7 then
+      local x, y, rad, r, g, b
+      x, y, rad, r, g, b, pos = unpack("<hhBBBB", raw, pos)
+      v.fx[i] = { 7, x, y, rad, { r / 255, g / 255, b / 255 } }
+    elseif kind == 8 then
+      local x, y, r, g, b, count, size
+      x, y, r, g, b, count, size, pos = unpack("<hhBBBBB", raw, pos)
+      v.fx[i] = { 8, x, y, { r / 255, g / 255, b / 255 }, count, size }
+    elseif kind == 9 then
+      local dx, dy
+      dx, dy, pos = unpack("<hh", raw, pos)
+      v.fx[i] = { 9, dx / 10, dy / 10 }
     else
       v.fx[i] = { 4 }
     end

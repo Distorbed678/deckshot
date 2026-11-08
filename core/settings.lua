@@ -4,6 +4,7 @@ local fx = require "gfx.fx"
 local Cards = require "game.cards"
 local Map = require "game.map"
 local platform = require "core.platform"
+local sfx = require "gfx.sfx"
 
 local Settings = {}
 
@@ -34,7 +35,7 @@ Settings.BIND_SCHEMES = {
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", melee = "Melee (hold: heavy)",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", melee = "Melee (hold)",
 }
 Settings.DEFAULT_BINDS = {
   p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q" },
@@ -62,6 +63,10 @@ local defaults = {
   pickFrom = 3,
   picksPerRound = 1,
   playerName = "Player", -- shown to others in LAN games
+  volMaster = 8,         -- volumes in steps of 0..10
+  volSfx = 10,
+  volUi = 8,
+  muteUnfocused = true,
 }
 for _, r in ipairs(Cards.RARITIES) do defaults["weight_" .. r.id] = r.weight end
 
@@ -347,6 +352,9 @@ function Settings.applyEffects()
   Bloom.intensity = Settings.BLOOM_LEVELS[v.bloomLevel][2]
   fx.shakeScale = Settings.SHAKE_LEVELS[v.shake][2]
   fx.particleScale = Settings.PARTICLE_LEVELS[v.particles][2]
+  sfx.volumes.master = clamp(v.volMaster, 0, 10) / 10
+  sfx.volumes.sfx = clamp(v.volSfx, 0, 10) / 10
+  sfx.volumes.ui = clamp(v.volUi, 0, 10) / 10
 end
 
 -- love.window.setMode can't run while a canvas is active (e.g. from a screen's draw, where

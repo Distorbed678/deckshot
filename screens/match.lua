@@ -12,6 +12,7 @@ local Cards = require "game.cards"
 local Input = require "core.input"
 local Bloom = require "gfx.bloom"
 local fx = require "gfx.fx"
+local sfx = require "gfx.sfx"
 local net = require "online.net"
 local Snap = require "online.snapshot"
 local hud = require "gfx.hud"
@@ -299,6 +300,7 @@ function Match:applySnapshot(v)
     p.charging, p.meleeCharge = pv.charging, pv.meleeCharge
     p.swingTimer, p.swingHeavy, p.swingPower = pv.swingTimer, pv.swingHeavy, pv.swingPower
     p.dashTimer = pv.dashing and 1 or 0
+    if (p.vy or 0) > 300 and math.abs(pv.vy) < 60 then p.landSquash = math.min(0.35, p.vy / 3000) end
     p.vy = pv.vy
     s.meleeRange, s.heavyCharge = pv.meleeRange, pv.heavyCharge
   end
@@ -339,6 +341,16 @@ function Match:applySnapshot(v)
       fx.ring(e[2], e[3], e[4], e[5])
     elseif e[1] == 3 then
       fx.addShake(e[2])
+    elseif e[1] == 5 then
+      sfx.playId(e[2], e[3], e[4], e[5])
+    elseif e[1] == 6 then
+      fx.spray(e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9], e[10])
+    elseif e[1] == 7 then
+      fx.ghost(e[2], e[3], e[4], e[5])
+    elseif e[1] == 8 then
+      fx.debris(e[2], e[3], e[4], e[5], e[6])
+    elseif e[1] == 9 then
+      fx.kick(e[2], e[3])
     else
       fx.clear()
     end
@@ -356,6 +368,7 @@ function Match:clientInterpolate(dt)
     end
     p.hitFlash = math.max(0, p.hitFlash - dt)
     p.swingTimer = math.max(0, (p.swingTimer or 0) - dt)
+    p.landSquash = math.max(0, (p.landSquash or 0) - dt * 2.5)
   end
   local age = love.timer.getTime() - self.snapTime
   for _, b in ipairs(self.bulletList) do
@@ -775,10 +788,7 @@ function Match:draw()
   if not map then return end
   local st = self:status()
 
-  local sx, sy = 0, 0
-  if fx.shake > 0 then
-    sx, sy = (love.math.random() - 0.5) * fx.shake * 2, (love.math.random() - 0.5) * fx.shake * 2
-  end
+  local sx, sy = fx.offset()
 
   love.graphics.push()
   love.graphics.translate(sx, sy)

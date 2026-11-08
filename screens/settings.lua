@@ -12,7 +12,7 @@ local platform = require "core.platform"
 local Screen = {}
 Screen.__index = Screen
 
-local TABS = { "Video", "Controls", "Gameplay" }
+local TABS = { "Video", "Audio", "Controls", "Gameplay" }
 
 function Screen.new()
   local s = setmetatable({ tab = 1, capture = nil }, Screen)
@@ -140,6 +140,30 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
   end
 end
 
+local function volumeText(v)
+  return v == 0 and "Off" or (v * 10 .. "%")
+end
+
+function Screen:drawAudio(x, y, w)
+  local v = Settings.values
+  local h, gap = 44, 52
+  local colW = (w - 30) / 2
+  local rows = {
+    { "Master volume", "volMaster" }, { "Effects volume", "volSfx" }, { "Menu volume", "volUi" },
+  }
+  for _, row in ipairs(rows) do
+    local d = ui.cycler(row[1], volumeText(v[row[2]]), x, y, colW, h)
+    if d ~= 0 then
+      v[row[2]] = math.max(0, math.min(10, v[row[2]] + d))
+      Settings.applyEffects()
+      require("gfx.sfx").play("hit", nil, 1, 1, true)
+    end
+    y = y + gap
+  end
+  local d = ui.cycler("Mute in background", v.muteUnfocused and "On" or "Off", x, y, colW, h)
+  if d ~= 0 then v.muteUnfocused = not v.muteUnfocused end
+end
+
 -- Browser build: the page owns the window, so only the effects options apply.
 function Screen:drawVideoWeb(x, y, w)
   local h, gap = 44, 52
@@ -238,7 +262,7 @@ function Screen:drawControls(x, y, w)
   local schemes = Settings.BIND_SCHEMES
   local gapX = 20
   local colW = (w - gapX * (#schemes - 1)) / #schemes
-  local h, gap = 40, 46
+  local h, gap = 34, 38
   local binds = Settings.values.binds
 
   for c, scheme in ipairs(schemes) do
@@ -247,7 +271,7 @@ function Screen:drawControls(x, y, w)
     love.graphics.setColor(1, 1, 1, 0.85)
     love.graphics.printf(scheme.name, cx, y, colW, "center")
     for r, action in ipairs(scheme.actions) do
-      local ry = y + 40 + (r - 1) * gap
+      local ry = y + 36 + (r - 1) * gap
       local capturing = self.capture and self.capture.scheme == scheme.id and self.capture.action == action
       local opts = capturing and { color = ui.ACCENT } or nil
       if ui.button("", cx, ry, colW, h, opts) and not self.capture then
@@ -269,14 +293,16 @@ function Screen:drawControls(x, y, w)
     end
   end
 
-  local by = y + 40 + 7 * gap + 10
+  local rows = 0
+  for _, scheme in ipairs(schemes) do rows = math.max(rows, #scheme.actions) end
+  local by = y + 36 + rows * gap + 4
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)
   love.graphics.printf(
     "Click a binding, then press a key or mouse button (Esc cancels). A key already in use is swapped.\n" ..
     "Local players share the keyboard. Online play always aims with the mouse.",
     x, by, w, "center")
-  if ui.button("Reset Controls", x, by + 84, 240, 46, { font = app.fonts.med }) then
+  if ui.button("Reset Controls", x, by + 44, 220, 40, { font = app.fonts.med }) then
     self:stopCapture()
     Settings.resetBinds()
   end
@@ -390,6 +416,8 @@ function Screen:draw()
   if self.tab == 1 then
     self:drawVideo(cx, cy, cw)
   elseif self.tab == 2 then
+    self:drawAudio(cx, cy, cw)
+  elseif self.tab == 3 then
     self:drawControls(cx, cy, cw)
   else
     self:drawGameplay(cx, cy, cw)
