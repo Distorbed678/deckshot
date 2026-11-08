@@ -1,0 +1,16 @@
+deckshot-map 1
+name Clockwork
+spawn 140 580
+spawn 1140 580
+spawn 160 340
+spawn 1120 340
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 100 380 160 14
+oneway 1020 380 160 14
+rect 340 320 80 40
+rect 860 320 80 40
+obj arm count=1 damage=25 length=100 r=22 spin=1.2 x=380 y=340
+obj arm count=1 damage=25 length=100 r=22 spin=-1.2 x=900 y=340
+obj platform h=16 speed=80 w=100 x=540 y=480 path=590,488;590,300
+obj platform h=16 speed=80 w=100 x=640 y=480 path=690,488;690,300

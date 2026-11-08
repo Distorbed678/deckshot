@@ -1,0 +1,17 @@
+deckshot-map 1
+name Spike Pit
+spawn 160 540
+spawn 1120 540
+spawn 220 360
+spawn 1060 360
+rect 60 580 280 140
+rect 940 580 280 140
+oneway 400 520 100 14
+oneway 780 520 100 14
+oneway 560 440 160 14
+oneway 140 420 160 14
+oneway 980 420 160 14
+rect 340 600 20 120
+rect 920 600 20 120
+obj spikes damage=30 dir=up h=18 w=300 x=340 y=680
+obj spikes damage=30 dir=up h=18 w=300 x=640 y=680

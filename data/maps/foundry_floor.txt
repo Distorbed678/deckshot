@@ -1,0 +1,15 @@
+deckshot-map 1
+name Foundry Floor
+spawn 240 580
+spawn 1040 580
+spawn 160 420
+spawn 1120 420
+rect 80 620 560 60
+rect 640 620 560 60
+rect 80 460 160 20
+rect 1040 460 160 20
+oneway 340 480 140 14
+oneway 800 480 140 14
+oneway 540 340 100 14
+oneway 640 340 100 14
+rect 600 520 80 100

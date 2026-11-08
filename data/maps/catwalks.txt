@@ -1,0 +1,17 @@
+deckshot-map 1
+name Catwalks
+spawn 140 580
+spawn 1140 580
+spawn 160 260
+spawn 1120 260
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 80 440 300 14
+oneway 900 440 300 14
+oneway 80 300 220 14
+oneway 980 300 220 14
+oneway 440 360 400 14
+obj weight damage=60 r=22 x=480 y=200
+obj weight damage=60 r=22 x=800 y=200
+obj rope target=1 x=480 y=40
+obj rope target=2 x=800 y=40

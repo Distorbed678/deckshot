@@ -1,0 +1,16 @@
+deckshot-map 1
+name Gaps
+spawn 160 580
+spawn 1120 580
+spawn 440 580
+spawn 840 580
+rect 80 620 200 80
+rect 1000 620 200 80
+rect 380 620 160 80
+rect 740 620 160 80
+oneway 240 480 120 14
+oneway 920 480 120 14
+oneway 540 420 100 14
+oneway 640 420 100 14
+oneway 360 320 120 14
+oneway 800 320 120 14

@@ -1,0 +1,20 @@
+deckshot-map 1
+name Gas Works
+spawn 140 580
+spawn 1140 580
+spawn 260 360
+spawn 1020 360
+rect 60 620 580 100
+rect 640 620 580 100
+rect 200 400 200 20
+rect 880 400 200 20
+oneway 520 300 120 14
+oneway 640 300 120 14
+obj gas h=42 hp=20 radius=110 w=28 x=380 y=578
+obj gas h=42 hp=20 radius=110 w=28 x=872 y=578
+obj gas h=42 hp=20 radius=110 w=28 x=520 y=578
+obj gas h=42 hp=20 radius=110 w=28 x=732 y=578
+obj crate drop=0.08 h=50 hp=60 w=50 x=440 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=790 y=570
+obj gas h=42 hp=20 radius=110 w=28 x=300 y=358
+obj gas h=42 hp=20 radius=110 w=28 x=952 y=358

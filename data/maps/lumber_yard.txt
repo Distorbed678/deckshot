@@ -1,0 +1,20 @@
+deckshot-map 1
+name Lumber Yard
+spawn 140 580
+spawn 1140 580
+spawn 160 340
+spawn 1120 340
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 100 380 180 14
+oneway 1000 380 180 14
+obj crate drop=0.08 h=50 hp=60 w=50 x=380 y=280
+obj crate drop=0.08 h=50 hp=60 w=50 x=850 y=280
+obj rope target=1 x=405 y=60
+obj rope target=2 x=875 y=60
+obj plank h=14 hp=0 w=120 x=520 y=400
+obj plank h=14 hp=0 w=120 x=640 y=400
+obj rope target=5 x=580 y=120
+obj rope target=6 x=700 y=120
+obj crate drop=0.08 h=50 hp=60 w=50 x=260 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=970 y=570

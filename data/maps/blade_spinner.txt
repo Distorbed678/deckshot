@@ -1,0 +1,16 @@
+deckshot-map 1
+name Blade Spinner
+spawn 160 580
+spawn 1120 580
+spawn 200 360
+spawn 1080 360
+rect 60 620 580 100
+rect 640 620 580 100
+rect 600 360 80 40
+oneway 140 400 180 14
+oneway 960 400 180 14
+oneway 380 260 120 14
+oneway 780 260 120 14
+oneway 400 500 100 14
+oneway 780 500 100 14
+obj arm count=2 damage=25 length=130 phase=0 r=24 spin=1.4 x=640 y=380

@@ -1,0 +1,18 @@
+deckshot-map 1
+name Conveyor Line
+spawn 160 560
+spawn 1120 560
+spawn 200 360
+spawn 1080 360
+rect 60 620 580 60
+rect 640 620 580 60
+oneway 480 460 120 14
+oneway 680 460 120 14
+oneway 540 300 100 14
+oneway 640 300 100 14
+obj conveyor h=20 speed=150 w=300 x=60 y=600
+obj conveyor h=20 speed=-150 w=300 x=920 y=600
+obj conveyor h=20 speed=150 w=280 x=360 y=600
+obj conveyor h=20 speed=-150 w=280 x=640 y=600
+obj conveyor h=20 speed=-150 w=220 x=140 y=400
+obj conveyor h=20 speed=150 w=220 x=920 y=400

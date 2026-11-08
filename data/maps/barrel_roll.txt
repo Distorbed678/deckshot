@@ -1,0 +1,20 @@
+deckshot-map 1
+name Barrel Roll
+spawn 140 580
+spawn 1140 580
+spawn 200 360
+spawn 1080 360
+rect 60 620 580 60
+rect 640 620 580 60
+oneway 140 400 180 14
+oneway 960 400 180 14
+oneway 500 340 140 14
+oneway 640 340 140 14
+obj conveyor h=20 speed=90 w=400 x=240 y=600
+obj conveyor h=20 speed=-90 w=400 x=640 y=600
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=300 y=552
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=944 y=552
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=520 y=260
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=724 y=260
+obj rope target=5 x=538 y=60
+obj rope target=6 x=742 y=60

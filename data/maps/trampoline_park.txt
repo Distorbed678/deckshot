@@ -1,0 +1,16 @@
+deckshot-map 1
+name Trampoline Park
+spawn 160 580
+spawn 1120 580
+spawn 120 300
+spawn 1160 300
+rect 60 620 580 100
+rect 640 620 580 100
+rect 560 180 160 20
+oneway 80 340 160 14
+oneway 1040 340 160 14
+oneway 440 440 120 14
+oneway 720 440 120 14
+obj pad h=14 power=1350 w=80 x=320 y=606
+obj pad h=14 power=1350 w=80 x=880 y=606
+obj spikes damage=30 dir=down h=18 w=160 x=560 y=200

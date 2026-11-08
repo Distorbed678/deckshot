@@ -1,0 +1,17 @@
+deckshot-map 1
+name Acid Bath
+spawn 140 540
+spawn 1140 540
+spawn 340 380
+spawn 940 380
+rect 60 580 180 140
+rect 1040 580 180 140
+oneway 300 520 100 14
+oneway 880 520 100 14
+oneway 560 480 160 14
+oneway 300 420 120 14
+oneway 860 420 120 14
+oneway 460 320 120 14
+oneway 700 320 120 14
+obj acid damage=20 h=80 w=400 x=240 y=640
+obj acid damage=20 h=80 w=400 x=640 y=640

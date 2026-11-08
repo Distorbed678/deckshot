@@ -1,0 +1,16 @@
+deckshot-map 1
+name Demolition
+spawn 140 580
+spawn 1140 580
+spawn 200 380
+spawn 1080 380
+rect 60 620 580 100
+rect 640 620 580 100
+rect 120 420 180 20
+rect 980 420 180 20
+obj wall h=120 hp=150 w=40 x=300 y=500
+obj wall h=120 hp=150 w=40 x=940 y=500
+obj wall h=40 hp=150 w=80 x=600 y=380
+obj wall h=200 hp=260 w=80 x=600 y=420
+obj wall h=30 hp=120 w=120 x=420 y=300
+obj wall h=30 hp=120 w=120 x=740 y=300

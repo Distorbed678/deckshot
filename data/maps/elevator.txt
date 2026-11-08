@@ -1,0 +1,18 @@
+deckshot-map 1
+name Elevator
+spawn 140 580
+spawn 1140 580
+spawn 160 300
+spawn 1120 300
+rect 60 620 240 60
+rect 980 620 240 60
+rect 60 340 200 20
+rect 1020 340 200 20
+oneway 520 440 120 14
+oneway 640 440 120 14
+rect 560 600 80 120
+rect 640 600 80 120
+oneway 500 220 140 14
+oneway 640 220 140 14
+obj platform h=16 speed=110 w=110 x=340 y=600 path=395,608;395,280
+obj platform h=16 speed=110 w=110 x=830 y=600 path=885,608;885,280

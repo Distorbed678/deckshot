@@ -1,0 +1,29 @@
+deckshot-map 1
+name Rope Bridge
+spawn 140 540
+spawn 1140 540
+spawn 200 360
+spawn 1080 360
+rect 40 580 200 140
+rect 1040 580 200 140
+oneway 120 400 120 14
+oneway 1040 400 120 14
+oneway 540 360 200 14
+obj acid damage=20 h=60 w=400 x=240 y=660
+obj acid damage=20 h=60 w=400 x=640 y=660
+obj plank h=14 hp=0 w=90 x=260 y=540
+obj plank h=14 hp=0 w=90 x=930 y=540
+obj rope target=3 x=305 y=300
+obj rope target=4 x=975 y=300
+obj plank h=14 hp=0 w=90 x=355 y=540
+obj plank h=14 hp=0 w=90 x=835 y=540
+obj rope target=7 x=400 y=300
+obj rope target=8 x=880 y=300
+obj plank h=14 hp=0 w=90 x=450 y=540
+obj plank h=14 hp=0 w=90 x=740 y=540
+obj rope target=11 x=495 y=300
+obj rope target=12 x=785 y=300
+obj plank h=14 hp=0 w=90 x=545 y=540
+obj plank h=14 hp=0 w=90 x=645 y=540
+obj rope target=15 x=590 y=300
+obj rope target=16 x=690 y=300

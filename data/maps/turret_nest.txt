@@ -1,0 +1,16 @@
+deckshot-map 1
+name Turret Nest
+spawn 140 580
+spawn 1140 580
+spawn 220 360
+spawn 1060 360
+rect 60 620 580 100
+rect 640 620 580 100
+rect 560 200 160 24
+oneway 160 400 160 14
+oneway 960 400 160 14
+obj turret damage=18 hp=80 rate=2.2 x=640 y=240
+obj wall h=120 hp=160 w=30 x=360 y=500
+obj wall h=120 hp=160 w=30 x=890 y=500
+obj wall h=120 hp=160 w=30 x=400 y=280
+obj wall h=120 hp=160 w=30 x=850 y=280

@@ -1,0 +1,18 @@
+deckshot-map 1
+name Hangar
+spawn 220 580
+spawn 1060 580
+spawn 420 400
+spawn 860 400
+rect 60 620 580 60
+rect 640 620 580 60
+rect 60 160 580 24
+rect 640 160 580 24
+rect 60 184 24 300
+rect 1196 184 24 300
+oneway 200 460 160 14
+oneway 920 460 160 14
+oneway 380 320 160 14
+oneway 740 320 160 14
+oneway 560 470 80 14
+oneway 640 470 80 14

@@ -1,0 +1,20 @@
+deckshot-map 1
+name Sky Ladder
+spawn 200 580
+spawn 1080 580
+spawn 300 220
+spawn 980 220
+rect 120 620 300 60
+rect 860 620 300 60
+oneway 120 500 100 14
+oneway 1060 500 100 14
+oneway 260 400 100 14
+oneway 920 400 100 14
+oneway 120 300 100 14
+oneway 1060 300 100 14
+oneway 260 260 120 14
+oneway 900 260 120 14
+oneway 440 460 160 14
+oneway 680 460 160 14
+oneway 540 340 100 14
+oneway 640 340 100 14

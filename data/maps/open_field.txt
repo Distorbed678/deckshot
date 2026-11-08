@@ -1,0 +1,14 @@
+deckshot-map 1
+name Open Field
+spawn 200 580
+spawn 1080 580
+spawn 500 580
+spawn 780 580
+rect 80 620 560 60
+rect 640 620 560 60
+oneway 300 420 120 14
+oneway 860 420 120 14
+oneway 540 300 100 14
+oneway 640 300 100 14
+oneway 100 300 100 14
+oneway 1080 300 100 14

@@ -1,0 +1,18 @@
+deckshot-map 1
+name Laser Tag
+spawn 140 580
+spawn 1140 580
+spawn 220 380
+spawn 1060 380
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 140 420 180 14
+oneway 960 420 180 14
+rect 560 300 160 20
+obj laser damage=40 dir=right off=2.4 on=0.9 warn=0.8 x=76 y=430
+obj laser damage=40 dir=left off=2.4 on=0.9 warn=0.8 x=1204 y=430
+obj crate drop=0.08 h=50 hp=60 w=50 x=300 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=930 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=500 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=730 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=615 y=250

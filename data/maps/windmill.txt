@@ -1,0 +1,15 @@
+deckshot-map 1
+name Windmill
+spawn 180 580
+spawn 1100 580
+spawn 160 300
+spawn 1120 300
+rect 80 620 280 60
+rect 920 620 280 60
+rect 80 340 140 20
+rect 1060 340 140 20
+oneway 580 560 120 14
+obj fan dir=up force=3200 h=300 w=100 x=400 y=380
+obj fan dir=up force=3200 h=300 w=100 x=780 y=380
+obj platform h=16 speed=90 w=100 x=500 y=420 path=550,428;550,260
+obj platform h=16 speed=90 w=100 x=680 y=420 path=730,428;730,260

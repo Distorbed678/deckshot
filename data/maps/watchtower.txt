@@ -1,0 +1,16 @@
+deckshot-map 1
+name Watchtower
+spawn 140 580
+spawn 1140 580
+spawn 200 400
+spawn 1080 400
+rect 60 620 580 100
+rect 640 620 580 100
+rect 600 300 80 320
+oneway 140 440 180 14
+oneway 960 440 180 14
+oneway 400 320 120 14
+oneway 760 320 120 14
+obj turret damage=18 hp=90 rate=2.4 x=640 y=280
+obj wall h=120 hp=140 w=30 x=520 y=500
+obj wall h=120 hp=140 w=30 x=730 y=500

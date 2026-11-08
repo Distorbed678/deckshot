@@ -1,0 +1,16 @@
+deckshot-map 1
+name Sawmill
+spawn 140 580
+spawn 1140 580
+spawn 90 400
+spawn 1190 400
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 520 300 120 14
+oneway 640 300 120 14
+rect 40 440 100 20
+rect 1140 440 100 20
+obj saw damage=25 r=26 speed=130 x=400 y=600 path=300,600;520,600
+obj saw damage=25 r=26 speed=130 x=880 y=600 path=980,600;760,600
+obj conveyor h=20 speed=140 w=200 x=240 y=420
+obj conveyor h=20 speed=-140 w=200 x=840 y=420

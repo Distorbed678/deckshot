@@ -1,0 +1,16 @@
+deckshot-map 1
+name Tiers
+spawn 200 580
+spawn 1080 580
+spawn 340 380
+spawn 940 380
+rect 100 620 540 60
+rect 640 620 540 60
+oneway 280 500 160 14
+oneway 840 500 160 14
+oneway 420 380 160 14
+oneway 700 380 160 14
+oneway 560 260 80 14
+oneway 640 260 80 14
+oneway 120 300 120 14
+oneway 1040 300 120 14

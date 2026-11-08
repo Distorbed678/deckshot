@@ -1,0 +1,18 @@
+deckshot-map 1
+name Pillarbox
+spawn 140 580
+spawn 1140 580
+spawn 460 400
+spawn 820 400
+rect 60 620 580 60
+rect 640 620 580 60
+rect 260 380 40 240
+rect 980 380 40 240
+rect 560 300 40 200
+rect 680 300 40 200
+rect 400 440 120 20
+rect 760 440 120 20
+oneway 80 440 120 14
+oneway 1080 440 120 14
+oneway 300 260 120 14
+oneway 860 260 120 14

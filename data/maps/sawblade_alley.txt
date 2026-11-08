@@ -1,0 +1,16 @@
+deckshot-map 1
+name Sawblade Alley
+spawn 140 580
+spawn 1140 580
+spawn 160 340
+spawn 1120 340
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 100 380 180 14
+oneway 1000 380 180 14
+oneway 460 440 120 14
+oneway 700 440 120 14
+oneway 500 260 140 14
+oneway 640 260 140 14
+obj saw damage=25 r=24 speed=140 x=380 y=520 path=380,560;380,300
+obj saw damage=25 r=24 speed=140 x=900 y=520 path=900,560;900,300

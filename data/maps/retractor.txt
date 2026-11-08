@@ -1,0 +1,16 @@
+deckshot-map 1
+name Retractor
+spawn 140 580
+spawn 1140 580
+spawn 220 400
+spawn 1060 400
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 160 460 160 14
+oneway 960 460 160 14
+oneway 420 380 140 14
+oneway 720 380 140 14
+oneway 560 260 160 14
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=120 warn=0.6 x=300 y=604
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=120 warn=0.6 x=860 y=604
+obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=1.6 w=160 warn=0.6 x=560 y=604

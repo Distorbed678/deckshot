@@ -1,0 +1,17 @@
+deckshot-map 1
+name Breakout
+spawn 140 580
+spawn 1140 580
+spawn 220 380
+spawn 1060 380
+rect 60 620 580 100
+rect 640 620 580 100
+rect 560 600 160 20
+oneway 160 420 180 14
+oneway 940 420 180 14
+oneway 400 300 120 14
+oneway 760 300 120 14
+obj wall h=30 hp=140 w=160 x=560 y=440
+obj wall h=180 hp=180 w=20 x=540 y=440
+obj wall h=180 hp=180 w=20 x=720 y=440
+obj crate drop=0.5 h=50 hp=60 w=50 x=615 y=550

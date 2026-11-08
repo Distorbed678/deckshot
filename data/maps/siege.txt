@@ -1,0 +1,20 @@
+deckshot-map 1
+name Siege
+spawn 120 580
+spawn 1160 580
+spawn 160 300
+spawn 1120 300
+rect 60 620 580 100
+rect 640 620 580 100
+rect 220 460 40 160
+rect 1020 460 40 160
+rect 60 340 200 20
+rect 1020 340 200 20
+oneway 400 380 120 14
+oneway 760 380 120 14
+obj wall h=120 hp=160 w=40 x=420 y=500
+obj wall h=120 hp=160 w=40 x=820 y=500
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=470 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=774 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=600 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=644 y=572

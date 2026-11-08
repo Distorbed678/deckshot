@@ -1,0 +1,16 @@
+deckshot-map 1
+name Spinning Wheels
+spawn 140 580
+spawn 1140 580
+spawn 180 300
+spawn 1100 300
+rect 60 620 580 100
+rect 640 620 580 100
+rect 380 440 40 40
+rect 860 440 40 40
+oneway 100 340 180 14
+oneway 1000 340 180 14
+oneway 500 260 140 14
+oneway 640 260 140 14
+obj arm count=2 damage=25 length=90 r=20 spin=-1.6 x=400 y=460
+obj arm count=2 damage=25 length=90 r=20 spin=1.6 x=880 y=460

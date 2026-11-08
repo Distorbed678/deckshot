@@ -1,0 +1,17 @@
+deckshot-map 1
+name Crossroads
+spawn 180 580
+spawn 1100 580
+spawn 260 340
+spawn 1020 340
+rect 80 620 300 60
+rect 900 620 300 60
+oneway 480 620 160 14
+oneway 640 620 160 14
+rect 600 300 80 240
+oneway 440 420 160 14
+oneway 680 420 160 14
+oneway 180 380 180 14
+oneway 920 380 180 14
+oneway 440 240 120 14
+oneway 720 240 120 14

@@ -1,0 +1,18 @@
+deckshot-map 1
+name Pendulum
+spawn 140 580
+spawn 1140 580
+spawn 180 360
+spawn 1100 360
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 120 420 160 14
+oneway 1000 420 160 14
+oneway 500 220 100 14
+oneway 680 220 100 14
+obj saw damage=25 r=26 speed=0 x=420 y=440
+obj saw damage=25 r=26 speed=0 x=860 y=440
+obj rope target=1 x=420 y=60
+obj rope target=2 x=860 y=60
+obj saw damage=25 r=30 speed=0 x=640 y=360
+obj rope target=5 x=640 y=40

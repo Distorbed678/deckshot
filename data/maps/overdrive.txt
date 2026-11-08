@@ -1,0 +1,16 @@
+deckshot-map 1
+name Overdrive
+spawn 180 300
+spawn 1100 300
+spawn 500 260
+spawn 780 260
+rect 60 620 580 60
+rect 640 620 580 60
+oneway 100 340 160 14
+oneway 1020 340 160 14
+oneway 440 300 120 14
+oneway 720 300 120 14
+obj conveyor h=20 speed=260 w=580 x=60 y=600
+obj conveyor h=20 speed=-260 w=580 x=640 y=600
+obj pad h=14 power=1350 w=60 x=400 y=586
+obj pad h=14 power=1350 w=60 x=820 y=586

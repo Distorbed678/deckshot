@@ -1,0 +1,17 @@
+deckshot-map 1
+name Shattered
+spawn 140 540
+spawn 1140 540
+spawn 200 300
+spawn 1080 300
+rect 60 580 220 140
+rect 1000 580 220 140
+oneway 100 340 160 14
+oneway 1020 340 160 14
+rect 400 360 120 20
+rect 760 360 120 20
+obj acid damage=20 h=50 w=360 x=280 y=670
+obj acid damage=20 h=50 w=360 x=640 y=670
+obj glass h=16 hp=40 w=340 x=300 y=520
+obj glass h=16 hp=40 w=340 x=640 y=520
+obj glass h=16 hp=40 w=160 x=560 y=300

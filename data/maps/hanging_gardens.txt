@@ -1,0 +1,20 @@
+deckshot-map 1
+name Hanging Gardens
+spawn 160 580
+spawn 1120 580
+spawn 340 300
+spawn 940 300
+rect 60 620 240 60
+rect 980 620 240 60
+rect 80 400 140 20
+rect 1060 400 140 20
+oneway 300 320 100 14
+oneway 880 320 100 14
+obj acid damage=20 h=60 w=340 x=300 y=660
+obj acid damage=20 h=60 w=340 x=640 y=660
+obj plank h=14 hp=0 w=120 x=340 y=460
+obj plank h=14 hp=0 w=120 x=820 y=460
+obj rope target=3 x=400 y=140
+obj rope target=4 x=880 y=140
+obj plank h=14 hp=0 w=120 x=580 y=360
+obj rope target=7 x=640 y=60

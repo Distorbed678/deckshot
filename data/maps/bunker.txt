@@ -1,0 +1,18 @@
+deckshot-map 1
+name Bunker
+spawn 200 580
+spawn 1080 580
+spawn 460 580
+spawn 820 580
+rect 60 620 580 60
+rect 640 620 580 60
+rect 320 560 40 60
+rect 920 560 40 60
+rect 560 540 40 80
+rect 680 540 40 80
+rect 160 420 240 20
+rect 880 420 240 20
+rect 480 360 160 20
+rect 640 360 160 20
+oneway 80 300 100 14
+oneway 1100 300 100 14

@@ -1,0 +1,19 @@
+deckshot-map 1
+name Bounce House
+spawn 160 580
+spawn 1120 580
+spawn 120 260
+spawn 1160 260
+rect 60 620 260 100
+rect 960 620 260 100
+oneway 400 400 120 14
+oneway 760 400 120 14
+rect 60 300 160 20
+rect 1060 300 160 20
+oneway 560 200 160 14
+obj acid damage=20 h=60 w=320 x=320 y=660
+obj acid damage=20 h=60 w=320 x=640 y=660
+obj pad h=14 power=1350 w=70 x=240 y=606
+obj pad h=14 power=1350 w=70 x=970 y=606
+obj pad h=14 power=1200 w=60 x=420 y=386
+obj pad h=14 power=1200 w=60 x=800 y=386

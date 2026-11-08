@@ -1,0 +1,26 @@
+deckshot-map 1
+name Bridgeworks
+spawn 140 540
+spawn 1140 540
+spawn 160 340
+spawn 1120 340
+rect 60 580 220 140
+rect 1000 580 220 140
+oneway 100 380 160 14
+oneway 1020 380 160 14
+obj spikes damage=30 dir=up h=18 w=360 x=280 y=690
+obj spikes damage=30 dir=up h=18 w=360 x=640 y=690
+obj plank h=14 hp=0 w=100 x=290 y=520
+obj plank h=14 hp=0 w=100 x=890 y=520
+obj rope target=3 x=340 y=260
+obj rope target=4 x=940 y=260
+obj plank h=14 hp=0 w=100 x=398 y=520
+obj plank h=14 hp=0 w=100 x=782 y=520
+obj rope target=7 x=448 y=260
+obj rope target=8 x=832 y=260
+obj plank h=14 hp=0 w=100 x=506 y=520
+obj plank h=14 hp=0 w=100 x=674 y=520
+obj rope target=11 x=556 y=260
+obj rope target=12 x=724 y=260
+obj plank h=14 hp=0 w=48 x=616 y=520
+obj rope target=15 x=640 y=260

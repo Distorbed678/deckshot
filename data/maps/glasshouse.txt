@@ -1,0 +1,17 @@
+deckshot-map 1
+name Glasshouse
+spawn 160 580
+spawn 1120 580
+spawn 300 360
+spawn 980 360
+rect 60 620 580 100
+rect 640 620 580 100
+rect 200 400 200 20
+rect 880 400 200 20
+rect 480 380 160 20
+rect 640 380 160 20
+oneway 560 240 160 14
+obj glass h=140 hp=1 w=16 x=380 y=480
+obj glass h=140 hp=1 w=16 x=884 y=480
+obj glass h=120 hp=1 w=16 x=560 y=260
+obj glass h=120 hp=1 w=16 x=704 y=260

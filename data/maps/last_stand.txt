@@ -1,0 +1,18 @@
+deckshot-map 1
+name Last Stand
+spawn 140 580
+spawn 1140 580
+spawn 160 340
+spawn 1120 340
+rect 60 620 580 100
+rect 640 620 580 100
+rect 580 180 120 20
+oneway 100 380 180 14
+oneway 1000 380 180 14
+oneway 440 320 120 14
+oneway 720 320 120 14
+obj turret damage=15 hp=80 rate=2.5 x=640 y=160
+obj wall h=120 hp=150 w=30 x=440 y=500
+obj wall h=120 hp=150 w=30 x=810 y=500
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=330 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=914 y=572

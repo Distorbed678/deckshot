@@ -1,0 +1,22 @@
+deckshot-map 1
+name Powder Keg
+spawn 160 580
+spawn 1120 580
+spawn 320 380
+spawn 960 380
+rect 80 620 560 100
+rect 640 620 560 100
+oneway 260 420 160 14
+oneway 860 420 160 14
+oneway 520 300 120 14
+oneway 640 300 120 14
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=420 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=824 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=460 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=784 y=572
+obj crate drop=0.08 h=50 hp=60 w=50 x=380 y=570
+obj crate drop=0.08 h=50 hp=60 w=50 x=850 y=570
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=380 y=372
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=864 y=372
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=600 y=572
+obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=644 y=572

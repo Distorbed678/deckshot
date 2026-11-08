@@ -1,0 +1,15 @@
+deckshot-map 1
+name Crusher Works
+spawn 140 580
+spawn 1140 580
+spawn 160 380
+spawn 1120 380
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 100 420 140 14
+oneway 1040 420 140 14
+oneway 460 220 100 14
+oneway 720 220 100 14
+obj crusher damage=60 h=60 travel=260 w=110 wait=1.8 x=340 y=300
+obj crusher damage=60 h=60 travel=260 w=110 wait=1.8 x=830 y=300
+obj crusher damage=60 h=60 phase=1.2 travel=300 w=120 wait=2.4 x=580 y=260

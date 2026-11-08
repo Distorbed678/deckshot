@@ -1,0 +1,16 @@
+deckshot-map 1
+name Firewall
+spawn 140 580
+spawn 1140 580
+spawn 160 340
+spawn 1120 340
+rect 60 620 580 100
+rect 640 620 580 100
+rect 600 600 80 20
+oneway 100 380 200 14
+oneway 980 380 200 14
+oneway 380 300 140 14
+oneway 760 300 140 14
+oneway 400 480 140 14
+oneway 740 480 140 14
+obj flame damage=12 length=330 off=2 on=1.6 warn=0.6 x=640 y=620

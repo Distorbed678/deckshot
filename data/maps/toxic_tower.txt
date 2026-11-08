@@ -1,0 +1,18 @@
+deckshot-map 1
+name Toxic Tower
+spawn 140 540
+spawn 1140 540
+spawn 200 340
+spawn 1080 340
+rect 60 580 220 140
+rect 1000 580 220 140
+rect 580 400 120 320
+oneway 320 480 140 14
+oneway 820 480 140 14
+rect 100 380 160 20
+rect 1020 380 160 20
+obj acid damage=20 h=60 w=360 x=280 y=660
+obj acid damage=20 h=60 w=360 x=640 y=660
+obj gas h=42 hp=20 radius=110 w=28 x=626 y=358
+obj gas h=42 hp=20 radius=110 w=28 x=110 y=338
+obj gas h=42 hp=20 radius=110 w=28 x=1142 y=338

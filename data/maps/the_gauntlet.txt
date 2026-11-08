@@ -1,0 +1,18 @@
+deckshot-map 1
+name The Gauntlet
+spawn 120 580
+spawn 1160 580
+spawn 160 320
+spawn 1120 320
+rect 60 620 580 100
+rect 640 620 580 100
+oneway 100 380 180 14
+oneway 1000 380 180 14
+oneway 380 440 120 14
+oneway 780 440 120 14
+obj spikes damage=30 dir=up h=16 w=80 x=280 y=604
+obj spikes damage=30 dir=up h=16 w=80 x=920 y=604
+obj flame damage=12 length=140 off=2.5 on=1 phase=0.8 warn=0.5 x=460 y=620
+obj flame damage=12 length=140 off=2.5 on=1 phase=0.8 warn=0.5 x=820 y=620
+obj saw damage=25 r=24 speed=120 x=560 y=420 path=560,420;560,300
+obj saw damage=25 r=24 speed=120 x=720 y=420 path=720,420;720,300

@@ -1,0 +1,15 @@
+deckshot-map 1
+name Updraft
+spawn 140 540
+spawn 1140 540
+spawn 160 300
+spawn 1120 300
+rect 60 580 220 140
+rect 1000 580 220 140
+rect 560 580 160 140
+oneway 440 300 100 14
+oneway 740 300 100 14
+rect 60 340 120 20
+rect 1100 340 120 20
+obj fan dir=up force=3400 h=440 w=120 x=300 y=260
+obj fan dir=up force=3400 h=440 w=120 x=860 y=260

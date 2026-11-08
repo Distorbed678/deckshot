@@ -1,0 +1,19 @@
+deckshot-map 1
+name Crumble Tower
+spawn 160 580
+spawn 1120 580
+spawn 300 300
+spawn 980 300
+rect 80 620 300 100
+rect 900 620 300 100
+rect 240 320 120 20
+rect 920 320 120 20
+obj crumble back=4 delay=0.5 h=18 w=140 x=380 y=560
+obj crumble back=4 delay=0.5 h=18 w=140 x=760 y=560
+obj crumble back=4 delay=0.5 h=18 w=120 x=300 y=440
+obj crumble back=4 delay=0.5 h=18 w=120 x=860 y=440
+obj crumble back=4 delay=0.5 h=18 w=120 x=500 y=360
+obj crumble back=4 delay=0.5 h=18 w=120 x=660 y=360
+obj crumble back=4 delay=0.5 h=18 w=160 x=560 y=220
+obj acid damage=20 h=60 w=260 x=380 y=660
+obj acid damage=20 h=60 w=260 x=640 y=660
