@@ -109,6 +109,28 @@ function Snap.encode(world, events)
     add("<hhffBH", i16(w.x), i16(w.y), w.t, w.max, w.owner.slot or 0, u16(w.radius))
   end
 
+  -- Map objects (same order as the map's list), spawned effects, the barrier.
+  local objs = world.objects or {}
+  add("<B", math.min(#objs, 255))
+  for i = 1, math.min(#objs, 255) do
+    local o = objs[i]
+    local flags = (o.alive and 1 or 0) + (o.falling and 2 or 0)
+    local hpFrac = o.maxHp and o.maxHp > 0 and u8(255 * math.max(0, o.hp or 0) / o.maxHp) or 255
+    add("<BhhfBB", flags, i16(o.x), i16(o.y), o.angle or o.a or 0, u8(o.s), hpFrac)
+  end
+  local effects = world.effects or {}
+  add("<B", math.min(#effects, 255))
+  for i = 1, math.min(#effects, 255) do
+    local e = effects[i]
+    add("<BhhBBB", e.type == "pickup" and 1 or 2, i16(e.x), i16(e.y), e.kind or 0, u8(e.life * 20), u8((e.radius or 0) / 2))
+  end
+  local b = world.barrier
+  if b then
+    add("<Bhhhh", 1, i16(b[1]), i16(b[2]), i16(b[3]), i16(b[4]))
+  else
+    add("<B", 0)
+  end
+
   events = events or {}
   add("<H", #events)
   for _, e in ipairs(events) do
@@ -235,6 +257,30 @@ function Snap.decode(data)
     local w = {}
     w.x, w.y, w.t, w.max, w.slot, w.radius, pos = unpack("<hhffBH", raw, pos)
     v.wells[i] = w
+  end
+
+  local no2
+  no2, pos = unpack("<B", raw, pos)
+  v.objects = {}
+  for i = 1, no2 do
+    local flags, x, y, a, s, hp
+    flags, x, y, a, s, hp, pos = unpack("<BhhfBB", raw, pos)
+    v.objects[i] = { alive = flags % 2 == 1, falling = flags >= 2, x = x, y = y, a = a, s = s, hp = hp / 255 }
+  end
+  local nfx
+  nfx, pos = unpack("<B", raw, pos)
+  v.effects = {}
+  for i = 1, nfx do
+    local kind, x, y, k, life, rad
+    kind, x, y, k, life, rad, pos = unpack("<BhhBBB", raw, pos)
+    v.effects[i] = { type = kind == 1 and "pickup" or "cloud", x = x, y = y, kind = k, life = life / 20, radius = rad * 2 }
+  end
+  local hasBarrier
+  hasBarrier, pos = unpack("<B", raw, pos)
+  if hasBarrier == 1 then
+    local x0, y0, x1, y1
+    x0, y0, x1, y1, pos = unpack("<hhhh", raw, pos)
+    v.barrier = { x0, y0, x1, y1 }
   end
 
   local ne

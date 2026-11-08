@@ -8,6 +8,7 @@ local World = require "game.world"
 local Player = require "game.player"
 local Bullet = require "game.bullet"
 local Map = require "game.map"
+local Objects = require "game.objects"
 local Cards = require "game.cards"
 local Input = require "core.input"
 local Bloom = require "gfx.bloom"
@@ -139,6 +140,13 @@ function Match:scene()
   end
   local w = self.world
   return w.players, w.bullets, w.wells, w.map
+end
+
+-- Map objects, spawned effects and the barrier rect, for any role.
+function Match:sceneObjects()
+  if self.role == "client" then return self.objViews or {}, self.view.effects or {}, self.view.barrier end
+  local w = self.world
+  return w.objects or {}, w.effects or {}, w.barrier
 end
 
 function Match:status()
@@ -370,6 +378,23 @@ function Match:applySnapshot(v)
       owner = { color = World.COLORS[w.slot] or { 1, 1, 1 } },
     }
   end
+
+  -- Map objects: rebuilt from the map's list when the map changes, then updated from the snapshot.
+  local map = Map.list[v.mapIndex] or Map.list[1]
+  if self.objMap ~= map then
+    self.objMap = map
+    self.objViews = Objects.build(map)
+  end
+  for i, ov in ipairs(v.objects or {}) do
+    local o = self.objViews[i]
+    if o then
+      o.alive, o.falling, o.x, o.y, o.s = ov.alive, ov.falling, ov.x, ov.y, ov.s
+      if o.type == "rope" then o.angle = ov.a else o.a = ov.a end
+      if o.maxHp then o.hp = ov.hp * o.maxHp end
+    end
+  end
+  view.effects = v.effects
+  view.barrier = v.barrier
 
   for _, e in ipairs(v.fx) do
     if e[1] == 1 then
@@ -1042,17 +1067,23 @@ function Match:draw()
 
   local sx, sy = fx.offset()
 
+  local objs, effects, barrier = self:sceneObjects()
   love.graphics.push()
   love.graphics.translate(sx, sy)
   Map.draw(map)
+  Objects.draw(objs, effects)
   hud.drawWells(wells)
   for _, b in ipairs(bullets) do b:draw() end
   for _, p in ipairs(players) do p:draw() end
   fx.draw()
   love.graphics.pop()
 
+  if barrier then hud.drawBarrier(barrier) end
+
   Bloom.draw(function()
     love.graphics.translate(sx, sy)
+    Objects.drawGlow(objs, effects)
+    if barrier then hud.drawBarrier(barrier, true) end
     for _, b in ipairs(bullets) do b:draw() end
     for _, p in ipairs(players) do p:drawGlow() end
     fx.draw()

@@ -67,6 +67,8 @@ local defaults = {
   startCards = 1,        -- cards everyone picks before round 1
   pickTimer = 45,        -- seconds per pick online (0 = off); local play has no timer
   allowDiscard = true,   -- "discard a card instead" on the pick screen
+  hazards = true,        -- map hazards on (breakables always stay)
+  barrier = true,        -- sudden-death barrier in 3-4 player matches
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -277,6 +279,8 @@ function Settings.resetGameplay()
   v.startCards = defaults.startCards
   v.pickTimer = defaults.pickTimer
   v.allowDiscard = defaults.allowDiscard
+  v.hazards = defaults.hazards
+  v.barrier = defaults.barrier
   for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
   v.cards = {}
   v.maps = {}
@@ -304,7 +308,8 @@ end
 function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
-    startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard }
+    startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
+    hazards = v.hazards, barrier = v.barrier }
   for i, r in ipairs(Cards.RARITIES) do rules.weights[i] = v["weight_" .. r.id] end
   for _, c in ipairs(Cards.list) do
     rules.rarity[c.index] = Settings.cardRarity(c)

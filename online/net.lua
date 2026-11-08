@@ -133,8 +133,8 @@ function net.encodeRules(rules, cards, rarities)
     if rules.disabled[c.index] then b = b + 128 end
     parts[#parts + 1] = string.char(b)
   end
-  parts[#parts + 1] = pack("string", "<BBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
-    rules.allowDiscard and 1 or 0)
+  parts[#parts + 1] = pack("string", "<BBBBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
+    rules.allowDiscard and 1 or 0, rules.hazards == false and 0 or 1, rules.barrier == false and 0 or 1)
   return table.concat(parts)
 end
 
@@ -153,9 +153,11 @@ function net.decodeRules(data, rarities)
     rules.disabled[i] = b >= 128 or nil
   end
   pos = pos + nc
-  local discard
-  rules.startCards, rules.pickTimer, discard = unpack("<BBB", data, pos)
+  local discard, hazards, barrier
+  rules.startCards, rules.pickTimer, discard, hazards, barrier = unpack("<BBBBB", data, pos)
   rules.allowDiscard = discard == 1
+  rules.hazards = hazards == 1
+  rules.barrier = barrier == 1
   return rules
 end
 

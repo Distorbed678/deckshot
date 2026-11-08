@@ -372,7 +372,7 @@ function Screen:drawGameplay(x, y, w)
 
   if ui.button("Reset Gameplay Settings", lx, ly, colW, h) then Settings.resetGameplay() end
 
-  -- Rarity chances
+  -- Rarity chances, then arena rules
   local rx, ry = x + colW + 30, y
   local total = 0
   for _, r in ipairs(Cards.RARITIES) do total = total + v["weight_" .. r.id] end
@@ -388,6 +388,12 @@ function Screen:drawGameplay(x, y, w)
     if d ~= 0 then v[key] = weightStep(wt, d) end
     ry = ry + gap
   end
+  d = ui.cycler("Map hazards", v.hazards and "On" or "Off", rx, ry, colW, h)
+  if d ~= 0 then v.hazards = not v.hazards end
+  ry = ry + gap
+  d = ui.cycler("Sudden-death barrier", v.barrier and "On" or "Off", rx, ry, colW, h)
+  if d ~= 0 then v.barrier = not v.barrier end
+  ry = ry + gap
 
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)

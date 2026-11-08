@@ -3,6 +3,7 @@
 local Player = require "game.player"
 local Map = require "game.map"
 local Cards = require "game.cards"
+local Objects = require "game.objects"
 local fx = require "gfx.fx"
 local sfx = require "gfx.sfx"
 
@@ -41,6 +42,10 @@ function World.new(defs, winScore, rules)
     pickQueue = {},   -- upcoming picks: { slot, num, total }
     pickSerial = 0,   -- bumped on every new hand (u8), so stale choices can be ignored
     votes = {},       -- slot -> World.VOTE_* while the match is over
+    objects = {}, effects = {}, pendingBlasts = {},
+    time = 0,         -- seconds of play (drives hazard cycles)
+    duelTime = 0,     -- seconds since only two players are left (sudden-death barrier)
+    barrier = nil,    -- { x0, y0, x1, y1 } while the barrier is closing in
     on = {},
   }, World)
   for i, d in ipairs(defs) do
@@ -50,6 +55,7 @@ function World.new(defs, winScore, rules)
     p.peer = d.peer
     w.players[i] = p
   end
+  w.startPlayers = #defs
   return w
 end
 
@@ -90,9 +96,17 @@ end
 -- Pick a map and build the collision list.
 function World:loadMap()
   self.map, self.mapIndex = Map.random(self.mapIndex, self.rules.maps)
-  -- Everything players and bullets collide with: the map's rects (objects add to this later).
-  self.solids = {}
-  for i, r in ipairs(self.map.rects) do self.solids[i] = r end
+  -- Objects come back fresh every round. With hazards off, hazards (and ropes holding them) sit out.
+  self.objects = Objects.build(self.map)
+  if self.rules.hazards == false then
+    for _, o in ipairs(self.objects) do
+      if Objects.HAZARD[o.type] or (o.type == "rope" and o.held and Objects.HAZARD[o.held.type]) then o.alive = false end
+    end
+  end
+  self.effects, self.pendingBlasts = {}, {}
+  self.barrier, self.duelTime, self.barrierWarned = nil, 0, false
+  -- Everything players and bullets collide with: the map's rects plus solid objects.
+  Objects.rebuildSolids(self)
 end
 
 -- Start of a match: everyone picks their starting cards (rules.startCards, slot order), then round 1.
@@ -136,6 +150,7 @@ function World:startRound()
   end
   self.pick = nil
   self.pickQueue = {}
+  self.barrierCenter = nil
   self.roundWinner = nil
   self.state = "countdown"
   self.timer = 2.4
@@ -167,7 +182,10 @@ function World:update(dt)
     end
   elseif self.state == "playing" or self.state == "roundOver" then
     local sdt = (self.state == "roundOver") and dt * 0.35 or dt
+    self.time = self.time + sdt
+    Objects.update(self, sdt)
     for _, p in ipairs(self.players) do p:update(sdt, false) end
+    self:updateBarrier(sdt)
     for i = #self.bullets, 1, -1 do
       local b = self.bullets[i]
       if not b.dead then b:update(sdt, self) end
@@ -187,6 +205,46 @@ function World:update(dt)
       if self.timer <= 0 then self:afterRound() end
     end
   end
+end
+
+-- Melee swings hit map objects too (called from Player:meleeHitCheck).
+function World:meleeObjects(p, reach, heavy, power)
+  Objects.melee(self, p, reach, heavy, power)
+end
+
+-- Sudden death: in matches that started with 3+ players, a red barrier closes in once the
+-- round has been a 1v1 for BARRIER_DELAY seconds (host setting rules.barrier).
+World.BARRIER_DELAY, World.BARRIER_TIME = 30, 20
+World.BARRIER_SIZE = { 420, 320 }
+function World:updateBarrier(dt)
+  if self.state ~= "playing" or self.rules.barrier == false or self.startPlayers < 3 then return end
+  local alive = {}
+  for _, p in ipairs(self.players) do
+    if not p.dead and not p.disconnected then alive[#alive + 1] = p end
+  end
+  if #alive ~= 2 then return end
+  self.duelTime = self.duelTime + dt
+  if self.duelTime >= World.BARRIER_DELAY - 3 and not self.barrierWarned then
+    self.barrierWarned = true
+    sfx.play("barrier")
+    self:toast("SUDDEN DEATH - the walls are closing in!", 5)
+  end
+  if self.duelTime < World.BARRIER_DELAY then return end
+  if not self.barrierCenter then
+    local cx = (alive[1].x + alive[2].x) / 2
+    local cy = (alive[1].y + alive[2].y) / 2
+    local hw, hh = World.BARRIER_SIZE[1] / 2, World.BARRIER_SIZE[2] / 2
+    self.barrierCenter = { math.max(hw, math.min(1280 - hw, cx)), math.max(hh, math.min(720 - hh, cy)) }
+  end
+  local t = math.min(1, (self.duelTime - World.BARRIER_DELAY) / World.BARRIER_TIME)
+  t = t * t * (3 - 2 * t)
+  local c = self.barrierCenter
+  local hw, hh = World.BARRIER_SIZE[1] / 2, World.BARRIER_SIZE[2] / 2
+  self.barrier = {
+    0 + (c[1] - hw) * t, 0 + (c[2] - hh) * t,
+    1280 + (c[1] + hw - 1280) * t, 720 + (c[2] + hh - 720) * t,
+  }
+  for _, p in ipairs(alive) do p:checkBounds(self.barrier[1], self.barrier[2], self.barrier[3], self.barrier[4], true) end
 end
 
 function World:connectedCount()

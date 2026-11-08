@@ -497,33 +497,43 @@ end
 
 -- Left, right and bottom edges hurt and launch you back in; blocking makes it a free bounce.
 function Player:checkEdges()
+  self:checkBounds(0, 0, ARENA_W, ARENA_H, false)
+end
+
+-- Damaging bounds (arena edges, the sudden-death barrier). top: the top edge counts too.
+function Player:checkBounds(x0, y0, x1, y1, top)
   local r = self.r
   local side
-  if self.x - r < 0 then
-    self.x = r
+  if self.x - r < x0 then
+    self.x = x0 + r
     side = "left"
-  elseif self.x + r > ARENA_W then
-    self.x = ARENA_W - r
+  elseif self.x + r > x1 then
+    self.x = x1 - r
     side = "right"
-  elseif self.y + r > ARENA_H then
-    self.y = ARENA_H - r
+  elseif self.y + r > y1 then
+    self.y = y1 - r
     side = "bottom"
+  elseif top and self.y - r < y0 then
+    self.y = y0 + r
+    side = "top"
   end
   if not side then return end
   if side == "left" then
     self.vx, self.vy = EDGE.launch, math.min(self.vy, -EDGE.launchUp)
   elseif side == "right" then
     self.vx, self.vy = -EDGE.launch, math.min(self.vy, -EDGE.launchUp)
-  else
+  elseif side == "bottom" then
     self.vy = -EDGE.bottomLaunch
+  else
+    self.vy = EDGE.launchUp
   end
   self.controlLock = math.max(self.controlLock, 0.15)
   self.dashTimer, self.lungeTimer = 0, 0
   self.jumping = false
   if self.edgeCd > 0 then return end
   self.edgeCd = EDGE.cooldown
-  local ex = side == "left" and 0 or side == "right" and ARENA_W or self.x
-  local ey = side == "bottom" and ARENA_H or self.y
+  local ex = side == "left" and x0 or side == "right" and x1 or self.x
+  local ey = side == "bottom" and y1 or side == "top" and y0 or self.y
   if self:isBlocking() then
     fx.burst(ex, ey, { 1, 1, 1 }, 10, 260, 3)
     self:blocked()
@@ -650,6 +660,7 @@ function Player:moveY(dy, rects)
   local prevBottom = self.y + r
   self.onGround = false
   self.groundOneway = false
+  self.groundRect = nil
   self.y = self.y + dy
   for _, b in ipairs(rects) do
     if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
@@ -660,11 +671,13 @@ function Player:moveY(dy, rects)
           self.vy = 0
           self.onGround = true
           self.groundOneway = true
+          self.groundRect = b
         end
       elseif dy > 0 then
         self.y = b.y - r
         self.vy = 0
         self.onGround = true
+        self.groundRect = b
       elseif dy < 0 then
         -- Corner correction: bumping a ceiling's edge slides around it.
         local fromLeft = (self.x + r) - b.x

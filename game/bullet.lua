@@ -5,6 +5,8 @@ local sfx = require "gfx.sfx"
 local Bullet = {}
 Bullet.__index = Bullet
 
+local function objects() return require "game.objects" end
+
 local GRAVITY = 1800
 local MAX_SPEED = 3200
 local LASER_SPEED = 2000
@@ -255,7 +257,9 @@ function Bullet:step(dt, game)
   self.travel = self.travel + math.sqrt(mx * mx + my * my)
 
   self.x = self.x + mx
-  if Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2) then
+  local hx = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
+  if hx then
+    if hx.isObject and not self.ghost then objects().bulletHitSolid(game, hx, self) end
     if self.ghost then
       self.phased = true -- passed through a wall (Ghost Bullets bonus)
     else
@@ -266,7 +270,9 @@ function Bullet:step(dt, game)
   end
 
   self.y = self.y + my
-  if Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2) then
+  local hy = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
+  if hy then
+    if hy.isObject and not self.ghost then objects().bulletHitSolid(game, hy, self) end
     if self.ghost then
       self.phased = true
     else
@@ -278,6 +284,12 @@ function Bullet:step(dt, game)
 
   if self.x < -200 or self.x > 1480 or self.y > 900 or self.y < -600 then
     self.dead = true
+    return
+  end
+
+  if game.objects and objects().bulletTouch(game, self) then
+    self.dead = true
+    self:impact(game)
     return
   end
 
@@ -471,6 +483,7 @@ function Bullet:explode(game, mult)
   fx.addShake(5)
   if not self.isCluster then sfx.play(self.explosion > 100 and "explosion" or "explosionSmall", self.x) end
   local dmg = self:currentDamage() * (mult or 0.5)
+  if game.objects then objects().explosion(game, self.x, self.y, self.explosion, dmg * 2, self.owner) end
   for _, p in ipairs(game.players) do
     if p ~= self.owner and not p.dead then
       local dx, dy = p.x - self.x, p.y - self.y

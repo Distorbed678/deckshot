@@ -272,6 +272,22 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   love.graphics.printf(label, x, y + h - 30, w, "center")
 end
 
+-- The sudden-death barrier: darkness outside a pulsing red rect.
+function hud.drawBarrier(b, glowOnly)
+  local x0, y0, x1, y1 = b[1], b[2], b[3], b[4]
+  local a = 0.6 + 0.25 * math.sin(love.timer.getTime() * 6)
+  if not glowOnly then
+    love.graphics.setColor(0.35, 0, 0, 0.35)
+    love.graphics.rectangle("fill", 0, 0, app.W, y0)
+    love.graphics.rectangle("fill", 0, y1, app.W, app.H - y1)
+    love.graphics.rectangle("fill", 0, y0, x0, y1 - y0)
+    love.graphics.rectangle("fill", x1, y0, app.W - x1, y1 - y0)
+  end
+  love.graphics.setColor(1, 0.15, 0.12, a)
+  love.graphics.setLineWidth(glowOnly and 8 or 4)
+  love.graphics.rectangle("line", x0, y0, x1 - x0, y1 - y0)
+end
+
 function hud.drawWells(wells)
   local t = love.timer.getTime()
   for _, w in ipairs(wells) do
