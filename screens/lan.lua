@@ -10,7 +10,8 @@ local Lan = {}
 Lan.__index = Lan
 
 function Lan.new()
-  return setmetatable({ name = Settings.values.playerName or "", address = "", games = {} }, Lan)
+  return setmetatable({ name = Settings.values.playerName or "", address = Settings.values.lastLanAddress or "",
+    games = {} }, Lan)
 end
 
 function Lan:enter()
@@ -51,6 +52,10 @@ function Lan:host()
 end
 
 function Lan:join(address)
+  if address and address ~= "" then
+    Settings.values.lastLanAddress = address
+    Settings.save()
+  end
   self:saveName()
   lan.join(address)
 end

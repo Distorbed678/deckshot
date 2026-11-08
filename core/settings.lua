@@ -24,6 +24,7 @@ Settings.ROUND_OPTIONS = { 3, 5, 7, 10, 15 }
 Settings.PICK_FROM = { min = 2, max = 6 }
 Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
 Settings.START_CARDS = { min = 0, max = 5 }
+Settings.TEXT_SIZES = { { "Small", 0.9 }, { "Normal", 1 }, { "Large", 1.15 } }
 Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
 
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
@@ -82,6 +83,8 @@ local defaults = {
   clientToken = "",      -- random id, so a LAN host can give you your slot back after a disconnect
   lobbyVisibility = "public", -- Steam lobbies: public (listed), friends, code (unlisted)
   damageNumbers = true,  -- floating damage numbers
+  textSize = 2,          -- 1 small, 2 normal, 3 large (Settings.TEXT_SIZES)
+  lastLanAddress = "",   -- the last LAN address you typed
   scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
@@ -203,6 +206,7 @@ function Settings.load()
   v.pickFrom = clamp(math.floor(v.pickFrom), Settings.PICK_FROM.min, Settings.PICK_FROM.max)
   v.picksPerRound = clamp(math.floor(v.picksPerRound), Settings.PICKS_PER_ROUND.min, Settings.PICKS_PER_ROUND.max)
   v.startCards = clamp(math.floor(v.startCards), Settings.START_CARDS.min, Settings.START_CARDS.max)
+  v.textSize = clamp(math.floor(v.textSize), 1, #Settings.TEXT_SIZES)
   v.pickTimer = clamp(math.floor(v.pickTimer), 0, 255)
   for _, r in ipairs(Cards.RARITIES) do
     local key = "weight_" .. r.id
@@ -411,6 +415,12 @@ function Settings.applyEffects()
   fx.shakeScale = Settings.SHAKE_LEVELS[v.shake][2]
   fx.particleScale = Settings.PARTICLE_LEVELS[v.particles][2]
   fx.showNumbers = v.damageNumbers
+  local app = package.loaded["core.app"]
+  local ts = Settings.TEXT_SIZES[v.textSize] or Settings.TEXT_SIZES[2]
+  if app and app.textScale ~= ts[2] then
+    app.textScale = ts[2]
+    app.renderScale = nil -- rebuild the fonts on the next frame
+  end
   sfx.volumes.master = clamp(v.volMaster, 0, 10) / 10
   sfx.volumes.sfx = clamp(v.volSfx, 0, 10) / 10
   sfx.volumes.ui = clamp(v.volUi, 0, 10) / 10

@@ -10,6 +10,7 @@ local app = {
   fonts = {},
   scale = 1, ox = 0, oy = 0,
   renderScale = nil, -- DPI scale the canvas and fonts were built for
+  textScale = 1,     -- text size option (Settings.TEXT_SIZES)
   showFps = false,
 }
 
@@ -19,11 +20,14 @@ local FONT_SIZES = { tiny = 12, small = 14, med = 18, button = 22, title = 26, b
 local function buildTargets(s)
   app.renderScale = s
   for name, size in pairs(FONT_SIZES) do
-    app.fonts[name] = love.graphics.newFont(size, "normal", s)
+    app.fonts[name] = love.graphics.newFont(math.floor(size * app.textScale + 0.5), "normal", s)
   end
   if app.canvas then app.canvas:release() end
   local ok, canvas = pcall(love.graphics.newCanvas, app.W, app.H, { msaa = 4, dpiscale = s })
   app.canvas = ok and canvas or love.graphics.newCanvas(app.W, app.H, { dpiscale = s })
+  if app.transCanvas then app.transCanvas:release() end
+  app.transCanvas = love.graphics.newCanvas(app.W, app.H, { dpiscale = s })
+  app.trans = nil
 end
 
 function app.load()
@@ -35,7 +39,15 @@ end
 -- A screen is a table with optional enter, leave, update(dt, isTop), draw,
 -- keypressed, keyreleased, mousepressed, mousereleased, textinput.
 
+---------------------------------------------------------------- transitions
+-- The next frame slides in from the right while the last one slides out to the left.
+local SLIDE_TIME = 0.35
+function app.slide()
+  if not app.noSlide then app.transPending = true end
+end
+
 function app.switch(screen, ...)
+  app.slide()
   for i = #app.stack, 1, -1 do
     local s = app.stack[i]
     if s.leave then s:leave() end
@@ -93,6 +105,17 @@ end
 
 function app.draw()
   app.updateViewport()
+  if app.transPending and app.transCanvas then
+    -- Keep the last finished frame for the slide.
+    app.transPending = false
+    love.graphics.setCanvas(app.transCanvas)
+    love.graphics.clear(0, 0, 0, 0)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setBlendMode("alpha", "premultiplied")
+    love.graphics.draw(app.canvas, 0, 0)
+    love.graphics.setBlendMode("alpha")
+    app.trans = { t = 0 }
+  end
   love.graphics.setCanvas(app.canvas)
   love.graphics.clear(0.11, 0.11, 0.15)
   love.graphics.origin()
@@ -107,7 +130,20 @@ function app.draw()
   love.graphics.clear(0, 0, 0)
   love.graphics.setColor(1, 1, 1)
   love.graphics.setBlendMode("alpha", "premultiplied")
-  love.graphics.draw(app.canvas, app.ox, app.oy, 0, app.scale, app.scale)
+  local tr = app.trans
+  if tr then
+    tr.t = tr.t + math.min(1 / 30, love.timer.getDelta())
+    local k = math.min(1, tr.t / SLIDE_TIME)
+    local e = 1 - (1 - k) ^ 3
+    local w = app.W * app.scale
+    love.graphics.setScissor(app.ox, app.oy, w, app.H * app.scale)
+    love.graphics.draw(app.transCanvas, app.ox - w * e, app.oy, 0, app.scale, app.scale)
+    love.graphics.draw(app.canvas, app.ox + w * (1 - e), app.oy, 0, app.scale, app.scale)
+    love.graphics.setScissor()
+    if k >= 1 then app.trans = nil end
+  else
+    love.graphics.draw(app.canvas, app.ox, app.oy, 0, app.scale, app.scale)
+  end
   love.graphics.setBlendMode("alpha")
 
   if app.showFps then

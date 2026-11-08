@@ -213,11 +213,11 @@ function Snap.decode(data)
   for i = 1, np do
     local p = {}
     local flags, flags2, mflags
+    p.st = {}
     p.x, p.y, p.aim, p.facing, p.hp, p.maxHp, p.r, flags,
     p.invuln, p.ammo, p.maxAmmo, p.reload, p.blockCd,
     p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry,
     flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy,
-    p.st = {}
     p.ack, p.vx, p.jumpsLeft, p.dashesLeft, mflags, p.dashT, p.dashCd2, p.ping,
     p.st.kills, p.st.deaths, p.st.dmg, p.st.shots, p.st.hits, p.st.blocks, p.st.melee, pos =
       unpack(PLAYER_FMT, raw, pos)

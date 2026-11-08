@@ -149,6 +149,13 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
 
   d = ui.cycler("Scoreboard key", v.scoreboardHold and "Hold" or "Toggle", rx, ry, colW, h)
   if d ~= 0 then v.scoreboardHold = not v.scoreboardHold end
+  ry = ry + gap
+
+  d = ui.cycler("Text size", Settings.TEXT_SIZES[v.textSize][1], rx, ry, colW, h)
+  if d ~= 0 then
+    v.textSize = math.max(1, math.min(#Settings.TEXT_SIZES, v.textSize + d))
+    Settings.applyEffects()
+  end
 end
 
 local function volumeText(v)

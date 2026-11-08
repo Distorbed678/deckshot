@@ -7,7 +7,77 @@ local Bloom = require "gfx.bloom"
 local platform = require "core.platform"
 local sfx = require "gfx.sfx"
 
+-- A friendly crash screen: the error is saved to crash.txt in the save folder, and can be copied.
+function love.errorhandler(msg)
+  msg = tostring(msg)
+  local trace = debug.traceback("Error: " .. msg, 2):gsub("\n[^\n]+$", "")
+  pcall(love.filesystem.write, "crash.txt", os.date("%Y-%m-%d %H:%M:%S") .. "\n" .. trace .. "\n")
+  print(trace)
+  if not love.window or not love.graphics or not love.event then return end
+  if not love.graphics.isCreated() or not love.window.isOpen() then
+    if not pcall(love.window.setMode, 800, 600) then return end
+  end
+  love.graphics.reset()
+  pcall(love.graphics.setCanvas)
+  if love.mouse then love.mouse.setVisible(true); love.mouse.setGrabbed(false) end
+  if love.audio then love.audio.stop() end
+  local font = love.graphics.newFont(16)
+  local big = love.graphics.newFont(28)
+  local copied = false
+  local function draw()
+    local w, h = love.graphics.getDimensions()
+    love.graphics.clear(0.09, 0.09, 0.12)
+    love.graphics.setColor(1, 0.55, 0.15)
+    love.graphics.setFont(big)
+    love.graphics.printf("Deckshot crashed", 40, 40, w - 80, "left")
+    love.graphics.setColor(1, 1, 1, 0.85)
+    love.graphics.setFont(font)
+    love.graphics.printf("Sorry! The error was saved to crash.txt in the game's save folder (" ..
+      love.filesystem.getSaveDirectory() .. ").\n\nC: copy the error   R: restart   Esc: quit" ..
+      (copied and "\n\nCopied to the clipboard." or ""), 40, 90, w - 80, "left")
+    love.graphics.setColor(1, 1, 1, 0.55)
+    love.graphics.printf(trace, 40, 210, w - 80, "left")
+    love.graphics.present()
+  end
+  return function()
+    love.event.pump()
+    for e, a in love.event.poll() do
+      if e == "quit" then return 1 end
+      if e == "keypressed" and a == "escape" then return 1 end
+      if e == "keypressed" and a == "c" then
+        pcall(love.system.setClipboardText, trace)
+        copied = true
+      end
+      if e == "keypressed" and a == "r" then return "restart" end
+    end
+    draw()
+    if love.timer then love.timer.sleep(0.1) end
+  end
+end
+
+-- A simple generated window icon (a card with a crosshair) until there's real art.
+local function setIcon()
+  if platform.web or not love.window or not love.window.setIcon then return end
+  local size = 64
+  local img = love.image.newImageData(size, size)
+  img:mapPixel(function(x, y)
+    local cx, cy = x - 31.5, y - 31.5
+    local inCard = x >= 12 and x <= 51 and y >= 4 and y <= 59
+    local r = math.sqrt(cx * cx + cy * cy)
+    if inCard then
+      if math.abs(r - 13) < 2.2 or (math.abs(cx) < 1.6 and r < 20) or (math.abs(cy) < 1.6 and r < 20) then
+        return 0.1, 0.1, 0.13, 1
+      end
+      if y <= 18 then return 1, 0.55, 0.15, 1 end
+      return 0.92, 0.92, 0.95, 1
+    end
+    return 0, 0, 0, 0
+  end)
+  pcall(love.window.setIcon, img)
+end
+
 function love.load(args)
+  setIcon()
   love.keyboard.setKeyRepeat(false)
   Settings.load()
   Settings.apply()

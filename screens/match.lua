@@ -76,6 +76,10 @@ function Match.newLocal(winScore, opts)
   m.returnTo = opts.returnTo
   local rules = settingsRules(false)
   rules.teams = opts.teams and true or false
+  if opts.practice then
+    rules.practice, rules.startCards, rules.barrier = true, 0, false
+    m.practice = { total = 0, hits = {}, last = 0, quiet = 0, prevHp = nil }
+  end
   if opts.map then rules.forceMap = opts.map end
   if opts.test then rules.startCards = 0 end
   local setup = opts.setup or { { kind = "p1", color = 1, team = 1 }, { kind = opts.test and "dummy" or "p2", color = 2, team = 2 } }
@@ -903,8 +907,103 @@ function Match:updatePresence()
   require("online.presence").set(kind .. ": round " .. (total + 1) .. ", " .. table.concat(scores, "-"))
 end
 
+-- Practice range: the dummy never dies (it heals after a moment), you respawn, and we keep a damage meter.
+function Match:updatePractice(dt)
+  local pr, w = self.practice, self.world
+  if not pr or not w or w.state ~= "playing" then return end
+  local me, dummy = w.players[1], w.players[2]
+  local now = love.timer.getTime()
+  if pr.prevHp and dummy.hp < pr.prevHp then
+    local dmg = pr.prevHp - dummy.hp
+    pr.total, pr.last, pr.quiet = pr.total + dmg, dmg, 0
+    pr.hits[#pr.hits + 1] = { t = now, d = dmg }
+  end
+  pr.quiet = pr.quiet + dt
+  while pr.hits[1] and now - pr.hits[1].t > 3 do table.remove(pr.hits, 1) end
+  for _, p in ipairs({ me, dummy }) do
+    if p.dead then
+      p:spawn(p.spawnX, p.spawnY, p.facing, w)
+    end
+  end
+  if dummy.hp < dummy.stats.maxHp and pr.quiet > 1.5 then dummy.hp = dummy.stats.maxHp end
+  dummy.hp = math.max(1, dummy.hp)
+  pr.prevHp = dummy.hp
+end
+
+function Match:drawPractice()
+  local pr = self.practice
+  if not pr then return end
+  local dps = 0
+  for _, h in ipairs(pr.hits) do dps = dps + h.d end
+  dps = dps / 3
+  love.graphics.setFont(app.fonts.med)
+  love.graphics.setColor(1, 1, 1, 0.85)
+  love.graphics.printf(string.format("Last hit %d   DPS %d   Total %d", pr.last, dps, pr.total), 0, 96, app.W, "center")
+  if ui.button("Cards (C)", app.W / 2 - 230, 126, 150, 34, { font = app.fonts.small }) then self.cardChooser = not self.cardChooser end
+  if ui.button("Reset damage", app.W / 2 - 70, 126, 150, 34, { font = app.fonts.small }) then
+    pr.total, pr.last, pr.hits = 0, 0, {}
+  end
+  local dummy = self.world.players[2]
+  local isBot = dummy.isBot
+  if ui.button(isBot and "Dummy: Bot" or "Dummy: Still", app.W / 2 + 90, 126, 150, 34, { font = app.fonts.small }) then
+    if isBot then
+      dummy.isBot = nil
+      dummy.input = Input.remote()
+      dummy.input.aim = nil
+    else
+      dummy.isBot = 2
+      dummy.input = Input.bot(2)
+    end
+    dummy.seenJump, dummy.seenBlock, dummy.seenDash, dummy.seenMelee = 0, 0, 0, 0
+  end
+  if self.cardChooser then self:drawCardChooser() end
+end
+
+-- Click a card to add a copy, right click to remove one.
+function Match:drawCardChooser()
+  local me = self.world.players[1]
+  love.graphics.setColor(0, 0, 0, 0.85)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  local counts = {}
+  for _, c in ipairs(me.cards) do counts[c] = (counts[c] or 0) + 1 end
+  local cols, bw, bh = 6, 200, 18
+  local mx, my = app.mouse()
+  for i, c in ipairs(Cards.list) do
+    if not c.special then
+      local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+      local x, y = 36 + col * (bw + 4), 20 + row * (bh + 3)
+      local rc = Cards.rarity[c.rarity] and Cards.rarity[c.rarity].color or { 1, 1, 1 }
+      local label = c.name .. (counts[c] and ("  x" .. counts[c]) or "")
+      if ui.button(label, x, y, bw, bh, { font = app.fonts.tiny, color = counts[c] and ui.ACCENT or rc }) then
+        table.insert(me.cards, c)
+        me:recompute()
+      end
+      if self.rightClick and mx >= x and mx <= x + bw and my >= y and my <= y + bh and counts[c] then
+        for k = #me.cards, 1, -1 do
+          if me.cards[k] == c then table.remove(me.cards, k) break end
+        end
+        me:recompute()
+      end
+    end
+  end
+  self.rightClick = nil
+  if ui.button("Clear cards", app.W / 2 - 230, app.H - 44, 220, 34, { font = app.fonts.small }) then
+    me.cards = {}
+    me:recompute()
+  end
+  if ui.button("Close (C)", app.W / 2 + 10, app.H - 44, 220, 34, { font = app.fonts.small, back = true }) then
+    self.cardChooser = false
+  end
+end
+
 function Match:update(dt, isTop)
   self:updatePresence()
+  self:updatePractice(dt)
+  if self.cardChooser then isTop = false end -- the practice card chooser is open: hold everyone still
+  -- A new round slides in like a new screen.
+  local stNow = self:status().state
+  if stNow == "countdown" and self.slideState and self.slideState ~= "countdown" then app.slide() end
+  self.slideState = stNow
   if self:usesTouch() and require("core.touch").takePause() and isTop then
     self.paused = not self.paused
     ui.reset()
@@ -975,6 +1074,14 @@ function Match:scoreboardVisible()
 end
 
 function Match:keypressed(key)
+  if self.practice and key == "c" then
+    self.cardChooser = not self.cardChooser
+    return
+  end
+  if self.practice and self.cardChooser and key == "escape" then
+    self.cardChooser = false
+    return
+  end
   if key == Settings.values.binds.online.scoreboard and not Settings.values.scoreboardHold then
     self.showScores = not self.showScores
     return
@@ -1096,6 +1203,8 @@ end
 
 function Match:mousepressed(x, y, button)
   if self.paused then return end
+  if self.cardChooser and button == 2 then self.rightClick = true end
+  if self.cardChooser then return end
   local pu = self.pickUI
   if pu then
     local cp = self:currentPick()
@@ -1800,6 +1909,7 @@ function Match:draw()
     require("core.touch").draw()
   end
 
+  if self.practice and not self.paused then self:drawPractice() end
   if self:scoreboardVisible() then self:drawScoreboard() end
 
   if self.paused then

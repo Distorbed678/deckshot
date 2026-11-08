@@ -319,6 +319,7 @@ function World:connectedCount()
 end
 
 function World:checkRoundEnd()
+  if self.rules.practice then return end -- the practice range never ends a round
   local alive, last, teams = 0, nil, {}
   for _, p in ipairs(self.players) do
     if not p.dead and not p.disconnected then
