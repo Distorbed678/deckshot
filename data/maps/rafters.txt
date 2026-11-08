@@ -5,8 +5,6 @@ spawn 168 696
 spawn 1368 696
 spawn 264 360
 spawn 1272 360
-rect 72 744 696 120
-rect 768 744 696 120
 rect 72 168 696 24
 rect 768 168 696 24
 oneway 192 528 192 17
@@ -19,11 +17,11 @@ oneway 576 600 144 14
 oneway 816 600 144 14
 oneway 576 312 144 14
 oneway 816 312 144 14
+rect 48 744 264 24
+rect 1224 744 264 24
+oneway 532 720 168 14
+oneway 836 720 168 14
 obj weight damage=60 r=24 x=408 y=384
 obj weight damage=60 r=24 x=1128 y=384
 obj rope target=1 x=408 y=192
 obj rope target=2 x=1128 y=192
-obj crate h=50 w=50 x=570 y=694
-obj crate h=50 w=50 x=916 y=694
-obj wall h=96 hp=150 w=40 x=372 y=648
-obj wall h=96 hp=150 w=40 x=1124 y=648

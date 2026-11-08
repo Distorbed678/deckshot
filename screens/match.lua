@@ -486,6 +486,7 @@ function Match:applySnapshot(v)
     p.score = pv.score
     local s = p.stats
     s.maxHp, s.ammo, s.orbs, s.stasis = pv.maxHp, pv.maxAmmo, pv.orbs, pv.stasis
+    s.blockCooldown = 1 -- blockCd arrives as a fraction of the cooldown
     p.vote = pv.vote
     p.shield = pv.shield
     s.sentry = pv.sentry
@@ -495,6 +496,7 @@ function Match:applySnapshot(v)
     p.dashTimer = pv.dashing and 1 or 0
     if (p.vy or 0) > 300 and math.abs(pv.vy) < 60 then p.landSquash = math.min(0.35, p.vy / 3000) end
     p.vy = pv.vy
+    p.vx, p.onGround = pv.vx, pv.onGround
     s.meleeRange, s.heavyCharge = pv.meleeRange, pv.heavyCharge
   end
 
@@ -566,6 +568,8 @@ function Match:applySnapshot(v)
       fx.number(e[2], e[3], e[4], e[5], e[6])
     elseif e[1] == 11 then
       fx.gibs(e[2], e[3], e[4], e[5], e[6])
+    elseif e[1] == 12 then
+      fx.muzzle(e[2], e[3], e[4], e[5])
     else
       fx.clear()
     end
@@ -657,6 +661,7 @@ function Match:reconcile(pv)
   pr.dashTimer, pr.dashCd = pv.dashT, pv.dashCd2
   if pr.dashTimer > 0 then pr.dashX, pr.dashY = pv.vx, pv.vy end
   pr.facing = pv.facing
+  pr.blockTimer = pv.blocking and math.max(pr.blockTimer or 0, 0.05) or 0 -- blocking changes edge bounces
   local hist, keep = self.predHistory, {}
   for _, e in ipairs(hist) do
     if e.seq == pv.ack then
@@ -995,14 +1000,14 @@ function Match:drawPractice()
   dps = dps / 3
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.85)
-  love.graphics.printf(string.format("Last hit %d   DPS %d   Total %d", pr.last, dps, pr.total), 0, 96, app.W, "center")
-  if ui.button("Cards", app.W / 2 - 230, 126, 150, 34, { font = app.fonts.small }) then self.cardChooser = not self.cardChooser end
-  if ui.button("Reset damage", app.W / 2 - 70, 126, 150, 34, { font = app.fonts.small }) then
+  love.graphics.printf(string.format("Last hit %d   DPS %d   Total %d", pr.last, dps, pr.total), 0, 92, app.W, "center")
+  if ui.button("Cards", app.W / 2 - 230, 130, 150, 34, { font = app.fonts.small }) then self.cardChooser = not self.cardChooser end
+  if ui.button("Reset damage", app.W / 2 - 70, 130, 150, 34, { font = app.fonts.small }) then
     pr.total, pr.last, pr.hits = 0, 0, {}
   end
   local dummy = self.world.players[2]
   local isBot = dummy.isBot
-  if ui.button(isBot and "Dummy: Bot" or "Dummy: Still", app.W / 2 + 90, 126, 150, 34, { font = app.fonts.small }) then
+  if ui.button(isBot and "Dummy: Bot" or "Dummy: Still", app.W / 2 + 90, 130, 150, 34, { font = app.fonts.small }) then
     if isBot then
       dummy.isBot = nil
       dummy.input = Input.remote()

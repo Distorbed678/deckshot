@@ -61,11 +61,11 @@ function Screen:draw()
   love.graphics.setFont(app.fonts.title)
   love.graphics.setColor(1, 1, 1, 0.9)
   love.graphics.print("Hats", x, y)
-  y = grid(self, Cosmetics.HATS, "hat", x, y + 40, 4, "hat") + 8
+  y = grid(self, Cosmetics.HATS, "hat", x, y + 46, 4, "hat") + 8
   love.graphics.setFont(app.fonts.title)
   love.graphics.setColor(1, 1, 1, 0.9)
   love.graphics.print("Faces", x, y)
-  y = grid(self, Cosmetics.FACES, "face", x, y + 40, 4, "face")
+  y = grid(self, Cosmetics.FACES, "face", x, y + 46, 4, "face")
 
   love.graphics.setFont(app.fonts.med)
   if self.tip then

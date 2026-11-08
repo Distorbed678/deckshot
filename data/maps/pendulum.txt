@@ -5,14 +5,16 @@ spawn 168 696
 spawn 1368 696
 spawn 216 432
 spawn 1320 432
-rect 72 744 696 120
-rect 768 744 696 120
 oneway 144 504 192 17
 oneway 1200 504 192 17
 oneway 600 264 120 17
 oneway 816 264 120 17
 oneway 312 120 120 14
 oneway 1104 120 120 14
+rect 48 744 264 24
+rect 1224 744 264 24
+oneway 532 720 168 14
+oneway 836 720 168 14
 obj saw damage=25 r=26 speed=0 x=504 y=528
 obj saw damage=25 r=26 speed=0 x=1032 y=528
 obj rope target=1 x=504 y=72
@@ -21,7 +23,3 @@ obj saw damage=25 r=30 speed=0 x=768 y=432
 obj rope target=5 x=768 y=48
 obj platform h=18 speed=90 w=120 x=336 y=336 path=336,336;336,240
 obj platform h=18 speed=90 w=120 x=1080 y=336 path=1080,336;1080,240
-obj glass h=120 w=16 x=446 y=624
-obj glass h=120 w=16 x=1074 y=624
-obj wall h=96 hp=150 w=40 x=324 y=648
-obj wall h=96 hp=150 w=40 x=1172 y=648

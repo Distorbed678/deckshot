@@ -13,7 +13,7 @@ Screen.__index = Screen
 
 local COLS, ROWS = 5, 11
 local PER_PAGE = COLS * ROWS
-local GRID_X, GRID_Y = 40, 122
+local GRID_X, GRID_Y = 40, 126
 local TILE_W, TILE_H, TILE_GAP = 148, 34, 6
 local SYN_PER_PAGE = 21
 
@@ -124,21 +124,21 @@ function Screen:drawCards()
   local d
   if self.typing then
     ui.focus = ui.count + 1
-    local text, done = ui.textField(self.search, GRID_X, 76, 260, 34, { font = app.fonts.med, placeholder = "Search", maxLength = 24 })
+    local text, done = ui.textField(self.search, GRID_X, 80, 260, 34, { font = app.fonts.med, placeholder = "Search", maxLength = 24 })
     if text ~= self.search then self.search, self.page = text, 1 end
     if done then self.typing = false end
-  elseif ui.button(self.search ~= "" and ("Search: " .. self.search) or "Search...", GRID_X, 76, 260, 34, { font = app.fonts.med, viewOnly = true }) then
+  elseif ui.button(self.search ~= "" and ("Search: " .. self.search) or "Search...", GRID_X, 80, 260, 34, { font = app.fonts.med, viewOnly = true }) then
     self.typing = true
   end
   local wasRO = ui.readOnly
   ui.readOnly = false
-  d = ui.cycler("Show", FILTERS[self.filter][1], 312, 76, 260, 34)
+  d = ui.cycler("Show", FILTERS[self.filter][1], 312, 80, 260, 34)
   if d ~= 0 then self.filter, self.page = cycle(self.filter, #FILTERS, d), 1 end
   local cards = self:visibleCards()
   local pages = math.max(1, math.ceil(#cards / PER_PAGE))
   self.page = math.max(1, math.min(pages, self.page))
   if pages > 1 then
-    d = ui.cycler("Page", self.page .. " / " .. pages, 582, 76, 208, 34)
+    d = ui.cycler("Page", self.page .. " / " .. pages, 582, 80, 208, 34)
     if d ~= 0 then self.page = cycle(self.page, pages, d) end
   end
   ui.readOnly = wasRO
@@ -191,16 +191,16 @@ function Screen:drawCards()
   local y = 346
   d = ui.cycler("Rarity", Cards.rarity[rarity].name, px, y, pw, 40)
   if d ~= 0 then Settings.setCard(c, Cards.RARITIES[cycle(rarityIndex(rarity), #Cards.RARITIES, d)].id, on) end
-  y = y + 46
+  y = y + 50
   d = ui.cycler("Enabled", on and "Yes" or "No", px, y, pw, 40)
   if d ~= 0 then toggle(c) end
-  y = y + 46
+  y = y + 50
   local isDefault = c.baseRarity == rarity and on
   if ui.button(isDefault and "Default" or ("Reset (" .. Cards.rarity[c.baseRarity].name .. ")"), px, y, pw, 40,
     { font = app.fonts.med, disabled = isDefault }) then
     Settings.setCard(c, c.baseRarity, true)
   end
-  y = y + 46
+  y = y + 50
   local bw = (pw - 12) / 2
   if ui.button("Enable All", px, y, bw, 40, { font = app.fonts.med }) then
     for _, card in ipairs(Cards.list) do Settings.setCard(card, Settings.cardRarity(card), true) end
@@ -245,7 +245,7 @@ function Screen:drawSynergies()
   local pages = math.max(1, math.ceil(#list / SYN_PER_PAGE))
   self.page = math.max(1, math.min(pages, self.page))
   local on = self.readOnly and (self.rules.synergies ~= false) or (not self.readOnly and v.synergiesOn)
-  if ui.button(on and "Synergies: ON" or "Synergies: OFF", GRID_X, 76, 220, 34,
+  if ui.button(on and "Synergies: ON" or "Synergies: OFF", GRID_X, 80, 220, 34,
     { font = app.fonts.med, color = on and ui.GOOD or ui.BAD }) then
     v.synergiesOn = not v.synergiesOn
   end
@@ -254,7 +254,7 @@ function Screen:drawSynergies()
     local s = list[(self.page - 1) * SYN_PER_PAGE + k]
     if not s then break end
     local col, row = (k - 1) % cols, math.floor((k - 1) / cols)
-    local x, y = 40 + col * (bw + 10), 122 + row * (bh + 6)
+    local x, y = 40 + col * (bw + 10), 126 + row * (bh + 6)
     local off = self:synOff(s)
     if ui.button("", x, y, bw, bh) then v.synergies[s.id] = not v.synergies[s.id] or nil end
     love.graphics.setColor(off and { 1, 1, 1, 0.35 } or { 1, 0.82, 0.35 })
@@ -275,8 +275,8 @@ function Screen:drawSynergies()
   love.graphics.setColor(1, 1, 1, 0.6)
   love.graphics.printf("Page " .. self.page .. " / " .. pages, app.W / 2 - 80, y + 8, 160, "center")
   if ui.button(">", app.W / 2 + 80, y, 50, 36, { disabled = self.page >= pages, viewOnly = true }) then self.page = self.page + 1 end
-  if ui.button("All On", 270, 76, 140, 34, { font = app.fonts.med }) then v.synergies = {} end
-  if ui.button("All Off", 420, 76, 140, 34, { font = app.fonts.med }) then
+  if ui.button("All On", 270, 80, 140, 34, { font = app.fonts.med }) then v.synergies = {} end
+  if ui.button("All Off", 420, 80, 140, 34, { font = app.fonts.med }) then
     for _, s in ipairs(list) do v.synergies[s.id] = true end
   end
 end

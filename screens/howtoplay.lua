@@ -49,11 +49,11 @@ end
 function Screen:draw()
   love.graphics.setColor(0.09, 0.09, 0.12, self.back and 0.97 or 1)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
-  app.centered("HOW TO PLAY", app.fonts.big, 26)
+  app.centered("HOW TO PLAY", app.fonts.big, 20)
   local tw = 200
   local tx = (app.W - (#PAGES * (tw + 10) - 10)) / 2
   for i, name in ipairs(PAGES) do
-    if ui.button(name, tx + (i - 1) * (tw + 10), 80, tw, 40, { font = app.fonts.med, color = i == self.page and ui.ACCENT or nil }) then
+    if ui.button(name, tx + (i - 1) * (tw + 10), 86, tw, 40, { font = app.fonts.med, color = i == self.page and ui.ACCENT or nil }) then
       self.page = i
     end
   end

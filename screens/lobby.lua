@@ -356,14 +356,14 @@ function Lobby:drawLanInfo(session, rx, ry, rw, rh)
   ui.printFit(session.code or "?", app.fonts.big, tx, ry + 32, tw, "center")
   if not session.isHost then return end
 
-  copyButton("Copy Address", "addr", session.code or "", tx + 40, ry + 80, tw - 80)
+  copyButton("Copy Address", "addr", session.code or "", tx + 40, ry + 86, tw - 80)
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Phones, tablets and browsers: scan the code or open", tx, ry + 128, tw, "center")
+  love.graphics.printf("Phones, tablets and browsers: scan the code or open", tx, ry + 132, tw, "center")
   if session.webDir() then
     love.graphics.setColor(0.55, 0.85, 1)
-    ui.printFit(session.url or "", app.fonts.title, tx, ry + 150, tw, "center")
-    copyButton("Copy Browser Link", "url", session.url or "", tx + 40, ry + 190, tw - 80)
+    ui.printFit(session.url or "", app.fonts.title, tx, ry + 154, tw, "center")
+    copyButton("Copy Browser Link", "url", session.url or "", tx + 40, ry + 196, tw - 80)
     if self.qrUrl ~= session.url then
       self.qrUrl = session.url
       self.qrM, self.qrN = require("core.qr").encode(session.url or "")

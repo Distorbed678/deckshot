@@ -6,6 +6,7 @@ local Triggers = require "game.triggers"
 local Synergies = require "game.synergies"
 local CardData = require "game.carddata"
 local Cosmetics = require "core.cosmetics"
+local Body = require "game.body"
 
 local Player = {}
 Player.__index = Player
@@ -40,7 +41,8 @@ local MELEE = {
 Player.MELEE = MELEE
 
 -- Arena edges (left, right, bottom): damage and a launch back in. The top is open.
-local EDGE = { damage = 30, launch = 900, launchUp = 650, bottomLaunch = 1150, cooldown = 0.3 }
+-- blockBounce: blocking at an edge throws you back in harder (enough to recover from the bottom).
+local EDGE = { damage = 30, launch = 900, launchUp = 650, bottomLaunch = 1150, cooldown = 0.3, blockBounce = 1.3 }
 Player.EDGE = EDGE
 
 local ORB_DISTANCE = 55
@@ -572,7 +574,7 @@ function Player:checkBounds(x0, y0, x1, y1, top, damageMul)
     side = "top"
   end
   if not side then return end
-  local L = self.stats.edgeLaunch or 1
+  local L = (self.stats.edgeLaunch or 1) * (self:isBlocking() and EDGE.blockBounce or 1)
   if side == "left" then
     self.vx, self.vy = EDGE.launch * L, math.min(self.vy, -EDGE.launchUp * L)
   elseif side == "right" then
@@ -580,7 +582,7 @@ function Player:checkBounds(x0, y0, x1, y1, top, damageMul)
   elseif side == "bottom" then
     self.vy = -EDGE.bottomLaunch * L
   else
-    self.vy = EDGE.launchUp
+    self.vy = EDGE.launchUp * L
   end
   self.controlLock = math.max(self.controlLock, 0.15)
   self.dashTimer, self.lungeTimer = 0, 0
@@ -1099,8 +1101,8 @@ function Player:volley(primary, mult)
     self:spawnBullet(base + math.pi + (i - (s.backShot + 1) / 2) * 0.18, 1, empowered, mult)
   end
 
-  local mx, my = self.x + self.aimX * (self.r + 12), self.y + self.aimY * (self.r + 12)
-  fx.spray(mx, my, base, 0.5, { 1, 0.95, 0.7 }, 5, 260, 2.5, 0.1)
+  local mx, my = self.x + self.aimX * (self.r + 28), self.y + self.aimY * (self.r + 28)
+  fx.muzzle(mx, my, base, s.bulletSize / 5)
   fx.kick(-self.aimX * 1.5, -self.aimY * 1.5)
   self.shotT = 0.12
   local size = s.bulletSize / 5
@@ -1401,12 +1403,6 @@ function Player:draw()
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.setLineWidth(3)
     love.graphics.circle("line", self.x, self.y, r + 14)
-  elseif self.blockCd > 0 then
-    -- Block cooldown ring
-    love.graphics.setColor(1, 1, 1, 0.25 * A)
-    love.graphics.setLineWidth(2)
-    local frac = 1 - self.blockCd / s.blockCooldown
-    love.graphics.arc("line", "open", self.x, self.y, r + 7, -math.pi / 2, -math.pi / 2 + math.pi * 2 * frac)
   end
 
   -- Shield Generator bubble
@@ -1435,15 +1431,8 @@ function Player:draw()
 
   self:drawMelee(A)
 
-  -- Gun
-  if self.empowered then
-    love.graphics.setColor(1, 0.9, 0.5, A)
-    love.graphics.setLineWidth(9)
-  else
-    love.graphics.setColor(0.85, 0.85, 0.9, A)
-    love.graphics.setLineWidth(6)
-  end
-  love.graphics.line(self.x, self.y, self.x + self.aimX * (r + 12), self.y + self.aimY * (r + 12))
+  Body.update(self, love.timer.getDelta())
+  Body.drawLegs(self, A)
 
   -- Body
   if self.hitFlash > 0 then
@@ -1474,6 +1463,7 @@ function Player:draw()
     { self.aimX, math.max(-1, math.min(1, lookY)) },
     { blink = blink, hurt = self.hitFlash > 0, firing = (self.shotT or 0) > 0 }, A)
   if A > 0.3 then Cosmetics.drawHat(self.x, by0 - r * 0.92 * sy, r, self.hat, c) end
+  Body.drawArms(self, A)
 
   -- HP bar (pending Decay damage shown faded)
   local pending = 0

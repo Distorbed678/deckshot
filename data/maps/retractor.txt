@@ -5,8 +5,6 @@ spawn 168 696
 spawn 1368 696
 spawn 264 480
 spawn 1272 480
-rect 72 744 696 120
-rect 768 744 696 120
 oneway 192 552 192 17
 oneway 1152 552 192 17
 oneway 504 456 168 17
@@ -16,6 +14,7 @@ oneway 360 144 144 14
 oneway 1032 144 144 14
 oneway 216 360 144 14
 oneway 1176 360 144 14
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=144 warn=0.6 x=360 y=728
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=0 w=144 warn=0.6 x=1032 y=728
-obj spikes damage=30 dir=up h=16 off=2 on=1.2 phase=1.6 w=192 warn=0.6 x=672 y=728
+rect 48 744 264 24
+rect 1224 744 264 24
+oneway 532 720 168 14
+oneway 836 720 168 14

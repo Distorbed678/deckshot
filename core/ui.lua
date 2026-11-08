@@ -151,7 +151,7 @@ end
 
 -- Eases this widget's hover and press, and applies its entrance and size. Returns the alpha;
 -- the caller pops the transform.
-local function animate(id, x, y, w, h, focused)
+local function animate(id, x, y, w, h, focused, noEnter)
   love.graphics.push()
   local a = 1
   if not id then return a end
@@ -162,7 +162,7 @@ local function animate(id, x, y, w, h, focused)
   st.press = math.max(0, st.press - dt * 7)
   local scale = 1 + 0.018 * st.hover - 0.035 * st.press
   local dy = 0
-  if not app().noSlide then
+  if not app().noSlide and not noEnter then
     local k = math.max(0, math.min(1, (enterT - math.min(0.35, (id - 1) * 0.025)) / 0.34))
     local e = 1 - (1 - k) ^ 3
     dy, a = (1 - e) * 16, e
@@ -205,7 +205,8 @@ function ui.button(label, x, y, w, h, opts)
   end
   local bg, border, fg = panelColors(focused, disabled)
   if opts.color and not disabled then border = opts.color end
-  local a = animate(id, x, y, w, h, focused and not disabled)
+  -- A button with no label has its text drawn by the screen, so it must not fade in after that text.
+  local a = animate(id, x, y, w, h, focused and not disabled, label == "")
   tint(bg, a)
   love.graphics.rectangle("fill", x, y, w, h, 10, 10)
   tint(border, a)
@@ -247,7 +248,7 @@ function ui.cycler(label, value, x, y, w, h, opts)
   end
   local bg, border, fg = panelColors(focused and not locked, false)
   if locked then fg = { 1, 1, 1, 0.6 } end
-  local a = animate(id, x, y, w, h, focused and not locked)
+  local a = animate(id, x, y, w, h, focused and not locked, opts and opts.noEnter)
   tint(bg, a)
   love.graphics.rectangle("fill", x, y, w, h, 10, 10)
   tint(border, a)

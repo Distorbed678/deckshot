@@ -2,7 +2,7 @@
 -- When fx.recorder is a table (online host), every effect is also recorded so it
 -- can be replayed on clients.
 local fx = {
-  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, shake = 0, kickX = 0, kickY = 0,
+  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, shake = 0, kickX = 0, kickY = 0,
   showNumbers = true, -- damage numbers (a per-player setting)
   shakeScale = 1, particleScale = 1,
   recorder = nil,
@@ -18,7 +18,7 @@ fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
--- 10 damage number, 11 death chunks.
+-- 10 damage number, 11 death chunks, 12 muzzle flash.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -84,11 +84,24 @@ function fx.debris(x, y, color, count, size)
   end
 end
 
+-- A flash at the barrel with sparks and a puff of smoke. size: 1 = a default bullet.
+function fx.muzzle(x, y, angle, size)
+  record({ 12, x, y, angle, size })
+  if fx.mute then return end
+  local k = math.max(0.7, math.min(3, size))
+  table.insert(fx.flashes, { x = x, y = y, a = angle, k = k, life = 0.075, max = 0.075 })
+  local keep = fx.recorder
+  fx.recorder = nil -- clients replay the single event above
+  fx.spray(x, y, angle, 0.7, { 1, 0.9, 0.55 }, math.floor(5 + 4 * k), 380 + 140 * k, 2.4, 0.15)
+  fx.spray(x, y, angle, 1.4, { 0.62, 0.62, 0.66 }, math.floor(2 + 2 * k), 110, 4 + k, -0.08)
+  fx.recorder = keep
+end
+
 -- A body bursting into chunks that bounce off the map (fx.solids), plus the face.
 function fx.gibs(x, y, color, count, size)
   record({ 11, x, y, color, count, size })
   if fx.mute then return end
-  count = math.max(4, math.floor(count * fx.particleScale + 0.5))
+  count = math.max(8, math.floor(count * fx.particleScale + 0.5)) -- always a face, four limbs and the pistol
   for i = 1, count do
     local a = love.math.random() * math.pi * 2
     local s = 180 + love.math.random() * 420
@@ -99,6 +112,13 @@ function fx.gibs(x, y, color, count, size)
       w = i == 1 and 2 or size * (0.5 + love.math.random() * 0.8), h = i == 1 and 2 or size * (0.4 + love.math.random() * 0.6),
       life = life, max = life, color = color, bounce = true, face = i == 1 and size or nil,
     })
+    local c = fx.chunks[#fx.chunks]
+    if i >= 2 and i <= 5 then     -- arms and legs
+      c.w, c.h = size * 2.2, 4
+      c.color = { color[1] * 0.72, color[2] * 0.72, color[3] * 0.72 }
+    elseif i == 6 then            -- the pistol
+      c.w, c.h, c.color = size * 2, 8, { 0.32, 0.33, 0.38 }
+    end
   end
 end
 
@@ -152,6 +172,7 @@ function fx.clear()
   fx.rings = {}
   fx.ghosts = {}
   fx.chunks = {}
+  fx.flashes = {}
   fx.numbers = {}
   fx.shake = 0
   fx.kickX, fx.kickY = 0, 0
@@ -179,6 +200,11 @@ function fx.update(dt)
     local g = fx.ghosts[i]
     g.life = g.life - dt
     if g.life <= 0 then table.remove(fx.ghosts, i) end
+  end
+  for i = #fx.flashes, 1, -1 do
+    local f = fx.flashes[i]
+    f.life = f.life - dt
+    if f.life <= 0 then table.remove(fx.flashes, i) end
   end
   for i = #fx.chunks, 1, -1 do
     local d = fx.chunks[i]
@@ -219,6 +245,20 @@ function fx.draw()
     local c = g.color
     love.graphics.setColor(c[1], c[2], c[3], 0.45 * g.life / g.max)
     love.graphics.circle("fill", g.x, g.y, g.r)
+  end
+  for _, f in ipairs(fx.flashes) do
+    local t = f.life / f.max
+    love.graphics.push()
+    love.graphics.translate(f.x, f.y)
+    love.graphics.rotate(f.a)
+    love.graphics.scale(f.k * (0.75 + 0.45 * t))
+    love.graphics.setColor(1, 0.72, 0.25, t)
+    love.graphics.polygon("fill", -4, -6, 30, 0, -4, 6)
+    love.graphics.polygon("fill", 0, -13, 8, 0, 0, 13)
+    love.graphics.setColor(1, 1, 0.85, t)
+    love.graphics.polygon("fill", -2, -3, 18, 0, -2, 3)
+    love.graphics.circle("fill", 0, 0, 5)
+    love.graphics.pop()
   end
   for _, d in ipairs(fx.chunks) do
     if d.face then

@@ -5,8 +5,6 @@ spawn 192 696
 spawn 1344 696
 spawn 360 432
 spawn 1176 432
-rect 72 744 696 120
-rect 768 744 696 120
 rect 240 480 240 24
 rect 1056 480 240 24
 rect 576 456 192 24
@@ -14,13 +12,11 @@ rect 768 456 192 24
 oneway 672 288 192 17
 oneway 336 120 168 14
 oneway 1032 120 168 14
-obj glass h=140 hp=1 w=16 x=456 y=604
-obj glass h=140 hp=1 w=16 x=1061 y=604
+rect 60 744 264 24
+rect 1212 744 264 24
+oneway 536 720 168 14
+oneway 832 720 168 14
 obj glass h=120 hp=1 w=16 x=672 y=336
 obj glass h=120 hp=1 w=16 x=845 y=336
 obj platform h=18 speed=90 w=120 x=72 y=312 path=72,312;72,216
 obj platform h=18 speed=90 w=120 x=1344 y=312 path=1344,312;1344,216
-obj crate h=50 w=50 x=498 y=694
-obj crate h=50 w=50 x=988 y=694
-obj pad h=14 power=1350 w=70 x=282 y=730
-obj pad h=14 power=1350 w=70 x=1184 y=730

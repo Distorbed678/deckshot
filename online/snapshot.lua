@@ -196,6 +196,8 @@ function Snap.encode(world, events)
     elseif kind == 8 then
       local c = e[4]
       add("<BhhBBBBB", 8, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
+    elseif kind == 12 then
+      add("<BhhhB", 12, i16(e[2]), i16(e[3]), i16(e[4] * 1000), u8(e[5] * 40))
     elseif kind == 11 then
       local c = e[4]
       add("<BhhBBBBB", 11, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
@@ -398,6 +400,10 @@ function Snap.decode(data)
       local x, y, radius, r, g, b
       x, y, radius, r, g, b, pos = unpack("<hhHBBB", raw, pos)
       v.fx[i] = { 2, x, y, radius, { r / 255, g / 255, b / 255 } }
+    elseif kind == 12 then
+      local x, y, a, size
+      x, y, a, size, pos = unpack("<hhhB", raw, pos)
+      v.fx[i] = { 12, x, y, a / 1000, size / 40 }
     elseif kind == 11 then
       local x, y, r, g, b, count, size
       x, y, r, g, b, count, size, pos = unpack("<hhBBBBB", raw, pos)

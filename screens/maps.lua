@@ -12,7 +12,7 @@ local COLS, ROWS = 7, 4
 local PER_PAGE = COLS * ROWS
 local THUMB_W, THUMB_H = 160, 90
 local GAP_X, LABEL_H, GAP_Y = 12, 22, 12
-local GRID_Y = 100
+local GRID_Y = 106
 
 -- rules: a client's view of the host's rules (read-only); nil = this machine's settings.
 function Screen.new(rules)
@@ -84,18 +84,18 @@ function Screen:draw()
   if pages > 1 then
     love.graphics.setFont(app.fonts.med)
     love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.printf("Page " .. self.page .. " / " .. pages, 0, 596, app.W, "center")
-    if ui.button("<", app.W / 2 - 150, 588, 50, 36, { disabled = self.page <= 1 }) then self.page = self.page - 1 end
-    if ui.button(">", app.W / 2 + 100, 588, 50, 36, { disabled = self.page >= pages }) then self.page = self.page + 1 end
+    love.graphics.printf("Page " .. self.page .. " / " .. pages, 0, 614, app.W, "center")
+    if ui.button("<", app.W / 2 - 150, 606, 50, 36, { disabled = self.page <= 1, viewOnly = true }) then self.page = self.page - 1 end
+    if ui.button(">", app.W / 2 + 100, 606, 50, 36, { disabled = self.page >= pages }) then self.page = self.page + 1 end
   end
 
   if enabled == 0 then
     love.graphics.setFont(app.fonts.med)
     love.graphics.setColor(1, 0.6, 0.45)
-    love.graphics.printf("No maps are enabled, so every map will be used.", 0, 560, app.W, "center")
+    love.graphics.printf("No maps are enabled, so every map will be used.", 0, 66, app.W, "center")
   end
 
-  local bw, by = 220, 636
+  local bw, by = 220, 654
   if ui.button("Enable All", app.W / 2 - bw - 10, by, bw, 46, { disabled = self.readOnly }) then Settings.values.maps = {} end
   if ui.button("Back", app.W / 2 + 10, by, bw, 46) then app.pop() end
 end

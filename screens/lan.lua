@@ -147,7 +147,7 @@ function Lan:drawDesktop(busy)
 
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.5)
-  love.graphics.print("or enter the host's address", rx + 24, ry + 220)
+  love.graphics.print("or enter the host's address", rx + 24, ry + 214)
   local submitted
   self.address, submitted = ui.textField(self.address, rx + 20, ry + 242, rw - 170, 44, {
     placeholder = "192.168.1.20", maxLength = 64, filter = addressFilter, font = app.fonts.med,
@@ -164,7 +164,7 @@ function Lan:draw()
   local busy = lan.busy
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.5)
-  love.graphics.printf("Your name", 0, 142, app.W, "center")
+  love.graphics.printf("Your name", 0, 136, app.W, "center")
   self.name = ui.textField(self.name, (app.W - 360) / 2, 164, 360, 50, { placeholder = "Player", maxLength = 24 })
 
   if not lan.available then

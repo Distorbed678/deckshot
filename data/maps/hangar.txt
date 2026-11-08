@@ -5,8 +5,6 @@ spawn 264 696
 spawn 1272 696
 spawn 504 480
 spawn 1032 480
-rect 72 744 696 72
-rect 768 744 696 72
 rect 72 192 696 29
 rect 768 192 696 29
 rect 72 221 29 360
@@ -21,7 +19,7 @@ oneway 144 384 144 14
 oneway 1248 384 144 14
 oneway 480 624 144 14
 oneway 912 624 144 14
-obj barrel h=48 w=36 x=618 y=696
-obj barrel h=48 w=36 x=882 y=696
-obj wall h=96 hp=150 w=40 x=468 y=648
-obj wall h=96 hp=150 w=40 x=1028 y=648
+rect 132 744 264 24
+rect 1140 744 264 24
+oneway 560 720 168 14
+oneway 808 720 168 14

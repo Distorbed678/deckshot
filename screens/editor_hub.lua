@@ -89,9 +89,9 @@ function Hub:drawMaps()
   local np = pages(n)
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Page " .. self.page .. " / " .. np .. "   (" .. n .. " maps)", 0, 612, app.W, "center")
-  if ui.button("<", app.W / 2 - 200, 604, 50, 36, { disabled = self.page <= 1 }) then self.page = self.page - 1 end
-  if ui.button(">", app.W / 2 + 150, 604, 50, 36, { disabled = self.page >= np }) then self.page = self.page + 1 end
+  love.graphics.printf("Page " .. self.page .. " / " .. np .. "   (" .. n .. " maps)", 0, 616, app.W, "center")
+  if ui.button("<", app.W / 2 - 200, 610, 50, 32, { disabled = self.page <= 1 }) then self.page = self.page - 1 end
+  if ui.button(">", app.W / 2 + 150, 610, 50, 32, { disabled = self.page >= np }) then self.page = self.page + 1 end
 
   -- Actions
   local s = self.sel
@@ -134,7 +134,7 @@ function Hub:drawMaps()
   }
   local bw = (app.W - 80 - (#acts - 1) * 10) / #acts
   for i, a in ipairs(acts) do
-    if ui.button(a[1], 40 + (i - 1) * (bw + 10), 652, bw, 44, { font = app.fonts.med, disabled = not a[2] }) then a[3]() end
+    if ui.button(a[1], 40 + (i - 1) * (bw + 10), 656, bw, 44, { font = app.fonts.med, disabled = not a[2] }) then a[3]() end
   end
 end
 

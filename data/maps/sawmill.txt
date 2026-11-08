@@ -5,8 +5,6 @@ spawn 168 696
 spawn 1368 696
 spawn 108 480
 spawn 1428 480
-rect 72 744 696 120
-rect 768 744 696 120
 oneway 624 360 144 17
 oneway 768 360 144 17
 rect 48 528 120 24
@@ -15,9 +13,9 @@ oneway 312 192 144 14
 oneway 1080 192 144 14
 oneway 288 408 168 14
 oneway 1080 408 168 14
-obj saw damage=25 r=26 speed=130 x=480 y=720 path=360,720;624,720
-obj saw damage=25 r=26 speed=130 x=1056 y=720 path=1176,720;912,720
+rect 48 744 264 24
+rect 1224 744 264 24
+oneway 532 720 168 14
+oneway 836 720 168 14
 obj conveyor h=20 speed=140 w=240 x=288 y=508
 obj conveyor h=20 speed=-140 w=240 x=1008 y=508
-obj barrel h=48 w=36 x=666 y=696
-obj barrel h=48 w=36 x=834 y=696

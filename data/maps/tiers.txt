@@ -5,8 +5,6 @@ spawn 240 696
 spawn 1296 696
 spawn 408 456
 spawn 1128 456
-rect 120 744 648 72
-rect 768 744 648 72
 oneway 336 600 192 17
 oneway 1008 600 192 17
 oneway 504 456 192 17
@@ -17,9 +15,9 @@ oneway 144 360 144 17
 oneway 1248 360 144 17
 oneway 360 144 144 14
 oneway 1032 144 144 14
+rect 108 744 264 24
+rect 1164 744 264 24
+oneway 552 720 168 14
+oneway 816 720 168 14
 obj crumble back=4 delay=0.5 h=18 w=168 x=48 y=528
 obj crumble back=4 delay=0.5 h=18 w=168 x=1320 y=528
-obj glass h=120 w=16 x=422 y=624
-obj glass h=120 w=16 x=1098 y=624
-obj wall h=96 hp=150 w=40 x=684 y=648
-obj wall h=96 hp=150 w=40 x=812 y=648

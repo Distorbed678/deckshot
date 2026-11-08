@@ -308,7 +308,7 @@ function Screen:drawControls(x, y0, w, viewH)
   self.controlsScroll = self.controlsScroll or { y = 0 }
   local rowsMax = 0
   for _, scheme in ipairs(schemes) do rowsMax = math.max(rowsMax, #scheme.actions) end
-  local y = ui.beginScroll(self.controlsScroll, x - 4, y0, w + 8, viewH, 36 + rowsMax * 38 + 104)
+  local y = ui.beginScroll(self.controlsScroll, x - 4, y0, w + 8, viewH, 44 + rowsMax * 38 + 104)
   local gapX = 20
   local colW = (w - gapX * (#schemes - 1)) / #schemes
   local h, gap = 34, 38
@@ -320,7 +320,7 @@ function Screen:drawControls(x, y0, w, viewH)
     love.graphics.setColor(1, 1, 1, 0.85)
     love.graphics.printf(scheme.name, cx, y, colW, "center")
     for r, action in ipairs(scheme.actions) do
-      local ry = y + 36 + (r - 1) * gap
+      local ry = y + 44 + (r - 1) * gap
       local capturing = self.capture and self.capture.scheme == scheme.id and self.capture.action == action
       local opts = capturing and { color = ui.ACCENT } or nil
       if ui.button("", cx, ry, colW, h, opts) and not self.capture then
@@ -344,7 +344,7 @@ function Screen:drawControls(x, y0, w, viewH)
 
   local rows = 0
   for _, scheme in ipairs(schemes) do rows = math.max(rows, #scheme.actions) end
-  local by = y + 36 + rows * gap + 4
+  local by = y + 44 + rows * gap + 4
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)
   love.graphics.printf("Click a binding, then press a key or mouse button (Esc cancels). A key already in use is swapped.",
@@ -497,7 +497,7 @@ function Screen:drawGameplay(x, y, w, viewH)
   ry = ry + head
   for _, r in ipairs(Cards.RARITIES) do
     local key = "weight_" .. r.id
-    d = ui.cycler(r.name, v[key] .. "%", rx, ry, colW, h)
+    d = ui.cycler(r.name, v[key] .. "%", rx, ry, colW, h, { noEnter = true })
     love.graphics.setColor(r.color)
     love.graphics.rectangle("fill", rx + 6, ry + 10, 4, h - 20, 2, 2)
     if d ~= 0 then Settings.setWeight(r.id, v[key] + d) end
@@ -540,20 +540,20 @@ function Screen:draw()
   ui.panel(px, py, pw, ph)
   love.graphics.setFont(app.fonts.big)
   love.graphics.setColor(1, 1, 1)
-  love.graphics.printf("SETTINGS", px, py + 18, pw, "center")
+  love.graphics.printf("SETTINGS", px, py + 12, pw, "center")
 
   -- Tabs
   local tw, th = 200, 44
   local tx = px + (pw - (#TABS * tw + (#TABS - 1) * 12)) / 2
   for i, name in ipairs(TABS) do
     local active = i == self.tab
-    if ui.button(name, tx + (i - 1) * (tw + 12), py + 70, tw, th,
+    if ui.button(name, tx + (i - 1) * (tw + 12), py + 74, tw, th,
       { color = active and ui.ACCENT or nil, font = app.fonts.button }) and not active then
       self:setTab(i)
     end
     if active then
       love.graphics.setColor(ui.ACCENT)
-      love.graphics.rectangle("fill", tx + (i - 1) * (tw + 12) + 30, py + 70 + th + 4, tw - 60, 3, 1, 1)
+      love.graphics.rectangle("fill", tx + (i - 1) * (tw + 12) + 30, py + 74 + th + 4, tw - 60, 3, 1, 1)
     end
   end
   local cx, cy, cw = px + 40, py + 134, pw - 80

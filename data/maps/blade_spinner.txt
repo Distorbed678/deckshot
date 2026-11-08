@@ -5,8 +5,6 @@ spawn 192 696
 spawn 1344 696
 spawn 240 432
 spawn 1296 432
-rect 72 744 696 120
-rect 768 744 696 120
 rect 720 432 96 48
 oneway 168 480 216 17
 oneway 1152 480 216 17
@@ -16,10 +14,10 @@ oneway 480 600 120 17
 oneway 936 600 120 17
 oneway 144 144 168 14
 oneway 1224 144 168 14
+rect 60 744 264 24
+rect 1212 744 264 24
+oneway 536 720 168 14
+oneway 832 720 168 14
 obj arm count=2 damage=25 length=130 phase=0 r=24 spin=1.4 x=768 y=456
 obj platform h=18 speed=90 w=120 x=576 y=144 path=576,144;576,48
 obj platform h=18 speed=90 w=120 x=840 y=144 path=840,144;840,48
-obj glass h=120 w=16 x=518 y=624
-obj glass h=120 w=16 x=1002 y=624
-obj wall h=96 hp=150 w=40 x=420 y=648
-obj wall h=96 hp=150 w=40 x=1076 y=648

@@ -5,8 +5,6 @@ spawn 168 696
 spawn 1368 696
 spawn 216 360
 spawn 1320 360
-rect 72 744 696 120
-rect 768 744 696 120
 rect 456 528 48 48
 rect 1032 528 48 48
 oneway 120 408 216 17
@@ -17,9 +15,9 @@ oneway 336 144 120 14
 oneway 1080 144 120 14
 oneway 144 576 168 14
 oneway 1224 576 168 14
+rect 48 744 264 24
+rect 1224 744 264 24
+oneway 532 720 168 14
+oneway 836 720 168 14
 obj arm count=2 damage=25 length=90 r=20 spin=-1.6 x=480 y=552
 obj arm count=2 damage=25 length=90 r=20 spin=1.6 x=1056 y=552
-obj gas h=42 w=28 x=474 y=702
-obj gas h=42 w=28 x=1034 y=702
-obj wall h=96 hp=150 w=40 x=324 y=648
-obj wall h=96 hp=150 w=40 x=1172 y=648

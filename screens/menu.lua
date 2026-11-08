@@ -98,7 +98,7 @@ function Menu:draw()
   local w, h = 360, 54
   local x = (app.W - w) / 2
   local y = 214
-  if self.message then app.centered(self.message, app.fonts.med, 188, ui.BAD) end
+  if self.message then app.centered(self.message, app.fonts.med, 182, ui.BAD) end
   if ui.button("Local Play", x, y, w, h) then app.switch(require("screens.localmenu").new()) end
   y = y + 64
   if ui.button("Online Play", x, y, w, h) then app.switch(require("screens.online").new()) end

@@ -735,7 +735,7 @@ function Editor:drawToolbar()
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.5)
   love.graphics.print("7  OBJECTS", x + 4, y)
-  y = y + 18
+  y = y + 22
   local bw, bh = 65, 23
   for i, t in ipairs(OBJ_TYPES) do
     local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
