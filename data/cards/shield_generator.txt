@@ -2,5 +2,4 @@ deckshot-card 1
 name Shield Generator
 rarity epic
 row add shieldMax 60
-note +start every round with a 60 HP shield
 stack +60 shield per copy

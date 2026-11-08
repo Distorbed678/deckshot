@@ -1,0 +1,5 @@
+deckshot-card 1
+name Hot Barrel
+rarity uncommon
+row mul fireDelay 0.8
+row mul reloadTime 1.2

@@ -1,0 +1,4 @@
+deckshot-card 1
+name Fortify
+rarity common
+row add maxHp 30

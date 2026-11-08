@@ -1,0 +1,4 @@
+deckshot-card 1
+name Long Reach
+rarity common
+row mul meleeRange 1.2

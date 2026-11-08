@@ -48,7 +48,7 @@ function Bullet.new(owner, x, y, vx, vy)
     bounces = s.bounces,
     bounced = false,
     gravity = s.bulletGravity,
-    explosion = s.explosion,
+    explosion = s.explosion * (s.explosionSize or 1),
     poison = s.poison,
     homing = s.homing,
     lifesteal = s.lifesteal,
@@ -413,6 +413,7 @@ function Bullet:hitPlayer(p, game)
   local landed = p:hit(dmg, self.vx, self.vy, self.knockback, o)
   if landed then
     if not self.fromTrigger and not self.isChild and o.trigger then o:trigger("hit", { target = p }) end
+    if (os.bloodPact or 0) > 0 and not o.dead and o.heal then o:heal(10 * os.bloodPact) end
     if self.lifesteal > 0 then o:heal(dmg * self.lifesteal) end
     if self.poison > 0 then p:poisonFor(dmg * self.poison, 3) end
     if self.frost > 0 then p.slowTimer = math.max(p.slowTimer, self.frost) end

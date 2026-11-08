@@ -117,6 +117,7 @@ function Objects.hazardHit(world, o, p, damage, dx, dy, kind, cooldown, source)
   if dy > 0.7 then p.vy = dy * SHOVE end -- pushed down (ceiling spikes)
   p.controlLock = math.max(p.controlLock, 0.15)
   p.dashTimer, p.lungeTimer = 0, 0
+  damage = damage * (p.stats.hazardTaken or 1)
   if p:isBlocking() then
     fx.burst(p.x - dx * p.r, p.y - dy * p.r, { 1, 1, 1 }, 10, 260, 3)
     p:emitSound("edgeBlock")
@@ -319,6 +320,7 @@ end
 -- An object took damage. Returns true if it broke.
 function Objects.damage(world, o, amount, source, x, y)
   if not o.alive or not o.hp or o.hp <= 0 then return false end
+  if source and source.stats and source.stats.objectDamage then amount = amount * source.stats.objectDamage end
   o.hp = o.hp - amount
   o.hitFlash = 0.1
   o.breaker = source or o.breaker
@@ -1281,6 +1283,17 @@ function Objects.update(world, dt)
           e.life = 0
         end
       end
+    elseif e.type == "strike" and e.life <= 0 then
+      -- Lightning (Thunder God): strikes where the enemy was when it started charging.
+      fx.ring(e.x, e.y, e.radius, { 0.7, 0.85, 1 })
+      fx.spray(e.x, e.y, -math.pi / 2, 0.4, { 0.8, 0.9, 1 }, 14, 500, 3, -0.5)
+      fx.addShake(4)
+      sfx.play("laserFire", e.x, 0.8, 1.6)
+      for _, p in ipairs(world.players) do
+        if not p.dead and p ~= e.owner and circleHitsPlayer(e.x, e.y, e.radius, p) then
+          p:hit(e.damage, p.x - e.x, -1, 300, e.owner, "lightning")
+        end
+      end
     elseif e.type == "cloud" then
       for _, p in ipairs(world.players) do
         if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (p.poisonTimer or 0) < 0.6 then
@@ -1345,6 +1358,14 @@ function Objects.drawEffect(e)
       love.graphics.setColor(1, 0.85, 0.3, a)
       for i = -1, 1 do love.graphics.rectangle("fill", e.x + i * 5 - 1.5, y - 7, 3, 14, 1, 1) end
     end
+  elseif e.type == "strike" then
+    local k = 1 - math.max(0, e.life or 0) / (e.max or 0.75)
+    love.graphics.setColor(0.7, 0.85, 1, 0.15 + 0.35 * k)
+    love.graphics.circle("fill", e.x, e.y, (e.radius or 55) * k)
+    love.graphics.setColor(0.85, 0.95, 1, 0.8)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", e.x, e.y, e.radius or 55)
+    love.graphics.line(e.x, e.y - 400, e.x, e.y - 400 + 400 * k)
   elseif e.type == "cloud" then
     local frac = math.min(1, (e.life or 1) / 1)
     for i = 1, 6 do

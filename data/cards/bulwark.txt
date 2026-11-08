@@ -2,7 +2,5 @@ deckshot-card 1
 name Bulwark
 rarity common
 block
-row add blockTime 0.1
-row mul blockCooldown 0.85
-row add maxHp 20
-note +longer block
+row mul blockTime 1.6
+row mul speed 0.9

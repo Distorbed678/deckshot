@@ -1,0 +1,4 @@
+deckshot-card 1
+name Vampiric Fists
+rarity uncommon
+row add meleeLifesteal 0.1

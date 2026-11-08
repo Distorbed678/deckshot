@@ -2,4 +2,5 @@ deckshot-card 1
 name Executioner
 rarity uncommon
 row add execute 1
+note +50% damage to enemies below 35% HP
 stack +50% per copy

@@ -1,0 +1,5 @@
+deckshot-card 1
+name Lunge
+rarity uncommon
+row mul heavyDash 1.4
+row mul meleeRange 1.1

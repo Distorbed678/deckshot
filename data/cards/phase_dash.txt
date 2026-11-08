@@ -1,0 +1,4 @@
+deckshot-card 1
+name Phase Dash
+rarity rare
+trigger dash invuln time=0.15

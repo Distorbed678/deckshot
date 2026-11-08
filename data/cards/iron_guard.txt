@@ -1,0 +1,6 @@
+deckshot-card 1
+name Iron Guard
+rarity uncommon
+block
+row add meleeStun 0.4
+row mul blockCooldown 0.9

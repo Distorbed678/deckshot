@@ -1,0 +1,7 @@
+deckshot-card 1
+name Cannoneer
+rarity rare
+row mul bulletSize 1.6
+row mul knockback 1.3
+row add explosion 30
+note +bullets explode

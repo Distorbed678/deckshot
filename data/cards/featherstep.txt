@@ -1,0 +1,4 @@
+deckshot-card 1
+name Featherstep
+rarity common
+row mul gravityMul 0.85

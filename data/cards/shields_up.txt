@@ -4,4 +4,3 @@ rarity common
 block
 row mul blockCooldown 0.6
 row add blockTime 0.15
-note +longer block

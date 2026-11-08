@@ -1,0 +1,7 @@
+deckshot-card 1
+name Bullet Hell
+rarity legendary
+row add bullets 3
+row mul fireDelay 0.555556
+row mul gunDamage 0.45
+row add spread 0.5

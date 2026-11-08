@@ -3,4 +3,3 @@ name Fast Ball
 rarity common
 row mul bulletSpeed 1.7
 row mul bulletGravity 0.4
-note +less bullet drop

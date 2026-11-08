@@ -1,0 +1,5 @@
+deckshot-card 1
+name Bat
+rarity common
+row mul meleeKnockback 1.25
+row mul meleeDamage 1.1

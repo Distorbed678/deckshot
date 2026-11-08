@@ -1,5 +1,5 @@
 deckshot-card 1
 name Haste
 rarity common
-row mul speed 1.3
-row mul jump 1.05
+row mul speed 1.25
+row mul dashCooldown 0.75

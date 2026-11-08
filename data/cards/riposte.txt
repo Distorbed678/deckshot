@@ -1,0 +1,5 @@
+deckshot-card 1
+name Riposte
+rarity rare
+row add riposte 1
+note +a melee within 1s after you block deals +25% damage

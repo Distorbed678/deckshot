@@ -1,5 +1,5 @@
 deckshot-card 1
-name Extended Barrel
+name Gunslinger
 rarity common
 row add ammo 1
-row mul bulletSpeed 1.2
+row mul reloadTime 0.85

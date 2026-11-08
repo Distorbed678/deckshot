@@ -1,0 +1,6 @@
+deckshot-card 1
+name Marksman
+rarity uncommon
+row mul gunDamage 1.2
+row mul bulletSpeed 1.3
+row add ammo -1

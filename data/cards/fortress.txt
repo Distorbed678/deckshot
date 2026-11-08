@@ -1,0 +1,7 @@
+deckshot-card 1
+name Fortress
+rarity legendary
+block
+row mul blockTime 2
+row mul blockCooldown 0.6
+row mul speed 0.85

@@ -1,0 +1,4 @@
+deckshot-card 1
+name Quick Recovery
+rarity common
+row mul stunTaken 0.7

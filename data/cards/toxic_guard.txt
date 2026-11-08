@@ -1,0 +1,5 @@
+deckshot-card 1
+name Toxic Guard
+rarity uncommon
+block
+trigger block poison damage=15 radius=180

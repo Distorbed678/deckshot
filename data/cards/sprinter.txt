@@ -1,0 +1,4 @@
+deckshot-card 1
+name Sprinter
+rarity common
+row mul speed 1.1

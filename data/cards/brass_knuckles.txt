@@ -1,0 +1,5 @@
+deckshot-card 1
+name Brass Knuckles
+rarity common
+row mul meleeDamage 1.25
+row mul meleeKnockback 1.1

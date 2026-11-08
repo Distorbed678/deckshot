@@ -1,0 +1,5 @@
+deckshot-card 1
+name Ricochet King
+rarity epic
+row add bounces 3
+row add bounceDamage 0.3

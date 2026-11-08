@@ -13,7 +13,9 @@ Stats.GROUPS = { "Gun", "Bullets", "Melee", "Movement", "Defense", "Block", "Abi
 
 Stats.LIST = {
   -- Gun
-  { "gunDamage", 34, "Gun", "pct", "high", "gun damage" },
+  { "gunDamage", 25, "Gun", "pct", "high", "gun damage" },
+  { "airDamage", 0, "Gun", "pct", "high", "gun damage while airborne" },
+  { "bloodPact", 0, "Gun", "count", "high", "blood pact" },
   { "fireDelay", 0.25, "Gun", "rate", "low", "fire rate" },
   { "ammo", 3, "Gun", "flat", "high", "ammo" },
   { "reloadTime", 1.5, "Gun", "pct", "low", "reload time" },
@@ -33,12 +35,13 @@ Stats.LIST = {
   { "distDamage", 0, "Bullets", "hidden", "high", "damage over distance" },
   { "accel", 0, "Bullets", "hidden", "high", "bullet acceleration" },
   { "explosion", 0, "Bullets", "flat", "high", "explosion radius" },
+  { "explosionSize", 1, "Bullets", "pct", "high", "explosion size" },
   { "poison", 0, "Bullets", "pct", "high", "poison damage" },
   { "homing", 0, "Bullets", "hidden", "high", "homing" },
   { "lifesteal", 0, "Bullets", "pct", "high", "lifesteal" },
-  { "frost", 0, "Bullets", "secs", "high", "slow on hit" },
+  { "frost", 0, "Bullets", "hidden", "high", "slow on hit" },
   { "crit", 0, "Bullets", "pct", "high", "crit chance" },
-  { "pierce", 0, "Bullets", "flat", "high", "players pierced" },
+  { "pierce", 0, "Bullets", "hidden", "high", "players pierced" },
   { "split", 0, "Bullets", "count", "high", "wall splits" },
   { "ghost", 0, "Bullets", "count", "high", "ghost bullets" },
   { "sticky", 0, "Bullets", "count", "high", "sticky mines" },
@@ -52,7 +55,7 @@ Stats.LIST = {
   { "mirror", 0, "Bullets", "count", "high", "mirror shots" },
   { "scavenger", 0, "Bullets", "flat", "high", "ammo refunded per hit" },
   -- Melee
-  { "meleeDamage", 12, "Melee", "pct", "high", "melee damage" },
+  { "meleeDamage", 20, "Melee", "pct", "high", "melee damage" },
   { "meleeKnockback", 450, "Melee", "pct", "high", "melee knockback" },
   { "meleeRange", 55, "Melee", "pct", "high", "melee range" },
   { "meleeCooldown", 0.45, "Melee", "pct", "low", "melee cooldown" },
@@ -60,15 +63,20 @@ Stats.LIST = {
   { "heavyDash", 260, "Melee", "pct", "high", "heavy lunge" },
   { "meleeStun", 0, "Melee", "pct", "high", "stun when you block melee" },
   { "meleeLifesteal", 0, "Melee", "pct", "high", "melee lifesteal" },
+  { "stunTaken", 1, "Melee", "pct", "low", "stun when your melee is blocked" },
+  { "uppercut", 0, "Melee", "count", "high", "uppercut" },
+  { "riposte", 0, "Melee", "count", "high", "riposte" },
+  { "boneBreaker", 0, "Melee", "count", "high", "bone breaker" },
+  { "objectDamage", 1, "Melee", "pct", "high", "damage to map objects" },
   -- Movement
   { "speed", 340, "Movement", "pct", "high", "move speed" },
   { "jump", 930, "Movement", "pct", "high", "jump power" },
-  { "airJumps", 0, "Movement", "flat", "high", "air jumps" },
+  { "airJumps", 1, "Movement", "flat", "high", "air jumps" },
   { "gravityMul", 1, "Movement", "pct", "low", "gravity" },
   { "dashes", 1, "Movement", "flat", "high", "air dashes" },
   { "dashSpeed", 950, "Movement", "pct", "high", "dash speed" },
   { "dashCooldown", 0.6, "Movement", "pct", "low", "dash cooldown" },
-  { "radius", 20, "Movement", "pct", "low", "body size" },
+  { "radius", 20, "Movement", "hidden", "low", "body size" },
   -- Defense
   { "maxHp", 100, "Defense", "flat", "high", "HP" },
   { "armor", 0, "Defense", "flat", "high", "damage blocked per hit" },
@@ -77,26 +85,29 @@ Stats.LIST = {
   { "lives", 0, "Defense", "count", "high", "revives" },
   { "lastStand", 0, "Defense", "count", "high", "last stands" },
   { "decay", 0, "Defense", "count", "high", "damage decay" },
-  { "thorns", 0, "Defense", "pct", "high", "thorns" },
-  { "frostback", 0, "Defense", "secs", "high", "slow on attackers" },
+  { "thorns", 0, "Defense", "hidden", "high", "thorns" },
+  { "frostback", 0, "Defense", "hidden", "high", "slow on attackers" },
   { "knockbackImmune", 0, "Defense", "count", "high", "knockback immunity" },
   { "stasis", 0, "Defense", "count", "high", "stasis field" },
   { "repel", 0, "Defense", "count", "high", "bullet repulsion" },
   { "orbs", 0, "Defense", "flat", "high", "orbiting orbs" },
+  { "hazardTaken", 1, "Defense", "pct", "low", "hazard damage taken" },
+  { "edgeTaken", 1, "Defense", "pct", "low", "edge damage taken" },
+  { "edgeLaunch", 1, "Defense", "pct", "high", "edge launch" },
   -- Block
   { "blockCooldown", 4, "Block", "pct", "low", "block cooldown" },
   { "blockTime", 0.3, "Block", "secs", "high", "block duration" },
   { "blockHeal", 0, "Block", "flat", "high", "HP healed when blocking" },
   { "reflect", 0, "Block", "count", "high", "reflected bullets" },
   { "shockwave", 0, "Block", "count", "high", "block shockwave" },
-  { "blink", 0, "Block", "flat", "high", "blink distance" },
+  { "blink", 0, "Block", "hidden", "high", "blink distance" },
   { "empower", 0, "Block", "count", "high", "empowered shots" },
   { "parry", 0, "Block", "count", "high", "parry" },
   { "blockReload", 0, "Block", "count", "high", "block reload" },
-  { "cloak", 0, "Block", "secs", "high", "cloak" },
-  { "blockNova", 0, "Block", "flat", "high", "nova bullets" },
+  { "cloak", 0, "Block", "hidden", "high", "cloak" },
+  { "blockNova", 0, "Block", "hidden", "high", "nova bullets" },
   { "sprintBlock", 0, "Block", "count", "high", "sprint block" },
-  { "mineLayer", 0, "Block", "flat", "high", "mines per block" },
+  { "mineLayer", 0, "Block", "hidden", "high", "mines per block" },
   { "lockLoad", 0, "Block", "count", "high", "lock and load" },
   { "gravityBlock", 0, "Block", "count", "high", "gravity block" },
   { "timeWarp", 0, "Block", "count", "high", "time warp" },
@@ -108,10 +119,10 @@ Stats.LIST = {
   { "spite", 0, "Abilities", "count", "high", "spite" },
   { "execute", 0, "Abilities", "count", "high", "executioner" },
   { "combo", 0, "Abilities", "count", "high", "combo" },
-  { "static", 0, "Abilities", "flat", "high", "static damage per second" },
+  { "static", 0, "Abilities", "hidden", "high", "static damage per second" },
   { "quickdraw", 0, "Abilities", "count", "high", "quickdraw" },
   { "momentum", 0, "Abilities", "count", "high", "momentum" },
-  { "reloadNova", 0, "Abilities", "flat", "high", "reload nova bullets" },
+  { "reloadNova", 0, "Abilities", "hidden", "high", "reload nova bullets" },
   { "adrenaline", 0, "Abilities", "count", "high", "adrenaline" },
   { "swap", 0, "Abilities", "count", "high", "swap shot" },
   { "sentry", 0, "Abilities", "count", "high", "sentry" },
@@ -130,6 +141,11 @@ Stats.ALIAS = { damage = "gunDamage" }
 
 local function round(v) return math.floor(v + 0.5) end
 
+Stats.SINGULAR = {
+  ["air jumps"] = "air jump", ["air dashes"] = "air dash", ["bullets per shot"] = "bullet per shot",
+  ["bullet bounces"] = "bullet bounce", ["orbiting orbs"] = "orbiting orb", ["revives"] = "revive",
+}
+
 local function num(v)
   if math.abs(v - round(v)) < 0.001 then return tostring(round(v)) end
   return (string.format("%.2f", v):gsub("0+$", ""):gsub("%.$", ""))
@@ -140,10 +156,12 @@ Stats.num = num
 -- row = { op = "add" | "mul" | "set", stat = key, value = number }
 function Stats.describe(row)
   local info = Stats.INFO[row.stat]
-  if not info or info.fmt == "hidden" then return nil end
+  if not info or info.fmt == "hidden" or info.fmt == "count" then return nil end
   local v = row.value
   local text, up
   if row.op == "set" then
+    if info.fmt == "rate" then return nil end -- explained by the card's notes
+    if v == 0 then return "+no " .. info.label, nil end
     return "+" .. info.label .. " set to " .. num(v), nil
   elseif row.op == "mul" then
     if v == 1 then return nil end
@@ -160,7 +178,7 @@ function Stats.describe(row)
   else -- add
     if v == 0 then return nil end
     up = v > 0
-    if info.fmt == "pct" and math.abs(v) <= 5 then
+    if info.fmt == "pct" and math.abs(info.base) <= 1.5 then
       text = (v > 0 and "+" or "") .. round(v * 100) .. "% " .. info.label
     elseif info.fmt == "secs" then
       text = (v > 0 and "+" or "") .. num(v) .. "s " .. info.label
@@ -168,7 +186,9 @@ function Stats.describe(row)
       text = (v > 0 and "+" or "") .. num(v) .. "s between shots"
       up = v < 0
     else
-      text = (v > 0 and "+" or "") .. num(v) .. " " .. info.label
+      local label = info.label
+      if math.abs(v) == 1 then label = Stats.SINGULAR[label] or label end -- "+1 air jump"
+      text = (v > 0 and "+" or "") .. num(v) .. " " .. label
     end
   end
   local good = up

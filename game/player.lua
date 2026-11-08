@@ -318,6 +318,11 @@ function Player:update(dt, frozen)
     end
   end
   self.boostSpeedTimer = math.max(0, (self.boostSpeedTimer or 0) - dt)
+  self.riposteTimer = math.max(0, (self.riposteTimer or 0) - dt)
+  if (self.boostShots or 0) > 0 then
+    self.boostTimer = (self.boostTimer or math.huge) - dt
+    if self.boostTimer <= 0 then self.boostShots, self.boostDamage = 0, 0 end
+  end
 
   -- Melee charge: release (or overholding a full charge) swings.
   if self.charging then
@@ -545,12 +550,13 @@ function Player:checkBounds(x0, y0, x1, y1, top)
     side = "top"
   end
   if not side then return end
+  local L = self.stats.edgeLaunch or 1
   if side == "left" then
-    self.vx, self.vy = EDGE.launch, math.min(self.vy, -EDGE.launchUp)
+    self.vx, self.vy = EDGE.launch * L, math.min(self.vy, -EDGE.launchUp * L)
   elseif side == "right" then
-    self.vx, self.vy = -EDGE.launch, math.min(self.vy, -EDGE.launchUp)
+    self.vx, self.vy = -EDGE.launch * L, math.min(self.vy, -EDGE.launchUp * L)
   elseif side == "bottom" then
-    self.vy = -EDGE.bottomLaunch
+    self.vy = -EDGE.bottomLaunch * L
   else
     self.vy = EDGE.launchUp
   end
@@ -569,7 +575,7 @@ function Player:checkBounds(x0, y0, x1, y1, top)
   end
   fx.burst(ex, ey, { 1, 0.25, 0.2 }, 14, 320, 4)
   self:emitSound("edge")
-  self:hit(EDGE.damage, 0, 0, 0, nil, "edge")
+  self:hit(EDGE.damage * (self.stats.edgeTaken or 1), 0, 0, 0, nil, "edge")
 end
 
 function Player:emitSound(name, volume, pitch)
@@ -867,12 +873,13 @@ end
 
 function Player:meleeHit(e, heavy, p, dx, dy)
   local s = self.stats
-  local dmg = heavy and s.meleeDamage * (1.67 + 1.66 * p) or s.meleeDamage
+  local dmg = heavy and s.meleeDamage * (1.5 + 1.0 * p) or s.meleeDamage
+  if (self.riposteTimer or 0) > 0 and s.riposte > 0 then dmg = dmg * (1 + 0.25 * s.riposte) end
   local knock = heavy and s.meleeKnockback * (1.2 + 0.8 * p) or s.meleeKnockback
   if e:isBlocking() then
     -- A blocked melee stuns the attacker; harder swings stun longer.
     local stun = heavy and (MELEE.heavyStunMin + (MELEE.heavyStunMax - MELEE.heavyStunMin) * p) or MELEE.lightStun
-    stun = stun * (1 + 0.5 * (e.stats.meleeStun or 0))
+    stun = stun * (1 + (e.stats.meleeStun or 0)) * (s.stunTaken or 1)
     self:stun(stun)
     e:blocked()
     e:trigger("meleeBlocked", { target = self })
@@ -885,6 +892,16 @@ function Player:meleeHit(e, heavy, p, dx, dy)
   end
   if e:hit(dmg, dx, dy - math.abs(dx) * 0.3, knock, self, "melee") then
     if s.meleeLifesteal > 0 then self:heal(dmg * s.meleeLifesteal) end
+    if heavy and s.uppercut > 0 and not e.dead then
+      e.vy = -(550 + 500 * p) * (1 + 0.25 * (s.uppercut - 1))
+      e.vx = e.vx * 0.3
+      e.jumping = false
+    end
+    if heavy and s.boneBreaker > 0 then
+      for _, o in ipairs(self.game:enemiesOf(self)) do
+        if (o.x - e.x) ^ 2 + (o.y - e.y) ^ 2 < 130 * 130 then o.slowTimer = math.max(o.slowTimer, 0.5 * s.boneBreaker) end
+      end
+    end
     fx.burst(e.x, e.y, { 1, 1, 1 }, heavy and 14 or 7, heavy and 320 or 200, 3)
     self:emitSound(heavy and "meleeHitHeavy" or "meleeHit")
     self:trigger("meleeHit", { target = e })
@@ -1023,6 +1040,10 @@ function Player:tryFire()
 
   self:volley(true, mult)
   self:trigger("shoot")
+  if s.bloodPact > 0 and self.hp > 1 then -- Blood Pact: every shot costs HP (can't kill you)
+    self.hp = math.max(1, self.hp - 5 * s.bloodPact)
+    self.hitFlash = 0.05
+  end
   if s.burst > 0 then
     self.burstLeft = s.burst
     self.burstTimer = 0.09
@@ -1082,6 +1103,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
 
   local b = Bullet.new(self, bx, by, math.cos(ang) * speed, math.sin(ang) * speed)
   if self.inTrigger then b.fromTrigger = true end
+  if s.airDamage > 0 and not self.onGround then b.damage = b.damage * (1 + s.airDamage) end
   if s.berserk > 0 then
     b.damage = b.damage * (1 + s.berserk * (1 - math.max(0, self.hp) / s.maxHp))
   end
@@ -1124,6 +1146,7 @@ end
 -- An attack hit our block. Parry recharges the block; extra copies also heal.
 function Player:blocked()
   local s = self.stats
+  self.riposteTimer = 1
   self:trigger("parry")
   if s.parry > 0 then
     self:emitSound("parry")

@@ -1,4 +1,0 @@
-deckshot-card 1
-name Leech
-rarity uncommon
-row add lifesteal 0.5

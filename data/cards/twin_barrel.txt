@@ -1,0 +1,6 @@
+deckshot-card 1
+name Twin Barrel
+rarity uncommon
+row add bullets 1
+row add spread 0.12
+row mul gunDamage 0.8

@@ -7,3 +7,4 @@ row add knockbackImmune 1
 row mul speed 0.8
 row mul blockCooldown 1.5
 note +immune to knockback
+note +bigger body

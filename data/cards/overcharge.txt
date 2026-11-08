@@ -1,0 +1,4 @@
+deckshot-card 1
+name Overcharge
+rarity rare
+trigger interval damage every=6 pct=50 shots=0 time=1

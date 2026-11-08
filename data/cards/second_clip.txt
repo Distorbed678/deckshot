@@ -1,0 +1,4 @@
+deckshot-card 1
+name Second Clip
+rarity common
+trigger kill ammo amount=20

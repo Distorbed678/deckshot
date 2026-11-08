@@ -1,0 +1,4 @@
+deckshot-card 1
+name Aerial Ace
+rarity rare
+row add airDamage 0.2

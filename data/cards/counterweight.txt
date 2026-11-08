@@ -1,0 +1,5 @@
+deckshot-card 1
+name Counterweight
+rarity common
+row mul knockback 1.15
+row add maxHp 10

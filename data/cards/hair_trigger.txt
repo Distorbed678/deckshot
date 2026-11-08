@@ -1,0 +1,5 @@
+deckshot-card 1
+name Hair Trigger
+rarity common
+row mul fireDelay 0.909091
+row mul bulletSpeed 1.05

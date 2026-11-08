@@ -4,4 +4,3 @@ rarity common
 row add bullets 2
 row add spread 0.3
 row mul gunDamage 0.7
-note +wider spread

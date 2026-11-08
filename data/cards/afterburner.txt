@@ -1,0 +1,5 @@
+deckshot-card 1
+name Afterburner
+rarity common
+row mul dashCooldown 0.85
+row mul dashSpeed 1.1

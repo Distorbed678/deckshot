@@ -122,7 +122,8 @@ function Snap.encode(world, events)
   add("<B", math.min(#effects, 255))
   for i = 1, math.min(#effects, 255) do
     local e = effects[i]
-    add("<BhhBBB", e.type == "pickup" and 1 or 2, i16(e.x), i16(e.y), e.kind or 0, u8(e.life * 20), u8((e.radius or 0) / 2))
+    local code = e.type == "pickup" and 1 or e.type == "cloud" and 2 or 3
+    add("<BhhBBB", code, i16(e.x), i16(e.y), e.kind or 0, u8(math.max(0, e.life) * 20), u8((e.radius or 0) / 2))
   end
   local b = world.barrier
   if b then
@@ -273,7 +274,8 @@ function Snap.decode(data)
   for i = 1, nfx do
     local kind, x, y, k, life, rad
     kind, x, y, k, life, rad, pos = unpack("<BhhBBB", raw, pos)
-    v.effects[i] = { type = kind == 1 and "pickup" or "cloud", x = x, y = y, kind = k, life = life / 20, radius = rad * 2 }
+    v.effects[i] = { type = kind == 1 and "pickup" or kind == 2 and "cloud" or "strike", x = x, y = y, kind = k,
+      life = life / 20, max = 0.75, radius = rad * 2 }
   end
   local hasBarrier
   hasBarrier, pos = unpack("<B", raw, pos)

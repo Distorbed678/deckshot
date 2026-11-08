@@ -1,6 +1,0 @@
-deckshot-card 1
-name Second Wind
-rarity common
-block
-row add blockHeal 15
-note +blocking heals 15 HP

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Blood Pact
+rarity epic
+row set fireDelay 0.06
+row add bloodPact 1
+note +fire as fast as your gun allows
+note -every shot costs 5 HP (it can't kill you)
+note +every hit heals 10 HP

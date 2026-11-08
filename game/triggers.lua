@@ -41,10 +41,18 @@ Triggers.EFFECTS = {
     text = function(p) return "release a shockwave (" .. p.damage .. " dmg)" end },
   { id = "speed", name = "Speed boost", params = { { "pct", 30, 5, 5, 300, "Speed %" }, { "time", 2, 0.5, 0.5, 10, "Seconds" } },
     text = function(p) return "+" .. p.pct .. "% move speed for " .. p.time .. "s" end },
-  { id = "damage", name = "Damage boost", params = { { "pct", 50, 10, 10, 500, "Damage %" }, { "shots", 1, 1, 1, 10, "Shots" } },
-    text = function(p) return "next " .. (p.shots > 1 and (p.shots .. " shots deal") or "shot deals") .. " +" .. p.pct .. "% damage" end },
-  { id = "ammo", name = "Refill ammo", params = { { "amount", 1, 1, 1, 20, "Ammo" } },
-    text = function(p) return "refill " .. p.amount .. " ammo" end },
+  { id = "damage", name = "Damage boost", params = { { "pct", 50, 5, 5, 500, "Damage %" }, { "shots", 1, 1, 0, 10, "Shots (0 = all)" },
+    { "time", 0, 0.5, 0, 10, "Within (s)" } },
+    text = function(p)
+      local within = p.time > 0 and (" within " .. p.time .. "s") or ""
+      if p.shots == 0 then
+        return "shots deal +" .. p.pct .. "% damage" .. (p.time > 0 and (" for " .. p.time .. "s") or "")
+      end
+      local who = p.shots > 1 and ("next " .. p.shots .. " shots") or "next shot"
+      return who .. within .. " deal" .. (p.shots > 1 and "" or "s") .. " +" .. p.pct .. "% damage"
+    end },
+  { id = "ammo", name = "Refill ammo", params = { { "amount", 1, 1, 1, 20, "Ammo (20 = all)" } },
+    text = function(p) return p.amount >= 20 and "refill all your ammo" or ("refill " .. p.amount .. " ammo") end },
   { id = "invuln", name = "Invulnerable", params = { { "time", 0.5, 0.1, 0.1, 5, "Seconds" } },
     text = function(p) return "become invulnerable for " .. p.time .. "s" end },
   { id = "mine", name = "Drop a mine", params = {}, text = function() return "drop a mine" end },
@@ -56,6 +64,8 @@ Triggers.EFFECTS = {
     text = function(p) return "poison nearby enemies (" .. p.damage .. " over 3s)" end },
   { id = "blackhole", name = "Black hole", params = {}, text = function() return "open a black hole" end },
   { id = "dash", name = "Refill dash", params = {}, text = function() return "refill your dash" end },
+  { id = "lightning", name = "Lightning", params = { { "damage", 30, 5, 1, 200, "Damage" }, { "delay", 0.75, 0.05, 0.2, 3, "Charge (s)" } },
+    text = function(p) return "lightning charges on every enemy, striking for " .. p.damage .. " after " .. p.delay .. "s" end },
   { id = "melee", name = "Reset melee", params = {}, text = function() return "reset your melee cooldown" end },
 }
 Triggers.EFFECT = {}
@@ -93,6 +103,7 @@ end
 
 local RUN = {}
 function RUN.explode(p, q, x, y)
+  q.radius = q.radius * (p.stats.explosionSize or 1)
   fx.ring(x, y, q.radius, p.color)
   fx.burst(x, y, p.color, 16, 300, 4)
   fx.addShake(5)
@@ -127,7 +138,16 @@ function RUN.speed(p, q)
 end
 function RUN.damage(p, q)
   p.boostDamage = math.max(p.boostDamage or 0, q.pct / 100)
-  p.boostShots = math.max(p.boostShots or 0, q.shots)
+  p.boostShots = q.shots == 0 and math.huge or math.max(p.boostShots or 0, q.shots)
+  p.boostTimer = q.time > 0 and q.time or math.huge
+end
+-- Marks every enemy's spot; after the delay, strikes there (dodgeable). Runs through world.strikes.
+function RUN.lightning(p, q)
+  for _, e in ipairs(p.game:enemiesOf(p)) do
+    table.insert(p.game.effects, { type = "strike", x = e.x, y = e.y, life = q.delay, max = q.delay, owner = p,
+      damage = q.damage, radius = 55 })
+  end
+  sfx.play("laserCharge", p.x, 0.8)
 end
 function RUN.ammo(p, q)
   p.ammo = math.min(p.stats.ammo, p.ammo + q.amount)

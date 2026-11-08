@@ -1,0 +1,4 @@
+deckshot-card 1
+name Quick Jab
+rarity common
+row mul meleeCooldown 0.65
