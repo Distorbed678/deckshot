@@ -370,7 +370,8 @@ function Screen:drawGameplay(x, y, w)
   end
   ly = ly + gap
 
-  if ui.button("Reset Gameplay Settings", lx, ly, colW, h) then Settings.resetGameplay() end
+  if ui.button("Synergies...", lx, ly, colW / 2 - 4, h) then app.push(require("screens.synergies").new()) end
+  if ui.button("Reset", lx + colW / 2 + 4, ly, colW / 2 - 4, h) then Settings.resetGameplay() end
 
   -- Rarity chances, then arena rules
   local rx, ry = x + colW + 30, y

@@ -36,6 +36,7 @@ Stats.LIST = {
   { "accel", 0, "Bullets", "hidden", "high", "bullet acceleration" },
   { "explosion", 0, "Bullets", "flat", "high", "explosion radius" },
   { "explosionSize", 1, "Bullets", "pct", "high", "explosion size" },
+  { "bounceExplode", 0, "Bullets", "count", "high", "bouncing blasts" },
   { "poison", 0, "Bullets", "pct", "high", "poison damage" },
   { "homing", 0, "Bullets", "hidden", "high", "homing" },
   { "lifesteal", 0, "Bullets", "pct", "high", "lifesteal" },

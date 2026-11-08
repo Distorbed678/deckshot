@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Fragmentation
+needs hydra shrapnel
+rarity legendary
+row add shrapnel 1
+note +impacts burst into 4 more shards

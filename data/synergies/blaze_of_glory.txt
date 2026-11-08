@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Blaze of Glory
+needs phoenix martyr
+rarity legendary
+row add martyr 1
+note +your death blast is twice as strong

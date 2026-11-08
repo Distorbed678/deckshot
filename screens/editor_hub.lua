@@ -146,7 +146,7 @@ function Hub:draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("EDITOR", 40, 22)
 
-  local tabs = { { "maps", "Maps" }, { "cards", "Cards" } }
+  local tabs = { { "maps", "Maps" }, { "cards", "Cards" }, { "synergies", "Synergies" } }
   for i, tb in ipairs(tabs) do
     local on = self.tab == tb[1]
     if ui.button(tb[2], 220 + (i - 1) * 170, 24, 160, 40, { color = on and ui.ACCENT or nil }) and not on then
@@ -163,11 +163,10 @@ function Hub:draw()
     love.graphics.print("Click a map to select it, click again to edit. Built-in maps you edit keep the original "
       .. "so you can reset them.", 40, 80)
     self:drawMaps()
+  elseif self.tab == "cards" then
+    require("screens.editor_cards").drawHub(self)
   else
-    local ok, cardsHub = pcall(require, "screens.editor_cards")
-    if ok then cardsHub.drawHub(self) else
-      app.centered("The card editor is coming soon.", app.fonts.med, 320, { 1, 1, 1, 0.6 })
-    end
+    require("screens.editor_cards").drawSynergyHub(self)
   end
 
   if self.msg and self.msgT > 0 then

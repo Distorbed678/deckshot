@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Daredevil
+needs hazard_proof edge_runner
+rarity legendary
+row mul hazardTaken 0.8
+row mul edgeTaken 0.8

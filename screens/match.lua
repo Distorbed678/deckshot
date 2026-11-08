@@ -89,6 +89,7 @@ function Match.newHost(slots, winScore, transport, opts)
   m:hookWorld()
   m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
   m:broadcast(net.encodeCards(Cards.sessionEntries()), true)
+  m:broadcast(net.encodeSynergies(require("game.synergies").sessionEntries()), true)
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
@@ -122,6 +123,7 @@ function Match:leave()
   if self.role == "client" then -- drop the host's session map and card lists
     Map.loadAll()
     Cards.loadAll()
+    require("game.synergies").loadAll()
   end
   fx.recorder = nil
   fx.clear()
@@ -472,7 +474,10 @@ function Match:clientNetwork()
   for _, msg in ipairs(msgs) do
     if msg.from == self.hostPeer then
       local kind = net.kind(msg.data)
-      if kind == net.MSG.CARDS then
+      if kind == net.MSG.SYNERGIES then
+        local ok, entries = pcall(net.decodeMaps, msg.data)
+        if ok then require("game.synergies").setSession(entries) end
+      elseif kind == net.MSG.CARDS then
         local ok, entries = pcall(net.decodeCards, msg.data)
         if ok then Cards.setSession(entries) end
       elseif kind == net.MSG.MAPS then

@@ -69,6 +69,7 @@ local defaults = {
   allowDiscard = true,   -- "discard a card instead" on the pick screen
   hazards = true,        -- map hazards on (breakables always stay)
   barrier = true,        -- sudden-death barrier in 3-4 player matches
+  synergiesOn = true,    -- card synergies (individual ones can be turned off)
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -92,6 +93,7 @@ for k, v in pairs(defaults) do Settings.values[k] = v end
 Settings.values.binds = copyBinds(Settings.DEFAULT_BINDS)
 Settings.values.cards = {} -- card id -> { rarity = id or nil, disabled = bool }
 Settings.values.maps = {}  -- map id -> true when the map is turned off
+Settings.values.synergies = {} -- synergy id -> true when turned off
 
 local function clamp(v, lo, hi)
   return math.max(lo, math.min(hi, v))
@@ -128,11 +130,14 @@ function Settings.load()
     local scheme, action, b = line:match("^bind%.([%w_]+)%.([%w_]+)=(.*)$")
     local cardId, cardVal = line:match("^card%.([%w_]+)=(.*)$")
     local mapId, mapVal = line:match("^map%.([%w_]+)=(.*)$")
+    local synId, synVal = line:match("^synergy%.([%w_]+)=(.*)$")
     local k, val = line:match("^([%w_]+)=(.*)$")
     if scheme then
       if v.binds[scheme] and Settings.DEFAULT_BINDS[scheme][action] and validBinding(b) then
         v.binds[scheme][action] = b
       end
+    elseif synId then
+      if synVal == "off" then v.synergies[synId] = true end
     elseif mapId then
       if Map.byId[mapId] and mapVal == "off" then v.maps[mapId] = true end
     elseif cardId then
@@ -204,6 +209,9 @@ function Settings.save()
   end
   for id in pairs(v.maps) do
     lines[#lines + 1] = "map." .. id .. "=off"
+  end
+  for id in pairs(v.synergies) do
+    lines[#lines + 1] = "synergy." .. id .. "=off"
   end
   for id, e in pairs(v.cards) do
     if e.rarity or e.disabled then
@@ -280,6 +288,8 @@ function Settings.resetGameplay()
   v.pickTimer = defaults.pickTimer
   v.allowDiscard = defaults.allowDiscard
   v.hazards = defaults.hazards
+  v.synergiesOn = defaults.synergiesOn
+  v.synergies = {}
   v.barrier = defaults.barrier
   for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
   v.cards = {}
@@ -309,7 +319,10 @@ function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
     startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
-    hazards = v.hazards, barrier = v.barrier }
+    hazards = v.hazards, barrier = v.barrier, synergies = v.synergiesOn, synergyOff = {} }
+  for _, syn in ipairs(require("game.synergies").list) do
+    if v.synergies[syn.id] then rules.synergyOff[syn.index] = true end
+  end
   for i, r in ipairs(Cards.RARITIES) do rules.weights[i] = v["weight_" .. r.id] end
   for _, c in ipairs(Cards.list) do
     rules.rarity[c.index] = Settings.cardRarity(c)

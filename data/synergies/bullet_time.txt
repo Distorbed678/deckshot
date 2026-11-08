@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Bullet Time
+needs time_warp stasis_field
+rarity legendary
+row add stasis 1
+note +your stasis field is 35% bigger

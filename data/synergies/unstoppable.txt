@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Unstoppable
+needs tank juggernaut
+rarity legendary
+row add maxHp 50

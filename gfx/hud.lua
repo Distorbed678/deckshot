@@ -91,11 +91,20 @@ function hud.drawScores(players, winScore)
       local font = app.fonts.small
       love.graphics.setFont(font)
       local items, height = hud.cardChips(p, x, 62, pw, align, font)
+      -- Cards that are part of an active synergy glow gold.
+      local linked = {}
+      for _, act in ipairs(require("game.synergies").active(p.cards, Cards.rules)) do
+        for _, id in ipairs(act.syn.needs) do linked[id] = true end
+      end
       for k, item in ipairs(items) do
         local rc = Cards.rarity[item.card.rarity].color
         if k > 1 and item.y == items[k - 1].y then
           love.graphics.setColor(1, 1, 1, 0.4 * a)
           love.graphics.print(",", item.x - font:getWidth(", "), item.y)
+        end
+        if linked[item.card.id] then
+          love.graphics.setColor(1, 0.8, 0.3, 0.25 * a)
+          love.graphics.rectangle("fill", item.x - 2, item.y + 1, item.w + 4, item.h - 1, 3, 3)
         end
         love.graphics.setColor(rc[1], rc[2], rc[3], 0.75 * a)
         love.graphics.print(item.text, item.x, item.y)
@@ -298,6 +307,17 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     local _, wrapped = sf:getWrap("Stacking: " .. card.stack, w - 28)
     love.graphics.setColor(1, 1, 1, 0.5)
     love.graphics.printf("Stacking: " .. card.stack, x + 14, y + h - 40 - #wrapped * sf:getHeight(), w - 28, "center")
+  end
+
+  -- Synergies this card is part of.
+  local syns = require("game.synergies").forCard(card, Cards.rules)
+  if #syns > 0 then
+    local names = {}
+    for k = 1, math.min(2, #syns) do names[#names + 1] = require("game.synergies").partners(syns[k], card) end
+    local text = "Synergy: " .. table.concat(names, ", ") .. (#syns > 2 and (" +" .. (#syns - 2)) or "")
+    love.graphics.setFont(app.fonts.tiny)
+    love.graphics.setColor(1, 0.82, 0.35, 0.85)
+    love.graphics.printf(text, x + 10, y + h - 50, w - 20, "center")
   end
 
   local label = rarity.name:upper()

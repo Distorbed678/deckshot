@@ -8,6 +8,7 @@ local Stats = require "game.stats"
 local Triggers = require "game.triggers"
 local hud = require "gfx.hud"
 local sfx = require "gfx.sfx"
+local Synergies = require "game.synergies"
 
 local CardEditor = {}
 CardEditor.__index = CardEditor
@@ -44,16 +45,27 @@ local function stepFor(stat, op)
   return 1
 end
 
--- opts: { card = existing card (edited as a copy) }
+-- opts: { card = existing card (edited as a copy) } or { synergy = existing synergy, newSynergy = true }
 function CardEditor.new(opts)
   opts = opts or {}
-  local src = opts.card
-  local def = src and copyDef(src.def) or { name = "New Card", rarity = "common", rows = {
-    { op = "mul", stat = "gunDamage", value = 1.2 } }, triggers = {}, notes = {} }
+  local isSyn = opts.synergy ~= nil or opts.newSynergy
+  local src = opts.card or opts.synergy
+  local def
+  if isSyn then
+    def = src and Synergies.parse(Synergies.serialize(src.def)) or { name = "New Synergy", rarity = "legendary",
+      rows = { { op = "mul", stat = "gunDamage", value = 1.1 } }, triggers = {}, notes = {}, needs = {} }
+  else
+    def = src and copyDef(src.def) or { name = "New Card", rarity = "common", rows = {
+      { op = "mul", stat = "gunDamage", value = 1.2 } }, triggers = {}, notes = {} }
+  end
   return setmetatable({
     def = def, src = src, scroll = 0, msg = nil, msgT = 0, picker = nil, typing = nil,
-    testCopies = 1,
+    testCopies = 1, synergy = isSyn,
   }, CardEditor)
+end
+
+function CardEditor:hubTab()
+  return self.synergy and "synergies" or "cards"
 end
 
 function CardEditor:say(text, bad)
@@ -75,6 +87,16 @@ function CardEditor:problems()
   if #def.rows == 0 and #def.triggers == 0 and #def.notes == 0 and not def.special then
     p[#p + 1] = "Add at least one stat, trigger or note"
   end
+  if self.synergy then
+    if #(def.needs or {}) < 2 then p[#p + 1] = "A synergy needs at least two cards" end
+    for _, s in ipairs(Synergies.list) do
+      if s ~= self.src and s.name:lower() == def.name:lower() then
+        p[#p + 1] = "Another synergy is already called \"" .. s.name .. "\""
+        break
+      end
+    end
+    return p
+  end
   for _, c in ipairs(Cards.list) do
     if c ~= self.src and c.name:lower() == def.name:lower() then
       p[#p + 1] = "Another card is already called \"" .. c.name .. "\""
@@ -88,6 +110,22 @@ function CardEditor:save()
   local problems = self:problems()
   if #problems > 0 then return self:say(problems[1], true) end
   local src = self.src
+  if self.synergy then
+    if src and src.builtin then
+      Synergies.saveOverride(src.id, self.def)
+    else
+      local syn = src or { def = self.def }
+      syn.def = self.def
+      syn.file = Synergies.saveCustom(syn)
+    end
+    Synergies.loadAll()
+    for _, s in ipairs(Synergies.list) do
+      if (src and s.id == src.id) or (not src and s.name == self.def.name) then self.src = s end
+    end
+    self:say("Saved " .. self.def.name)
+    sfx.ui("cardPick")
+    return
+  end
   if src and src.builtin then
     Cards.saveOverride(src.id, self.def)
     self:say("Saved your version of " .. self.def.name .. " (reset it from the card list)")
@@ -106,10 +144,20 @@ end
 
 function CardEditor:test()
   local Match = require "screens.match"
-  local card = CardData.build(copyDef(self.def))
-  card.id, card.index = "test", 0
   local cards = {}
-  for _ = 1, self.testCopies do cards[#cards + 1] = card end
+  if self.synergy then
+    -- Test a synergy by owning its cards (the saved version of the synergy is what applies).
+    for _ = 1, self.testCopies do
+      for _, id in ipairs(self.def.needs or {}) do
+        if Cards.byId[id] then cards[#cards + 1] = Cards.byId[id] end
+      end
+    end
+    if #self:problems() == 0 then self:save() end
+  else
+    local card = CardData.build(copyDef(self.def))
+    card.id, card.index = "test", 0
+    for _ = 1, self.testCopies do cards[#cards + 1] = card end
+  end
   app.switch(Match.newLocal(99, { test = true, returnTo = self, giveCards = cards }))
 end
 
@@ -119,7 +167,11 @@ function CardEditor:keypressed(key)
     return
   end
   if key == "escape" then
-    if self.picker then self.picker = nil else app.switch(require("screens.editor_hub").new("cards")) end
+    if self.picker or self.cardPicker then
+      self.picker, self.cardPicker = nil, nil
+    else
+      app.switch(require("screens.editor_hub").new(self:hubTab()))
+    end
   elseif key == "s" and love.keyboard.isDown("lctrl", "rctrl") then
     self:save()
   end
@@ -317,17 +369,19 @@ function CardEditor:draw()
     { "Copies +", function() self.testCopies = math.min(10, self.testCopies + 1) end },
     { "Save", function() self:save() end },
     { "Share", function()
-      local ok = pcall(love.system.setClipboardText, CardData.encodeShare(def))
+      local code = self.synergy and Synergies.encodeShare(def) or CardData.encodeShare(def)
+      local ok = pcall(love.system.setClipboardText, code)
       self:say(ok and "Card code copied" or "Couldn't use the clipboard", not ok)
     end },
     { "Import", function()
       local ok, text = pcall(love.system.getClipboardText)
-      local d, err = CardData.decodeShare(ok and text or "")
-      if not d then return self:say((err or "No card code") .. " - copy a card code first", true) end
+      local d, err
+      if self.synergy then d, err = Synergies.decodeShare(ok and text or "") else d, err = CardData.decodeShare(ok and text or "") end
+      if not d then return self:say((err or "No code") .. " - copy a code first", true) end
       self.def, self.src = d, nil
       self:say("Imported " .. d.name .. " as a new card")
     end },
-    { "Exit", function() app.switch(require("screens.editor_hub").new("cards")) end },
+    { "Exit", function() app.switch(require("screens.editor_hub").new(self:hubTab())) end },
   }
   local bx = 300
   local bw = (app.W - bx - 20 - (#buttons - 1) * 6) / #buttons
@@ -336,14 +390,28 @@ function CardEditor:draw()
     bx = bx + bw + 6
   end
 
-  -- Card settings
+  -- Card settings (or, for a synergy, the cards it needs)
   local y = 70
-  local d = ui.cycler("Rarity", Cards.rarity[def.rarity] and Cards.rarity[def.rarity].name or def.rarity, 20, y, 260, 30)
-  if d ~= 0 then def.rarity = cycle(RARITY_IDS, def.rarity, d) end
-  d = ui.cycler("Block card", def.block and "Yes" or "No", 300, y, 220, 30)
-  if d ~= 0 then def.block = not def.block or nil end
-  d = ui.cycler("Special", SPECIAL_NAMES[def.special or false], 540, y, 300, 30)
-  if d ~= 0 then def.special = cycle(SPECIALS, def.special or false, d) or nil end
+  if self.synergy then
+    label("NEEDS", 20, y + 8)
+    local bx = 80
+    for i, id in ipairs(def.needs) do
+      local c = Cards.byId[id]
+      if ui.button((c and c.name or id) .. "  x", bx, y, 170, 30, { font = app.fonts.small }) then
+        table.remove(def.needs, i)
+        break
+      end
+      bx = bx + 176
+    end
+    if #def.needs < 4 and ui.button("+ Card", bx, y, 100, 30, { font = app.fonts.small }) then self.cardPicker = true end
+  else
+    local d = ui.cycler("Rarity", Cards.rarity[def.rarity] and Cards.rarity[def.rarity].name or def.rarity, 20, y, 260, 30)
+    if d ~= 0 then def.rarity = cycle(RARITY_IDS, def.rarity, d) end
+    d = ui.cycler("Block card", def.block and "Yes" or "No", 300, y, 220, 30)
+    if d ~= 0 then def.block = not def.block or nil end
+    d = ui.cycler("Special", SPECIAL_NAMES[def.special or false], 540, y, 300, 30)
+    if d ~= 0 then def.special = cycle(SPECIALS, def.special or false, d) or nil end
+  end
 
   -- Scrolling content
   love.graphics.setScissor() -- (canvas)
@@ -361,6 +429,7 @@ function CardEditor:draw()
 
   -- Preview
   local card = CardData.build(copyDef(def))
+  card.id = self.src and self.src.id
   card.custom = not (self.src and self.src.builtin)
   card.edited = self.src and self.src.builtin and CardData.serialize(def) ~= self.src.defaultText or nil
   ui.panel(900, 104, 360, 600)
@@ -376,9 +445,71 @@ function CardEditor:draw()
   end
 
   if self.picker then self:drawStatPicker() end
+  if self.cardPicker then self:drawCardPicker() end
+end
+
+-- Pick a card for a synergy's "needs" list.
+function CardEditor:drawCardPicker()
+  love.graphics.setColor(0, 0, 0, 0.8)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  ui.panel(20, 16, app.W - 40, app.H - 32)
+  label("CHOOSE A CARD", 40, 24, 0.7)
+  local cols, bw, bh = 6, 198, 18
+  for i, c in ipairs(Cards.list) do
+    local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+    local rc = Cards.rarity[c.rarity] and Cards.rarity[c.rarity].color or { 1, 1, 1 }
+    if ui.button(c.name, 36 + col * (bw + 4), 44 + row * (bh + 4), bw, bh, { font = app.fonts.tiny, color = rc }) then
+      table.insert(self.def.needs, c.id)
+      self.cardPicker = nil
+      return
+    end
+  end
 end
 
 ---------------------------------------------------------------- hub tab
+function CardEditor.drawSynergyHub(hub)
+  local list = Synergies.list
+  local cols, bw, bh = 3, 386, 34
+  for k, s in ipairs(list) do
+    if k > 42 then break end
+    local col, row = (k - 1) % cols, math.floor((k - 1) / cols)
+    local x, y = 40 + col * (bw + 10), 104 + row * (bh + 4)
+    local tag = s.custom and "  (custom)" or s.edited and "  (edited)" or ""
+    if ui.button(s.name .. tag, x, y, bw, bh, { font = app.fonts.small, color = hub.sel == s and ui.ACCENT or { 1, 0.82, 0.35 } }) then
+      if hub.sel == s then
+        app.switch(CardEditor.new({ synergy = s }))
+        return
+      end
+      hub.sel = s
+    end
+  end
+  local s = hub.sel
+  local acts = {
+    { "New Synergy", true, function() app.switch(CardEditor.new({ newSynergy = true })) end },
+    { "Edit", s ~= nil, function() app.switch(CardEditor.new({ synergy = s })) end },
+    { "Share Code", s ~= nil, function()
+      local ok = pcall(love.system.setClipboardText, Synergies.encodeShare(s.def))
+      hub:say(ok and "Synergy code copied" or "Couldn't use the clipboard", not ok)
+    end },
+    { "Import Code", true, function()
+      local ok, text = pcall(love.system.getClipboardText)
+      local d, err = Synergies.decodeShare(ok and text or "")
+      if not d then return hub:say((err or "No synergy code") .. " - copy a code first", true) end
+      Synergies.saveCustom({ def = d })
+      Synergies.loadAll()
+      hub:say("Imported " .. d.name)
+    end },
+    { s and s.edited and "Reset to Default" or "Delete", s ~= nil and (s.custom or s.edited), function()
+      if s.custom then Synergies.deleteCustom(s) else Synergies.resetOverride(s.id) end
+      Synergies.loadAll()
+      hub.sel = nil
+    end },
+  }
+  local w = (app.W - 80 - (#acts - 1) * 10) / #acts
+  for i, a in ipairs(acts) do
+    if ui.button(a[1], 40 + (i - 1) * (w + 10), 652, w, 44, { font = app.fonts.med, disabled = not a[2] }) then a[3]() end
+  end
+end
 local PER_PAGE = 40
 function CardEditor.drawHub(hub)
   local list = Cards.list

@@ -20,6 +20,7 @@ net.MSG = {
   DISCARD = 10, -- client -> host: discard an owned card instead of picking
   MAPS = 11,    -- host -> clients: the map list (full text for custom / edited maps), zlib
   CARDS = 12,   -- host -> clients: the card list (full text for custom / edited cards), zlib
+  SYNERGIES = 13, -- host -> clients: the synergy list (full text for custom / edited ones), zlib
 }
 local M = net.MSG
 
@@ -137,6 +138,10 @@ function net.encodeRules(rules, cards, rarities)
   end
   parts[#parts + 1] = pack("string", "<BBBBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
     rules.allowDiscard and 1 or 0, rules.hazards == false and 0 or 1, rules.barrier == false and 0 or 1)
+  -- Synergies: on/off, then one byte per synergy (1 = turned off).
+  local syn = require "game.synergies"
+  parts[#parts + 1] = pack("string", "<BH", rules.synergies == false and 0 or 1, #syn.list)
+  for i = 1, #syn.list do parts[#parts + 1] = string.char((rules.synergyOff and rules.synergyOff[i]) and 1 or 0) end
   return table.concat(parts)
 end
 
@@ -160,6 +165,13 @@ function net.decodeRules(data, rarities)
   rules.allowDiscard = discard == 1
   rules.hazards = hazards == 1
   rules.barrier = barrier == 1
+  local synOn, nsyn
+  synOn, nsyn, pos = unpack("<BH", data, pos + 5)
+  rules.synergies = synOn == 1
+  rules.synergyOff = {}
+  for i = 1, nsyn do
+    if data:byte(pos + i - 1) == 1 then rules.synergyOff[i] = true end
+  end
   return rules
 end
 
@@ -184,6 +196,7 @@ end
 
 function net.encodeMaps(entries) return encodeEntries(M.MAPS, entries) end
 function net.encodeCards(entries) return encodeEntries(M.CARDS, entries) end
+function net.encodeSynergies(entries) return encodeEntries(M.SYNERGIES, entries) end
 
 function net.decodeMaps(data)
   local raw = love.data.decompress("string", "zlib", data:sub(2))

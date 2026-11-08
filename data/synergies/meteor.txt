@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Meteor
+needs ground_pound moon_shoes
+rarity legendary
+trigger land shockwave damage=15 radius=150

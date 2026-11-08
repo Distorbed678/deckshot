@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Powder Trail
+needs chain_reaction explosive
+rarity legendary
+row mul explosionSize 1.2

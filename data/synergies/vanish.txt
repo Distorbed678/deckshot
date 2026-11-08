@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Vanish
+needs cloak blink
+rarity legendary
+row add cloak 1
+note +cloak lasts 1s longer

@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name All In
+needs glass_cannon glass_fists
+rarity legendary
+row mul gunDamage 1.1
+row mul meleeDamage 1.2

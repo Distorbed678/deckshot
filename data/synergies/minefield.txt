@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Minefield
+needs smoke_dash mine_layer
+rarity legendary
+row add mineLayer 1
+note +blocking drops one more mine

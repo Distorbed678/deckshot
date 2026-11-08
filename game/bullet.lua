@@ -333,6 +333,18 @@ function Bullet:bounce(game, normal)
     return false
   end
   if not self.laser then sfx.play("bounce", self.x, 0.5) end
+  -- Bouncing Blasts (synergy): every bounce makes a small explosion.
+  local be = self.owner.stats and self.owner.stats.bounceExplode or 0
+  if be > 0 and not self.isChild and not self.laser then
+    local r = 45 * (1 + 0.3 * (be - 1)) * (self.owner.stats.explosionSize or 1)
+    fx.ring(self.x, self.y, r, self.color)
+    sfx.play("explosionSmall", self.x, 0.5)
+    for _, p in ipairs(game.players) do
+      if p ~= self.owner and not p.dead and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
+        p:hit(self:currentDamage() * 0.3, p.x - self.x, p.y - self.y, 300, self.owner, "explosion")
+      end
+    end
+  end
   if self.bounceDamage > 0 then self.damage = self.damage * (1 + self.bounceDamage) end
   return true
 end

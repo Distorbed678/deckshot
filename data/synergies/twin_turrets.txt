@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Twin Turrets
+needs sentry mirror_shot
+rarity legendary
+row add sentry 1
+note +your turret fires 50% faster

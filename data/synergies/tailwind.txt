@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Tailwind
+needs slipstream haste
+rarity legendary
+row mul speed 1.1

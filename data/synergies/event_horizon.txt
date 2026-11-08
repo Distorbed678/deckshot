@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Event Horizon
+needs black_hole cluster_bombs
+rarity legendary
+row mul explosionSize 1.25

@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Brick Wall
+needs counter_puncher iron_guard
+rarity legendary
+row add meleeStun 0.3
+row mul blockCooldown 0.9

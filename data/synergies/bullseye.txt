@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Bullseye
+needs lucky_shot deadeye
+rarity legendary
+row add crit 0.1

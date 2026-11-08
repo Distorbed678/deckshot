@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Storm Front
+needs thunder_god static_field
+rarity legendary
+trigger block slow radius=220 time=1

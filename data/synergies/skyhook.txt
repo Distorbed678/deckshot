@@ -1,0 +1,7 @@
+deckshot-synergy 1
+name Skyhook
+needs uppercut spring_legs
+rarity legendary
+row add uppercut 1
+row mul jump 1.05
+note +uppercuts launch even higher

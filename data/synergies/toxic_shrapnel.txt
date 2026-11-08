@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Toxic Shrapnel
+needs poison shrapnel
+rarity legendary
+row add poison 0.3

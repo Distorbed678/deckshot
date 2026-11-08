@@ -3,6 +3,8 @@ local fx = require "gfx.fx"
 local Bullet = require "game.bullet"
 local sfx = require "gfx.sfx"
 local Triggers = require "game.triggers"
+local Synergies = require "game.synergies"
+local CardData = require "game.carddata"
 
 local Player = {}
 Player.__index = Player
@@ -77,6 +79,17 @@ function Player:recompute()
     card.apply(s, copies[card])
     for _, rule in ipairs(card.triggers or {}) do
       self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
+    end
+  end
+  -- Synergies: each full set of a synergy's cards applies its bonus once more.
+  local rules = (self.game and self.game.rules) or require("game.cards").rules
+  self.synergies = Synergies.active(self.cards, rules)
+  for _, a in ipairs(self.synergies) do
+    for n = 1, a.sets do
+      CardData.applyRows(a.syn.def, s, n)
+      for _, rule in ipairs(a.syn.triggers or {}) do
+        self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
+      end
     end
   end
   s.maxHp = math.max(10, s.maxHp)

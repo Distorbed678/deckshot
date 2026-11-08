@@ -1,0 +1,6 @@
+deckshot-synergy 1
+name Bouncing Blasts
+needs explosive bouncy
+rarity legendary
+row add bounceExplode 1
+note +every bounce makes a small explosion

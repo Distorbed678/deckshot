@@ -376,7 +376,15 @@ function World:choose(slot, optionIndex, serial)
   elseif card.special == "shrine" then
     self:toast(Cards.shrine(p), 5)
   else
+    local before = {}
+    for _, a in ipairs(p.synergies or {}) do before[a.syn] = a.sets end
     p:addCard(card)
+    for _, a in ipairs(p.synergies or {}) do
+      if (before[a.syn] or 0) < a.sets then
+        self:toast("SYNERGY! " .. (p.name or "Player") .. " unlocked " .. a.syn.name, 5)
+        sfx.play("revealLegendary")
+      end
+    end
   end
   self:emit("roster")
   self:nextPick()

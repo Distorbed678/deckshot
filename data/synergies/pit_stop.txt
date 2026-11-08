@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Pit Stop
+needs dash_reload afterburner
+rarity legendary
+row mul dashCooldown 0.85

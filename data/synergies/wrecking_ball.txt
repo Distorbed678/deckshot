@@ -1,0 +1,5 @@
+deckshot-synergy 1
+name Wrecking Ball
+needs heavy_shot rubber_bullets
+rarity legendary
+row mul knockback 1.3
