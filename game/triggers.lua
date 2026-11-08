@@ -104,8 +104,7 @@ end
 local RUN = {}
 function RUN.explode(p, q, x, y)
   q.radius = q.radius * (p.stats.explosionSize or 1)
-  fx.ring(x, y, q.radius, p.color)
-  fx.burst(x, y, p.color, 16, 300, 4)
+  fx.explosion(x, y, q.radius, p.color)
   fx.addShake(5)
   sfx.play(q.radius > 120 and "explosion" or "explosionSmall", x)
   for _, e in ipairs(enemiesNear(p, x, y, q.radius)) do

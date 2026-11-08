@@ -25,6 +25,7 @@ end
 
 local function add(name, color, text)
   table.insert(Chat.lines, { name = name, color = color, text = text, at = love.timer.getTime() })
+  if Chat.onLine and name ~= "" then Chat.onLine(name, text) end
   if #Chat.lines > HISTORY then table.remove(Chat.lines, 1) end
   local sfx = package.loaded["gfx.sfx"]
   if sfx and name ~= "" then sfx.ui("uiHover") end

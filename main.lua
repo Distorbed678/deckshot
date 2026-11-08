@@ -81,6 +81,7 @@ function love.load(args)
   love.keyboard.setKeyRepeat(false)
   Settings.load()
   Settings.apply()
+  require("core.achievements").check(true) -- progress from before achievements existed
   app.load()
   app.showFps = Settings.values.showFps
   Bloom.load(app.W, app.H)

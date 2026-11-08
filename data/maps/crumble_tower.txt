@@ -3,8 +3,8 @@ name Crumble Tower
 theme void
 spawn 192 696
 spawn 1344 696
-spawn 360 360
-spawn 1176 360
+spawn 360 336
+spawn 1176 336
 rect 96 744 360 120
 rect 1080 744 360 120
 rect 288 384 144 24

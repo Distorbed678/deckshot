@@ -382,7 +382,7 @@ end
 local function viewOfRules(r)
   local v = { roundsToWin = r.roundsToWin, matchMode = r.mode, teams = r.teams, friendlyFire = r.friendlyFire, pickFrom = r.pickFrom,
     picksPerRound = r.picksPerRound, startCards = r.startCards, pickTimer = r.pickTimer, allowDiscard = r.allowDiscard,
-    mapVote = r.mapVote, mapVoteCount = r.mapVoteCount, cardBans = r.cardBans, hazards = r.hazards,
+    mapVote = r.mapVote, mapVoteCount = r.mapVoteCount, cardBans = r.cardBans, hazards = r.hazards, subRounds = r.subRounds,
     suddenDeath = r.suddenDeath, barrierClose = r.barrierClose, barrierBox = r.barrierBox, barrierDamage = r.barrierDamage }
   for i, x in ipairs(Cards.RARITIES) do v["weight_" .. x.id] = r.weights[i] or 0 end
   return v
@@ -413,7 +413,7 @@ function Screen:drawGameplay(x, y, w, viewH)
   local v = client and viewOfRules(rules) or Settings.values
   local h, gap, head = 38, 44, 42
   local colW = (w - 50) / 2
-  local contentH = head + 13 * gap
+  local contentH = head + 14 * gap
   local top = y
   if client then
     love.graphics.setFont(app.fonts.med)
@@ -444,6 +444,10 @@ function Screen:drawGameplay(x, y, w, viewH)
     local opts = Settings.ROUND_OPTIONS
     v.roundsToWin = opts[cycle(indexOf(opts, v.roundsToWin), #opts, d)]
   end
+  ly = ly + gap
+  local sr = Settings.SUB_ROUNDS
+  d = ui.cycler("Wins per point", tostring(v.subRounds), lx, ly, colW, h)
+  if d ~= 0 then v.subRounds = sr.min + cycle(v.subRounds - sr.min + 1, sr.max - sr.min + 1, d) - 1 end
   ly = ly + gap
   local pf = Settings.PICK_FROM
   d = ui.cycler("Cards to choose from", tostring(v.pickFrom), lx, ly, colW, h)

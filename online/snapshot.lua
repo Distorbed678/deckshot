@@ -7,7 +7,7 @@ local pack, unpack = love.data.pack, love.data.unpack
 
 local Snap = {}
 
-Snap.STATES = { "countdown", "playing", "roundOver", "cardPick", "matchOver", "mapVote", "cardBan" }
+Snap.STATES = { "countdown", "playing", "roundOver", "cardPick", "matchOver", "mapVote", "cardBan", "subRound" }
 local STATE_CODE = {}
 for i, s in ipairs(Snap.STATES) do STATE_CODE[s] = i end
 
@@ -67,9 +67,10 @@ function Snap.encode(world, events)
 
   -- Round timer, map vote, card bans, the hill.
   add("<H", world.suddenLeft and math.min(65534, math.ceil(world.suddenLeft * 10)) or 65535)
+  for _, p in ipairs(world.players) do add("<B", u8(p.subWins or 0)) end
   local mv = world.state == "mapVote" and world.mapVote
   if mv then
-    add("<BBB", #mv.options, u8(math.ceil(mv.timeLeft)), mv.winner)
+    add("<BBB", #mv.options, mv.timeLeft and math.min(254, u8(math.ceil(mv.timeLeft))) or 255, mv.winner)
     for _, o in ipairs(mv.options) do add("<B", o) end
     for _, p in ipairs(world.players) do add("<B", mv.votes[p.slot] or 0) end
   else
@@ -196,6 +197,9 @@ function Snap.encode(world, events)
     elseif kind == 8 then
       local c = e[4]
       add("<BhhBBBBB", 8, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
+    elseif kind == 13 then
+      local c = e[5]
+      add("<BhhHBBB", 13, i16(e[2]), i16(e[3]), u16(e[4]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255))
     elseif kind == 12 then
       add("<BhhhB", 12, i16(e[2]), i16(e[3]), i16(e[4] * 1000), u8(e[5] * 40))
     elseif kind == 11 then
@@ -245,13 +249,15 @@ function Snap.decode(data)
   local sudden
   sudden, pos = unpack("<H", raw, pos)
   v.suddenLeft = sudden < 65535 and sudden / 10 or nil
+  v.subWins = {}
+  for i = 1, np do v.subWins[i], pos = unpack("<B", raw, pos) end
   local nv
   nv, pos = unpack("<B", raw, pos)
   if nv > 0 then
     local mv = { options = {}, votes = {} }
     local tl, win
     tl, win, pos = unpack("<BB", raw, pos)
-    mv.timeLeft, mv.winner = tl, win
+    mv.timeLeft, mv.winner = tl < 255 and tl or nil, win
     for i = 1, nv do mv.options[i], pos = unpack("<B", raw, pos) end
     for i = 1, np do
       local o
@@ -400,6 +406,10 @@ function Snap.decode(data)
       local x, y, radius, r, g, b
       x, y, radius, r, g, b, pos = unpack("<hhHBBB", raw, pos)
       v.fx[i] = { 2, x, y, radius, { r / 255, g / 255, b / 255 } }
+    elseif kind == 13 then
+      local x, y, radius, r, g, b
+      x, y, radius, r, g, b, pos = unpack("<hhHBBB", raw, pos)
+      v.fx[i] = { 13, x, y, radius, { r / 255, g / 255, b / 255 } }
     elseif kind == 12 then
       local x, y, a, size
       x, y, a, size, pos = unpack("<hhhB", raw, pos)

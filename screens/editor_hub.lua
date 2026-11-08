@@ -9,7 +9,7 @@ Hub.__index = Hub
 local COLS, ROWS = 5, 3
 local TW, TH = 216, 122
 local GAP_X, GAP_Y = 18, 46
-local GRID_X, GRID_Y = 40, 116
+local GRID_X, GRID_Y = 40, 112
 
 -- tab: "maps" or "cards"
 function Hub.new(tab)

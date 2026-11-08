@@ -61,6 +61,7 @@ function World.teamColorIndices(teams)
 end
 World.CONTINUE_ROUNDS = 3
 World.COUNTDOWN, World.INTRO_TIME = 2.4, 1.4
+World.SUB_ROUND_TIME = 1.5
 
 -- Match-over votes (a suggestion to the host): 0 none, 1 continue, 2 new match.
 World.VOTE_CONTINUE, World.VOTE_NEW = 1, 2
@@ -100,7 +101,8 @@ function World.new(defs, winScore, rules)
     p.peer = d.peer
     p.team = (w.rules.teams and (d.team or ((i - 1) % 2 + 1))) or nil
     p.isBot = d.bot
-    p.hat, p.face = d.hat, d.face
+    p.hat, p.eyes, p.mouth, p.detail = d.hat, d.eyes, d.mouth, d.detail
+    p.subWins = 0
     w.players[i] = p
   end
   w.startPlayers = #defs
@@ -154,6 +156,8 @@ end
 function World:loadMap()
   if self.rules.forceMap then
     self.map, self.mapIndex = self.rules.forceMap, self.rules.forceMap.index or 0
+  elseif self.keepMap and self.map then
+    self.keepMap = nil
   elseif self.nextMap and Map.list[self.nextMap] then
     self.map, self.mapIndex = Map.list[self.nextMap], self.nextMap
     self.nextMap = nil
@@ -219,8 +223,10 @@ function World:startRound()
   self:beginRound()
 end
 
-function World:beginRound()
+-- sameMap: the next sub-round on this map (everything on it is rebuilt).
+function World:beginRound(sameMap)
   self.mapVote = nil
+  self.keepMap = sameMap
   self:loadMap()
   self.bullets = {}
   self.pending = {}
@@ -242,7 +248,7 @@ function World:beginRound()
   -- The first round opens with the versus intro (World.INTRO_TIME before the 3-2-1).
   self.timer = World.COUNTDOWN + ((self.roundCount == 1 and not self.rules.practice) and World.INTRO_TIME or 0)
   self:setupHill()
-  self:announceMatchPoint()
+  if not sameMap then self:announceMatchPoint() end
   self:emit("roster")
 end
 
@@ -264,7 +270,7 @@ function World:announceMatchPoint()
 end
 
 ---------------------------------------------------------------- map vote
-World.MAP_VOTE_TIME, World.MAP_VOTE_SHOW = 11, 1.7
+World.MAP_VOTE_SHOW = 1.4
 
 function World:openMapVote()
   if not self.map then
@@ -280,7 +286,9 @@ function World:openMapVote()
   for _ = 1, math.min(self.rules.mapVoteCount or 3, #pool) do
     options[#options + 1] = table.remove(pool, love.math.random(#pool))
   end
-  self.mapVote = { options = options, votes = {}, timeLeft = World.MAP_VOTE_TIME, t = 0, winner = 0 }
+  -- The vote lasts as long as a card pick; with no pick timer it waits for everyone.
+  local limit = self.rules.pickTimer or 0
+  self.mapVote = { options = options, votes = {}, timeLeft = limit > 0 and limit or nil, t = 0, winner = 0 }
   self.pick = nil
   self.state = "mapVote"
 end
@@ -303,7 +311,7 @@ function World:updateMapVote(dt)
     end
     return
   end
-  mv.timeLeft = mv.timeLeft - dt
+  if mv.timeLeft then mv.timeLeft = mv.timeLeft - dt end
   local allIn = true
   for _, p in ipairs(self.players) do
     if not p.disconnected and not mv.votes[p.slot] then
@@ -314,7 +322,7 @@ function World:updateMapVote(dt)
       end
     end
   end
-  if mv.timeLeft > 0 and not allIn then return end
+  if (not mv.timeLeft or mv.timeLeft > 0) and not allIn then return end
   -- Most votes wins; ties (and no votes at all) are random.
   local counts, best = {}, 0
   for _, o in pairs(mv.votes) do
@@ -480,7 +488,10 @@ function World:updateHill(dt)
 end
 
 function World:update(dt)
-  if self.state == "mapVote" then
+  if self.state == "subRound" then
+    self.timer = self.timer - dt
+    if self.timer <= 0 then self:beginRound(true) end
+  elseif self.state == "mapVote" then
     self:updateMapVote(dt)
   elseif self.state == "cardBan" then
     self:updateCardBan(dt)
@@ -628,30 +639,46 @@ function World:checkRoundEnd()
   self:endRound(last)
 end
 
+-- A round is a sub-round: first player or team to rules.subRounds wins takes the point, everyone
+-- else then picks a card and all progress resets.
 function World:endRound(last)
   self.roundWinner = last
-  self.history = self.history or {}
-  self.history[#self.history + 1] = last and last.slot or 0
+  local need = math.max(1, self.rules.subRounds or 1)
+  self.pointWon = false
   if last then
+    last.subWins = (last.subWins or 0) + 1
     if self.rules.teams and last.team then
       for _, p in ipairs(self.players) do
-        if p.team == last.team then p.score = p.score + 1 end
+        if p ~= last and p.team == last.team then p.subWins = (p.subWins or 0) + 1 end
       end
-    else
-      last.score = last.score + 1
     end
+    if last.subWins >= need then
+      self.pointWon = true
+      for _, p in ipairs(self.players) do
+        if p == last or (self.rules.teams and last.team and p.team == last.team) then p.score = p.score + 1 end
+      end
+      for _, p in ipairs(self.players) do p.subWins = 0 end
+    end
+  end
+  if self.pointWon or need == 1 then
+    self.history = self.history or {}
+    self.history[#self.history + 1] = last and last.slot or 0
   end
   sfx.play("stingerRound")
   self.state = "roundOver"
-  self.timer = 2.1
+  self.timer = 1.85
 end
 
 function World:afterRound()
-  if self.roundWinner and self.roundWinner.score >= self.winScore then
+  if self.pointWon and self.roundWinner.score >= self.winScore then
     self.state = "matchOver"
     self.votes = {}
     sfx.play("matchWin")
     self:emit("matchOver", self.roundWinner)
+  elseif not self.pointWon and (self.rules.subRounds or 1) > 1 then
+    -- Nobody has the point yet: show the progress, then the same map again.
+    self.state = "subRound"
+    self.timer = World.SUB_ROUND_TIME
   else
     self:openPicks()
   end
@@ -815,6 +842,7 @@ function World:newMatch()
   for _, p in ipairs(self.players) do
     p.cards = {}
     p.score = 0
+    p.subWins = 0
     p:recompute()
   end
   self.winScore = self.startScore

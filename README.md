@@ -22,11 +22,11 @@
 
 - **150 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
 - **40 hidden synergies.** The right pair unlocks a bonus: Explosive + Bouncy makes every bounce explode.
-- **Losers get stronger.** Everyone who loses a round picks a card, so no match is over until it's over.
+- **Losers get stronger.** Win 2 sub-rounds to take a point, then everyone else picks a card, so no match is over until it's over.
 - **55 hand-tuned arenas** with saws, lasers, crushers, acid, ropes and breakable everything.
 - **Elimination or King of the Hill**, free-for-all or 2v2, with a sudden-death barrier that ends the stalling.
 - **Vote on the next map, ban the card you hate, chat with your friends.**
-- **Earn hats and faces** just by playing.
+- **Unlock about 60 hats, eyes, mouths and details** through 44 achievements.
 - **Make your own** maps, cards and synergies in the built-in editors, then share them with a code.
 
 <table>

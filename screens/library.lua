@@ -269,7 +269,7 @@ function Screen:drawSynergies()
       love.graphics.printf("OFF", x, y + 6, bw - 12, "right")
     end
   end
-  local y = 628
+  local y = 636
   if ui.button("<", app.W / 2 - 130, y, 50, 36, { disabled = self.page <= 1, viewOnly = true }) then self.page = self.page - 1 end
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)

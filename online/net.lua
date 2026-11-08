@@ -78,8 +78,8 @@ end
 function net.encodeStart(winScore, slots)
   local parts = { pack("string", "<BHB", M.START, winScore, #slots) }
   for _, s in ipairs(slots) do
-    parts[#parts + 1] = pack("string", "<s1s1BBBBB", truncate(s.peer, 40), truncate(s.name, 64), s.color or 0,
-      s.team or 0, s.bot or 0, s.hat or 0, s.face or 0)
+    parts[#parts + 1] = pack("string", "<s1s1BBBBBBB", truncate(s.peer, 40), truncate(s.name, 64), s.color or 0,
+      s.team or 0, s.bot or 0, s.hat or 0, s.eyes or 0, s.mouth or 0, s.detail or 0)
   end
   return table.concat(parts)
 end
@@ -88,10 +88,10 @@ function net.decodeStart(data)
   local _, winScore, n, pos = unpack("<BHB", data)
   local slots = {}
   for i = 1, n do
-    local peer, name, color, team, bot, hat, face
-    peer, name, color, team, bot, hat, face, pos = unpack("<s1s1BBBBB", data, pos)
+    local peer, name, color, team, bot, hat, eyes, mouth, detail
+    peer, name, color, team, bot, hat, eyes, mouth, detail, pos = unpack("<s1s1BBBBBBB", data, pos)
     slots[i] = { peer = peer, name = name, color = color > 0 and color or nil, team = team > 0 and team or nil,
-      bot = bot > 0 and bot or nil, hat = hat, face = face }
+      bot = bot > 0 and bot or nil, hat = hat, eyes = eyes, mouth = mouth, detail = detail }
   end
   return winScore, slots
 end
@@ -115,13 +115,13 @@ function net.decodeByte(data)
   return value
 end
 
-function net.encodeLobbyHello(hat, face)
-  return pack("string", "<BBB", M.LOBBYHELLO, hat or 0, face or 0)
+function net.encodeLobbyHello(hat, eyes, mouth, detail)
+  return pack("string", "<BBBBB", M.LOBBYHELLO, hat or 0, eyes or 0, mouth or 0, detail or 0)
 end
 
 function net.decodeLobbyHello(data)
-  local _, hat, face = unpack("<BBB", data)
-  return hat, face
+  local _, hat, eyes, mouth, detail = unpack("<BBBBB", data)
+  return hat, eyes, mouth, detail
 end
 
 ---------------------------------------------------------------- roster
@@ -181,10 +181,10 @@ function net.encodeRules(rules, cards, rarities)
   parts[#parts + 1] = pack("string", "<BBBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
     rules.allowDiscard and 1 or 0, rules.hazards == false and 0 or 1)
   -- Everything else the host set (sudden death, mode, votes, teams...).
-  parts[#parts + 1] = pack("string", "<HBBBBBBBBBH", math.min(65535, rules.suddenDeath or 0), rules.barrierClose or 2,
+  parts[#parts + 1] = pack("string", "<HBBBBBBBBBHB", math.min(65535, rules.suddenDeath or 0), rules.barrierClose or 2,
     rules.barrierBox or 2, rules.barrierDamage or 2, rules.mode == "koth" and 1 or 0, rules.mapVote and 1 or 0,
     rules.mapVoteCount or 3, rules.cardBans and 1 or 0, rules.teams and 1 or 0, rules.friendlyFire and 1 or 0,
-    math.min(65535, rules.roundsToWin or 5))
+    math.min(65535, rules.roundsToWin or 5), rules.subRounds or 1)
   -- Synergies: on/off, then one byte per synergy (1 = turned off).
   local syn = require "game.synergies"
   parts[#parts + 1] = pack("string", "<BH", rules.synergies == false and 0 or 1, #syn.list)
@@ -217,7 +217,7 @@ function net.decodeRules(data, rarities)
   rules.hazards = hazards == 1
   local mode, vote, bans, teams, ff
   rules.suddenDeath, rules.barrierClose, rules.barrierBox, rules.barrierDamage, mode, vote, rules.mapVoteCount, bans,
-    teams, ff, rules.roundsToWin, pos = unpack("<HBBBBBBBBBH", data, pos)
+    teams, ff, rules.roundsToWin, rules.subRounds, pos = unpack("<HBBBBBBBBBHB", data, pos)
   rules.mode, rules.mapVote, rules.cardBans = mode == 1 and "koth" or "elim", vote == 1, bans == 1
   rules.teams, rules.friendlyFire = teams == 1, ff == 1
   local synOn, nsyn

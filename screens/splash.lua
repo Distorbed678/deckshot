@@ -6,7 +6,7 @@ local Logo = require "gfx.logo"
 local Splash = {}
 Splash.__index = Splash
 
-local FADE_IN, MIN_LOAD, MAX_LOAD, FADE_OUT = 0.6, 1.4, 6, 0.35
+local FADE_IN, MIN_LOAD, MAX_LOAD, FADE_OUT = 0.45, 1.2, 6, 0.27
 
 function Splash.new() return setmetatable({ t = 0 }, Splash) end
 

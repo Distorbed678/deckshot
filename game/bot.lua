@@ -215,7 +215,7 @@ function Bot.update(p, w, dt)
       w.botGraph, w.botGraphMap = buildGraph(w), w.map
     end
     local g = w.botGraph
-    local here = p.onGround and surfaceUnder(g, p.x, p.y + p.r - 2) or b.lastSurface
+    local here = p.onGround and surfaceUnder(g, p.x, p.y + p.r + p.leg - 2) or b.lastSurface
     if p.onGround then b.lastSurface = here end
     local there = surfaceUnder(g, dest.x, dest.y + 10)
     route = here and there and nextSurface(here, there)
@@ -251,10 +251,10 @@ function Bot.update(p, w, dt)
     if not p.onGround then
       local cx = (c.x0 + c.x1) / 2
       dir = (cx > p.x + 10) and 1 or (cx < p.x - 10) and -1 or 0
-      if p.y + p.r > c.y and p.vy > -120 and p.jumpsLeft > 0 then
+      if p.y + p.r + p.leg > c.y and p.vy > -120 and p.jumpsLeft > 0 then
         press(inp, "jumpCount")
         b.jumpHold = 0.3
-      elseif p.y + p.r > c.y and p.vy > 0 and p.dashesLeft > 0 and p.dashCd <= 0 then
+      elseif p.y + p.r + p.leg > c.y and p.vy > 0 and p.dashesLeft > 0 and p.dashCd <= 0 then
         inp.aim = math.atan2(c.y - 30 - p.y, cx - p.x) -- dash onto it
         press(inp, "dashCount")
       end
@@ -278,7 +278,7 @@ function Bot.update(p, w, dt)
   local wantJump = false
   if dir ~= 0 and p.onGround then
     if solidAt(w, ahead - 4, p.y - p.r + 4, 8, p.r * 2 - 10) then wantJump = true end
-    if not groundBelow(w, ahead, p.y + p.r - 2, 160) then
+    if not groundBelow(w, ahead, p.y + p.r + p.leg - 2, 160) then
       -- A gap: jump if there's somewhere to land, otherwise wait at the edge.
       local landing = false
       for dx = 100, 300, 50 do
@@ -432,7 +432,7 @@ end
 
 function Bot.pick(w, pk, dt)
   local p = w.players[pk.slot]
-  pk.botTimer = (pk.botTimer or -0.9) + dt -- waits while the cards are dealt
+  pk.botTimer = (pk.botTimer or -0.7) + dt -- waits while the cards are dealt
   local n = #pk.options
   local step = math.floor(pk.botTimer / 0.35) + 1
   if step <= n then

@@ -1,5 +1,6 @@
 -- Shared drawing helpers for the match: score panels, cards, black holes, crosshair.
 local app = require "core.app"
+local ui = require "core.ui"
 local Cards = require "game.cards"
 
 local hud = {}
@@ -45,18 +46,6 @@ end
 
 -- One panel per player across the top of the screen. Returns the card name items
 -- (see hud.cardChips, plus `bottom`, the end of that player's list) for hover tooltips.
--- 3-4 players: the score panels leave a gap in the middle for the round timer.
-local TIMER_GAP = 150
-function hud.chipWidth(n)
-  return math.floor((app.W - 48 - (n - 1) * 16 - TIMER_GAP) / n)
-end
-
-function hud.chipX(i, n, pw)
-  local x = 24 + (i - 1) * (pw + 16)
-  if i > math.ceil(n / 2) then x = x + TIMER_GAP end
-  return x
-end
-
 -- Round timer, top middle. left: seconds until sudden death.
 function hud.drawTimer(left)
   if not left then return end
@@ -123,74 +112,85 @@ function hud.drawHillScores(players, target, scoreOf)
   end
 end
 
-function hud.drawScores(players, winScore)
-  local hover = {}
-  local n = #players
-  local W = app.W
-  local pw = n <= 2 and 320 or hud.chipWidth(n)
-  for i, p in ipairs(players) do
-    local x, align
-    if n <= 2 then
-      x = i == 1 and 24 or W - 24 - pw
-      align = i == 1 and "left" or "right"
-    else
-      x = hud.chipX(i, n, pw)
-      align = "left"
-    end
-    local a = p.disconnected and 0.35 or 1
-    local c = p.color
-
-    love.graphics.setFont(app.fonts.med)
-    love.graphics.setColor(c[1], c[2], c[3], a)
-    local name = (p.name or ("PLAYER " .. i)):upper()
-    if p.disconnected then name = name .. " (LEFT)" end
-    love.graphics.printf(name, x, 14, pw, align)
-
-    local spacing = 22
-    if winScore * spacing <= pw then
-      for k = 1, winScore do
-        local px
-        if align == "left" then px = x + 8 + (k - 1) * spacing else px = x + pw - 8 - (k - 1) * spacing end
-        if k <= p.score then
-          love.graphics.setColor(c[1], c[2], c[3], a)
-          love.graphics.circle("fill", px, 48, 7)
-        else
-          love.graphics.setColor(1, 1, 1, 0.25 * a)
-          love.graphics.setLineWidth(2)
-          love.graphics.circle("line", px, 48, 7)
-        end
-      end
-    else
-      love.graphics.setColor(c[1], c[2], c[3], a)
-      love.graphics.printf(p.score .. " / " .. winScore, x, 38, pw, align)
-    end
-
-    if #p.cards > 0 then
-      local font = app.fonts.small
-      love.graphics.setFont(font)
-      local items, height = hud.cardChips(p, x, 62, pw, align, font)
-      -- Cards that are part of an active synergy glow gold.
-      local linked = {}
-      for _, act in ipairs(require("game.synergies").active(p.cards, Cards.rules)) do
-        for _, id in ipairs(act.syn.needs) do linked[id] = true end
-      end
-      for k, item in ipairs(items) do
-        local rc = Cards.rarity[item.card.rarity].color
-        if k > 1 and item.y == items[k - 1].y then
-          love.graphics.setColor(1, 1, 1, 0.4 * a)
-          love.graphics.print(",", item.x - font:getWidth(", "), item.y)
-        end
-        if linked[item.card.id] then
-          love.graphics.setColor(1, 0.8, 0.3, 0.25 * a)
-          love.graphics.rectangle("fill", item.x - 2, item.y + 1, item.w + 4, item.h - 1, 3, 3)
-        end
-        love.graphics.setColor(rc[1], rc[2], rc[3], 0.75 * a)
-        love.graphics.print(item.text, item.x, item.y)
-        item.bottom = 62 + height
-        hover[#hover + 1] = item
-      end
+-- A circle cut into n segments with `filled` of them coloured. lastK (0-1) animates the newest one in.
+function hud.drawPie(x, y, r, n, filled, color, alpha, lastK)
+  alpha = alpha or 1
+  n = math.max(1, n)
+  love.graphics.setColor(0, 0, 0, 0.45 * alpha)
+  love.graphics.circle("fill", x, y, r)
+  for i = 1, math.min(filled, n) do
+    local a0 = -math.pi / 2 + (i - 1) * 2 * math.pi / n
+    local a1 = a0 + 2 * math.pi / n
+    local rr = r
+    if lastK and i == filled then rr = r * lastK end
+    love.graphics.setColor(color[1], color[2], color[3], alpha)
+    if n == 1 then love.graphics.circle("fill", x, y, rr) else love.graphics.arc("fill", x, y, rr, a0, a1) end
+  end
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  love.graphics.setLineWidth(math.max(1.5, r * 0.08))
+  love.graphics.circle("line", x, y, r)
+  if n > 1 then
+    for i = 1, n do
+      local a = -math.pi / 2 + (i - 1) * 2 * math.pi / n
+      love.graphics.line(x, y, x + math.cos(a) * r, y + math.sin(a) * r)
     end
   end
+end
+
+-- Top left: a row of points for each player or team; the next point shows sub-round progress.
+-- Top right: every player's cards as boxes with 2-letter initials. Returns hover items.
+function hud.drawScores(players, winScore)
+  local hover = {}
+  local need = math.max(1, Cards.rules.subRounds or 1)
+  local gap = math.min(24, 460 / math.max(1, winScore))
+  local dotR = math.min(8, gap * 0.42)
+  local y, seen = 18, {}
+  for i, p in ipairs(players) do
+    local key = p.team or -i
+    if not seen[key] then
+      seen[key] = true
+      local a = p.disconnected and 0.35 or 1
+      local c = p.color
+      for k = 1, winScore do
+        local x = 18 + (k - 1) * gap
+        if k <= p.score then
+          love.graphics.setColor(c[1], c[2], c[3], a)
+          love.graphics.circle("fill", x, y, dotR)
+        elseif k == p.score + 1 then
+          hud.drawPie(x, y, dotR, need, p.subWins or 0, c, a)
+        else
+          love.graphics.setColor(c[1], c[2], c[3], 0.55 * a)
+          love.graphics.circle("fill", x, y, dotR * 0.42)
+        end
+      end
+      y = y + dotR * 2 + 8
+    end
+  end
+
+  local size, sp, perRow = 30, 4, 12
+  local rowY = 10
+  for i, p in ipairs(players) do
+    local a = p.disconnected and 0.35 or 1
+    local c = p.color
+    local n = #p.cards
+    for k = 1, n do
+      local card = p.cards[k]
+      local col = (k - 1) % perRow
+      local row = math.floor((k - 1) / perRow)
+      local x, by = app.W - 14 - size - col * (size + sp), rowY + row * (size + sp)
+      love.graphics.setColor(0.06, 0.06, 0.09, 0.72 * a)
+      love.graphics.rectangle("fill", x, by, size, size, 5, 5)
+      love.graphics.setColor(c[1], c[2], c[3], 0.85 * a)
+      love.graphics.setLineWidth(1.5)
+      love.graphics.rectangle("line", x, by, size, size, 5, 5)
+      local rc = Cards.rarity[card.rarity] and Cards.rarity[card.rarity].color or { 1, 1, 1 }
+      love.graphics.setColor(rc[1], rc[2], rc[3], a)
+      ui.printFit(card.name:sub(1, 2), app.fonts.small, x + 3, by + (size - app.fonts.small:getHeight()) / 2, size - 6, "center")
+      hover[#hover + 1] = { x = x, y = by, w = size, h = size, card = card, count = 1, bottom = by + size }
+    end
+    rowY = rowY + math.max(1, math.ceil(n / perRow)) * (size + sp) + 4
+  end
+  hud.cardsBottom = rowY
   return hover
 end
 
@@ -254,16 +254,19 @@ end
 
 -- Card layout used for both drawing and mouse hit-testing.
 -- Cards shrink so that up to 6 fit across the screen.
--- lift: card index -> 0..1, how far that card has slid up (a table), or the selected index.
+-- Cards fanned in an arc above the character. Each rect is { x, y, w, h, cx =, cy =, a = } (a: tilt);
+-- lift: card index -> 0..1, how far that card has slid out toward you.
 function hud.cardRects(n, selected, lift)
-  local ch = 360
-  local gap = n <= 3 and 36 or 18
-  local cw = math.min(290, math.floor((app.W - 60 - (n - 1) * gap) / math.max(1, n)))
-  local startX = (app.W - (n * cw + (n - 1) * gap)) / 2
+  local step = n <= 3 and 0.42 or n == 4 and 0.36 or n == 5 and 0.31 or 0.26
+  local cw, ch = n >= 6 and 190 or 215, n >= 6 and 265 or 300
+  local R, cy0 = 640, 930
   local rects = {}
   for i = 1, n do
+    local a = (i - (n + 1) / 2) * step
     local k = lift and (lift[i] or 0) or (i == selected and 1 or 0)
-    rects[i] = { startX + (i - 1) * (cw + gap), 220 - 25 * k, cw, ch }
+    local cx = app.W / 2 + math.sin(a) * (R + 26 * k)
+    local cy = cy0 - math.cos(a) * (R + 26 * k)
+    rects[i] = { cx - cw / 2, cy - ch / 2, cw, ch, cx = cx, cy = cy, a = a }
   end
   return rects
 end

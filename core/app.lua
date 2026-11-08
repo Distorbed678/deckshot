@@ -53,7 +53,7 @@ end
 
 ---------------------------------------------------------------- transitions
 -- The next frame slides in from the right while the last one slides out to the left.
-local SLIDE_TIME = 0.6
+local SLIDE_TIME = 0.47
 function app.slide()
   if app.skipSlide then
     app.skipSlide = false

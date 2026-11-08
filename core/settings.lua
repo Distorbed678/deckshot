@@ -26,6 +26,7 @@ Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
 Settings.START_CARDS = { min = 0, max = 5 }
 Settings.TEXT_SIZES = { { "Small", 0.9 }, { "Normal", 1 }, { "Large", 1.15 } }
 Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
+Settings.SUB_ROUNDS = { min = 1, max = 5 }
 Settings.SUDDEN_TIMES = { 0, 60, 90, 120, 180, 240, 300, 420, 600 } -- seconds; 0 = off
 Settings.BARRIER_CLOSE_NAMES = { "Slow (40s)", "Normal (20s)", "Fast (10s)" }
 Settings.BARRIER_BOX_NAMES = { "Small", "Medium", "Large" }
@@ -69,7 +70,8 @@ local defaults = {
   shake = 3,
   particles = 2,
   showFps = false,
-  roundsToWin = 5,
+  roundsToWin = 3,
+  subRounds = 2,         -- sub-round wins needed for a point
   pickFrom = 5,
   picksPerRound = 1,
   startCards = 1,        -- cards everyone picks before round 1
@@ -100,11 +102,13 @@ local defaults = {
   textSize = 2,          -- 1 small, 2 normal, 3 large (Settings.TEXT_SIZES)
   lastLanAddress = "",   -- the last LAN address you typed
   scoreboardHold = true, -- scoreboard key: hold to show (false = press to toggle)
-  settingsVersion = 3,
+  settingsVersion = 4,
   checkUpdates = true,   -- look for a new version on the main menu (desktop)
   tutorialOffered = false, -- the first-run tutorial has been offered
   hat = "none",          -- cosmetics (core/cosmetics.lua)
-  face = "classic",
+  eyes = "classic",
+  mouth = "smile",
+  detail = "none",
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
   volSfx = 10,
@@ -183,6 +187,8 @@ function Settings.load()
         entry.disabled = state == "off"
         v.cards[cardId] = entry
       end
+    elseif k == "face" then
+      v.eyes = val -- older saves had one "face" slot
     elseif k == "barrier" then
       legacyBarrierOff = val == "false"
     elseif k == "vsync" then
@@ -222,6 +228,10 @@ function Settings.load()
     if legacyBarrierOff then v.suddenDeath = 0 end
     v.settingsVersion = 3
   end
+  if v.settingsVersion < 4 then
+    if v.roundsToWin == 5 then v.roundsToWin = 3 end -- points now take 2 sub-round wins each
+    v.settingsVersion = 4
+  end
 
   -- Older settings files: vsync=true/false and resolution=<index>.
   if legacyVsync then v.vsyncMode = legacyVsync == "false" and 0 or 1 end
@@ -250,6 +260,7 @@ function Settings.load()
   v.barrierClose = clamp(math.floor(v.barrierClose), 1, 3)
   v.barrierBox = clamp(math.floor(v.barrierBox), 1, 3)
   v.barrierDamage = clamp(math.floor(v.barrierDamage), 1, 3)
+  v.subRounds = clamp(math.floor(v.subRounds), Settings.SUB_ROUNDS.min, Settings.SUB_ROUNDS.max)
   v.mapVoteCount = clamp(math.floor(v.mapVoteCount), Settings.MAP_VOTE_COUNT.min, Settings.MAP_VOTE_COUNT.max)
   v.volMusic = clamp(math.floor(v.volMusic), 0, 10)
   if not Settings.MODE_NAMES[v.matchMode] then v.matchMode = "elim" end
@@ -389,6 +400,7 @@ end
 function Settings.resetGameplay()
   local v = Settings.values
   v.roundsToWin = defaults.roundsToWin
+  v.subRounds = defaults.subRounds
   v.matchMode, v.teams, v.friendlyFire = defaults.matchMode, defaults.teams, defaults.friendlyFire
   v.suddenDeath, v.barrierClose = defaults.suddenDeath, defaults.barrierClose
   v.barrierBox, v.barrierDamage = defaults.barrierBox, defaults.barrierDamage
@@ -433,7 +445,7 @@ function Settings.cardRules(online)
     teams = v.teams, friendlyFire = v.friendlyFire, roundsToWin = v.roundsToWin,
     suddenDeath = v.suddenDeath, barrierClose = v.barrierClose, barrierBox = v.barrierBox,
     barrierDamage = v.barrierDamage, mode = v.matchMode, mapVote = v.mapVote, mapVoteCount = v.mapVoteCount,
-    cardBans = v.cardBans }
+    cardBans = v.cardBans, subRounds = v.subRounds }
   for _, syn in ipairs(require("game.synergies").list) do
     if v.synergies[syn.id] then rules.synergyOff[syn.index] = true end
   end

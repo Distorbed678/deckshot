@@ -6,6 +6,13 @@ local Version = {
   VERSION = "0.5.1",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Win 2 sub-rounds on the same map to take a point (the host can change how many). Losers then pick a card.",
+    "New card screen: your character aims at the cards as you choose them with the keys.",
+    "New in-round display with points and sub-round progress top left and cards top right.",
+    "Noodle arms and legs that really hold you up, tuck when you jump, and a recoil kick when you fire.",
+    "Explosions are smoke, fire and debris now.",
+    "44 achievements unlock about 60 hats, eyes, mouths and details. Your face reacts as you play.",
+    "Chat bubbles appear above players during matches, with name tags online.",
     "Maps are 20% bigger, and all 55 have new platforms, hazards and breakables.",
     "New mode: King of the Hill, in free-for-all or teams.",
     "Every round has a timer. When it ends, a red barrier closes in from all four sides.",

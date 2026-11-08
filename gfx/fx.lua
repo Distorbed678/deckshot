@@ -2,7 +2,7 @@
 -- When fx.recorder is a table (online host), every effect is also recorded so it
 -- can be replayed on clients.
 local fx = {
-  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, shake = 0, kickX = 0, kickY = 0,
+  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, puffs = {}, shake = 0, kickX = 0, kickY = 0,
   showNumbers = true, -- damage numbers (a per-player setting)
   shakeScale = 1, particleScale = 1,
   recorder = nil,
@@ -18,7 +18,7 @@ fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
--- 10 damage number, 11 death chunks, 12 muzzle flash.
+-- 10 damage number, 11 death chunks, 12 muzzle flash, 13 explosion.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -94,6 +94,43 @@ function fx.muzzle(x, y, angle, size)
   fx.recorder = nil -- clients replay the single event above
   fx.spray(x, y, angle, 0.7, { 1, 0.9, 0.55 }, math.floor(5 + 4 * k), 380 + 140 * k, 2.4, 0.15)
   fx.spray(x, y, angle, 1.4, { 0.62, 0.62, 0.66 }, math.floor(2 + 2 * k), 110, 4 + k, -0.08)
+  fx.recorder = keep
+end
+
+-- An explosion: a fiery core, chunky smoke puffs and bouncing debris. radius is the blast size.
+function fx.explosion(x, y, radius, color)
+  record({ 13, x, y, radius, color })
+  if fx.mute then return end
+  local k = math.max(0.45, math.min(3, radius / 70))
+  local rnd = love.math.random
+  local keep = fx.recorder
+  fx.recorder = nil -- clients replay the single event above
+  local fire = math.max(3, math.floor((4 + 5 * k) * fx.particleScale + 0.5))
+  for i = 1, fire do
+    local a, d = rnd() * math.pi * 2, rnd() * radius * 0.45
+    local life = 0.16 + rnd() * 0.2
+    table.insert(fx.puffs, { x = x + math.cos(a) * d, y = y + math.sin(a) * d, vx = math.cos(a) * 90 * k, vy = math.sin(a) * 90 * k - 30,
+      r0 = radius * (0.22 + rnd() * 0.15), r1 = radius * (0.45 + rnd() * 0.25), life = life, max = life, fire = true, hot = i % 2 == 0 })
+  end
+  local smoke = math.max(4, math.floor((7 + 8 * k) * fx.particleScale + 0.5))
+  local tint = 0.25
+  local base = 0.34 + rnd() * 0.06
+  local sc = { base + (color[1] - base) * tint, base + (color[2] - base) * tint, base + (color[3] - base) * tint }
+  for _ = 1, smoke do
+    local a, d = rnd() * math.pi * 2, rnd() * radius * 0.75
+    local life = 0.55 + rnd() * 0.6
+    table.insert(fx.puffs, { x = x + math.cos(a) * d, y = y + math.sin(a) * d, vx = math.cos(a) * 60 * k, vy = math.sin(a) * 60 * k - 55,
+      r0 = radius * (0.12 + rnd() * 0.12), r1 = radius * (0.4 + rnd() * 0.3), life = life, max = life, color = sc })
+  end
+  for _ = 1, math.max(3, math.floor((4 + 5 * k) * fx.particleScale + 0.5)) do
+    local a = -math.pi / 2 + (rnd() - 0.5) * 3.4
+    local s = (220 + rnd() * 420) * math.min(1.6, k)
+    local life = 0.8 + rnd() * 0.8
+    local shade = 0.22 + rnd() * 0.2
+    table.insert(fx.chunks, { x = x, y = y, vx = math.cos(a) * s, vy = math.sin(a) * s, rot = rnd() * 6, spin = (rnd() - 0.5) * 18,
+      w = 3 + rnd() * 6 * k, h = 2 + rnd() * 4 * k, life = life, max = life, color = { shade, shade, shade + 0.03 }, bounce = true })
+  end
+  fx.spray(x, y, -math.pi / 2, 6.2, { 1, 0.75, 0.3 }, math.floor(8 + 8 * k), 480 * math.min(1.4, k), 3, 0.3)
   fx.recorder = keep
 end
 
@@ -173,6 +210,7 @@ function fx.clear()
   fx.ghosts = {}
   fx.chunks = {}
   fx.flashes = {}
+  fx.puffs = {}
   fx.numbers = {}
   fx.shake = 0
   fx.kickX, fx.kickY = 0, 0
@@ -200,6 +238,16 @@ function fx.update(dt)
     local g = fx.ghosts[i]
     g.life = g.life - dt
     if g.life <= 0 then table.remove(fx.ghosts, i) end
+  end
+  for i = #fx.puffs, 1, -1 do
+    local p = fx.puffs[i]
+    p.life = p.life - dt
+    if p.life <= 0 then
+      table.remove(fx.puffs, i)
+    else
+      p.vx, p.vy = p.vx * (1 - 2.4 * dt), p.vy * (1 - 2.4 * dt)
+      p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
+    end
   end
   for i = #fx.flashes, 1, -1 do
     local f = fx.flashes[i]
@@ -245,6 +293,27 @@ function fx.draw()
     local c = g.color
     love.graphics.setColor(c[1], c[2], c[3], 0.45 * g.life / g.max)
     love.graphics.circle("fill", g.x, g.y, g.r)
+  end
+  for _, p in ipairs(fx.puffs) do
+    if not p.fire and not fx.glowPass then -- smoke would glow grey in the bloom pass
+      local t = p.life / p.max
+      local g = 1 - (1 - (1 - t)) ^ 2
+      local r = p.r0 + (p.r1 - p.r0) * (1 - t * t)
+      local a = math.min(1, t * 2.2) * 0.85
+      local c = p.color
+      love.graphics.setColor(c[1], c[2], c[3], a)
+      love.graphics.circle("fill", p.x, p.y, r)
+      love.graphics.setColor(c[1] + 0.09, c[2] + 0.09, c[3] + 0.09, a)
+      love.graphics.circle("fill", p.x - r * 0.22, p.y - r * 0.26, r * 0.62)
+    end
+  end
+  for _, p in ipairs(fx.puffs) do
+    if p.fire then
+      local t = p.life / p.max
+      local r = p.r0 + (p.r1 - p.r0) * (1 - t)
+      if p.hot then love.graphics.setColor(1, 0.95, 0.65, t) else love.graphics.setColor(1, 0.55, 0.15, t) end
+      love.graphics.circle("fill", p.x, p.y, r)
+    end
   end
   for _, f in ipairs(fx.flashes) do
     local t = f.life / f.max

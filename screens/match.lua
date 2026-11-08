@@ -32,8 +32,8 @@ local SNAPSHOT_INTERVAL = 1 / 30
 local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
 local PING_EVERY = 1
 local RECONNECT_TIME = 60     -- seconds a dropped player's slot is kept for them
-local PICK_DELAY = 0.9 -- ignore "take" presses right after a hand appears
-local LOAD_TIME = 1.6  -- the loading screen before a match
+local PICK_DELAY = 0.7 -- ignore "take" presses right after a hand appears
+local LOAD_TIME = 1.3  -- the loading screen before a match
 
 local function newMatch(role)
   return setmetatable({
@@ -51,6 +51,9 @@ end
 
 function Match:enter()
   Music.play("match")
+  -- In-match chat also pops up above the sender.
+  self.bubbles = {}
+  Chat.onLine = function(name, text) self.bubbles[name] = { text = text, t = 4 } end
 end
 
 -- Gameplay rules from this machine's settings (local play and the online host).
@@ -93,12 +96,12 @@ function Match.newLocal(winScore, opts)
   rules.teams = opts.teams and true or false
   if opts.practice then
     rules.practice, rules.startCards, rules.suddenDeath = true, 0, 0
-    rules.mapVote, rules.cardBans, rules.mode = false, false, "elim"
+    rules.mapVote, rules.cardBans, rules.mode, rules.subRounds = false, false, "elim", 1
     m.practice = { total = 0, hits = {}, last = 0, quiet = 0, prevHp = nil }
   end
   if opts.map then rules.forceMap = opts.map end
   if opts.test then
-    rules.startCards, rules.suddenDeath, rules.mapVote, rules.cardBans, rules.mode = 0, 0, false, false, "elim"
+    rules.startCards, rules.suddenDeath, rules.mapVote, rules.cardBans, rules.mode, rules.subRounds = 0, 0, false, false, "elim", 1
   end
   if opts.map then rules.mapVote = false end
   local setup = opts.setup or { { kind = "p1", color = 1, team = 1 }, { kind = opts.test and "dummy" or "p2", color = 2, team = 2 } }
@@ -122,7 +125,7 @@ function Match.newLocal(winScore, opts)
     m.inputs[i] = inp
     colors[i] = sl.color
     defs[i] = { name = name, input = inp, team = sl.team, bot = bot and tonumber(bot) or nil }
-    if i == 1 and not bot then defs[i].hat, defs[i].face = Cosmetics.mine() end
+    if i == 1 and not bot then defs[i].hat, defs[i].eyes, defs[i].mouth, defs[i].detail = Cosmetics.mine() end
   end
   if rules.teams then
     local teams = {}
@@ -157,7 +160,7 @@ function Match.newHost(slots, winScore, transport, opts)
   for i, s in ipairs(slots) do
     local input
     if i == 1 then input = m.myInput elseif s.bot then input = Input.bot(s.bot) else input = Input.remote() end
-    defs[i] = { name = s.name, input = input, peer = s.peer, team = s.team, bot = s.bot, hat = s.hat, face = s.face }
+    defs[i] = { name = s.name, input = input, peer = s.peer, team = s.team, bot = s.bot, hat = s.hat, eyes = s.eyes, mouth = s.mouth, detail = s.detail }
     colors[i] = s.color
     if i > 1 and not s.bot then m.peers[s.peer] = { slot = i, seq = -1 } end
   end
@@ -199,7 +202,7 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.proxies = {}
   for i, s in ipairs(slots) do
     m.proxies[i] = m:newProxy(i, s.name)
-    m.proxies[i].hat, m.proxies[i].face = s.hat, s.face
+    m.proxies[i].hat, m.proxies[i].eyes, m.proxies[i].mouth, m.proxies[i].detail = s.hat, s.eyes, s.mouth, s.detail
   end
   m.bulletViews, m.bulletList, m.wellList = {}, {}, {}
   m.snapTime = love.timer.getTime()
@@ -216,6 +219,8 @@ function Match:leave()
   Music.setIntensity(0)
   require("gfx.sfx").muffle = nil
   fx.solids = nil
+  Chat.onLine = nil
+  require("game.body").showNames = false
   if self.role == "client" then -- drop the host's session map and card lists
     Map.loadAll()
     Cards.loadAll()
@@ -248,15 +253,11 @@ function Match:hookWorld()
     if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true) end
   end
   w.on.kill = function(victim, killer, kind)
-    if killer and self:isMine(killer.slot) then Profile.bump("kills") end
     self:addKill(victim.slot, killer and killer.slot, kind)
     if self.role == "host" then self:broadcast(net.encodeKill(victim.slot, killer and killer.slot, kind), true) end
   end
   w.on.matchOver = function(winner)
     ui.reset()
-    for i, p in ipairs(w.players) do
-      if (p == winner or (winner and winner.team and p.team == winner.team)) and self:isMine(i) then Profile.bump("wins") end
-    end
     if self.role == "host" then self:recordStreaks(winner) end
   end
 end
@@ -433,7 +434,7 @@ function Match:newProxy(slot, name)
     dashTimer = 0, vx = 0, vy = 0,
     vote = 0, shield = 0,
     decay = { { remaining = 0 } },
-    x = -1000, y = -1000, r = 20, aimX = 1, aimY = 0, facing = 1,
+    x = -1000, y = -1000, r = 20, leg = 14, subWins = 0, aimX = 1, aimY = 0, facing = 1,
     hp = 100, ammo = 3, reloadTimer = 0, blockTimer = 0, blockCd = 0,
     cloakTimer = 0, invuln = 0, poisonTimer = 0, slowTimer = 0,
     empowered = false, hitFlash = 0, livesLeft = 0, orbAngle = 0, dead = true,
@@ -469,6 +470,8 @@ function Match:applySnapshot(v)
     if pv.ammo < (p.ammo or 0) then p.shotT = 0.12 end
     p.hp = pv.hp
     p.r = pv.r
+    p.leg = pv.r * 0.7
+    p.subWins = v.subWins[i] or 0
     p.dead = pv.dead
     p.blockTimer = pv.blocking and 1 or 0
     p.empowered = pv.empowered
@@ -570,6 +573,8 @@ function Match:applySnapshot(v)
       fx.gibs(e[2], e[3], e[4], e[5], e[6])
     elseif e[1] == 12 then
       fx.muzzle(e[2], e[3], e[4], e[5])
+    elseif e[1] == 13 then
+      fx.explosion(e[2], e[3], e[4], e[5])
     else
       fx.clear()
     end
@@ -1189,7 +1194,7 @@ function Match:drawMapVote(st)
   if not mv then return end
   -- Comes in gently: the backdrop and title fade up, then the maps rise in one after another.
   local voteT = self.voteT or 0
-  local fadeK = math.min(1, voteT / 0.6)
+  local fadeK = math.min(1, voteT / 0.4)
   love.graphics.setColor(0, 0, 0, 0.82 * fadeK)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local players = self:players()
@@ -1198,7 +1203,9 @@ function Match:drawMapVote(st)
   if mv.winner > 0 then title = "NEXT MAP"
   elseif self.role == "local" and slot then title = (players[slot].name or "Player"):upper() .. ": VOTE FOR THE NEXT MAP" end
   app.centered(title, app.fonts.big, 34, { 1, 1, 1, fadeK })
-  if mv.winner == 0 then app.centered(tostring(math.max(0, math.ceil(mv.timeLeft))), app.fonts.title, 84, { 1, 1, 1, 0.7 * fadeK }) end
+  if mv.winner == 0 and mv.timeLeft then
+    app.centered(tostring(math.max(0, math.ceil(mv.timeLeft))), app.fonts.title, 84, { 1, 1, 1, 0.7 * fadeK })
+  end
   local n = #mv.options
   local perRow = n <= 3 and n or 3
   local rows = math.ceil(n / perRow)
@@ -1210,7 +1217,7 @@ function Match:drawMapVote(st)
     local inRow = row == rows - 1 and (n - (rows - 1) * perRow) or perRow
     local rowW = inRow * w + (inRow - 1) * gap
     local x, y = (app.W - rowW) / 2 + col * (w + gap), top + row * (h + gap)
-    local rise = ease((voteT - 0.25 - (i - 1) * 0.15) / 0.6)
+    local rise = ease((voteT - 0.18 - (i - 1) * 0.1) / 0.42)
     y = y + (1 - rise) * (app.H - y + 20)
     local map = Map.list[idx]
     local mine = slot and mv.votes[slot] == i
@@ -1261,6 +1268,38 @@ function Match:drawCardBan(st)
 end
 
 ---------------------------------------------------------------- chat
+-- Speech bubbles above whoever just said something.
+function Match:drawBubbles(players)
+  local dt = love.timer.getDelta()
+  local font = app.fonts.small
+  for name, b in pairs(self.bubbles or {}) do
+    b.t = b.t - dt
+    if b.t <= 0 then
+      self.bubbles[name] = nil
+    else
+      for _, p in ipairs(players) do
+        if p.name == name and not p.dead then
+          local maxW = 220
+          local w, lines = font:getWrap(b.text, maxW)
+          local h = #lines * font:getHeight() + 12
+          local bw = w + 20
+          local cx, top = p.x * Map.VIEW, (p.y - p.r - 62) * Map.VIEW - h
+          local bx = math.max(6, math.min(app.W - bw - 6, cx - bw / 2))
+          local by = math.max(4, top)
+          local a = math.min(1, b.t * 2)
+          love.graphics.setColor(0.96, 0.96, 0.98, 0.95 * a)
+          love.graphics.rectangle("fill", bx, by, bw, h, 8, 8)
+          love.graphics.polygon("fill", cx - 6, by + h - 1, cx + 6, by + h - 1, cx, by + h + 8)
+          love.graphics.setColor(0.1, 0.1, 0.13, a)
+          love.graphics.setFont(font)
+          love.graphics.printf(b.text, bx + 10, by + 6, w, "center")
+          break
+        end
+      end
+    end
+  end
+end
+
 function Match:drawChat(st)
   if self.role == "local" then return end
   local session = active.get()
@@ -1379,7 +1418,7 @@ end
 
 -- The arena slides out to the left when a round gives way to card picks or the map vote, stays
 -- away while they're on screen, and the next map slides in from the right. The HUD stays put.
-local MAP_SLIDE_TIME = 0.85
+local MAP_SLIDE_TIME = 0.7
 local NO_MAP_STATES = { cardPick = true, mapVote = true, cardBan = true }
 
 function Match:updateMapSlide(dt)
@@ -1396,7 +1435,7 @@ function Match:updateMapSlide(dt)
       elseif not prev then
         self.mapHidden = true
       end
-    elseif state == "countdown" and prev and prev ~= "countdown" then
+    elseif state == "countdown" and prev and prev ~= "countdown" and prev ~= "subRound" then
       self.mapHidden, self.mapSlide = false, { kind = "in", t = 0 }
     end
   end
@@ -1586,11 +1625,10 @@ function Match:pickKeys(slot)
     local inp = self.world.players[slot] and self.world.players[slot].input
     if not inp or inp.kind ~= "keys" then return {}, {}, {}, {} end -- pads use gamepadpressed
     local b = inp.controls
-    return set(b.left), set(b.right), set(b.fire), set(b.down)
+    return set(b.left), set(b.right), set(b.fire, b.up), set(b.down)
   end
   local b = Settings.values.binds.online
-  return set(b.left, "left"), set(b.right, "right"), set(b.fire, b.jump, b.jump2, "return", "kpenter"),
-    set(b.down, "down")
+  return set(b.left, "left"), set(b.right, "right"), set(b.jump), set(b.down, "down")
 end
 
 function Match:mousepressed(x, y, button)
@@ -1603,17 +1641,15 @@ function Match:mousepressed(x, y, button)
   if pu then
     local cp = self:currentPick()
     if self.discardMode then return end -- the discard panel's buttons handle clicks
-    if button == 1 and cp then
+    -- Cards are chosen with the keys; phones have none, so a tap selects and a second tap takes.
+    if self:usesTouch() and button == 1 and cp then
       for i, r in ipairs(hud.cardRects(#cp.options, 0)) do
         if x >= r[1] and x <= r[1] + r[3] and y >= r[2] and y <= r[2] + r[4] then
-          self:choosePick(i)
+          if pu.index == i then self:choosePick(i) else pu.index = i end
           return
         end
       end
     end
-    -- Online, a mouse-bound "take" (e.g. fire on a button other than LMB) also works.
-    local _, _, take = self:pickKeys(pu.slot)
-    if button ~= 1 and take["mouse" .. button] then self:choosePick(pu.index) end
     return
   end
   if self.role ~= "local" then Input.mousepressed(self.myInput, button) end
@@ -1621,8 +1657,8 @@ end
 
 ---------------------------------------------------------------- drawing
 ---------------------------------------------------------------- card pick animation
-local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.13, 0.55, 0.42
-local DEAL_WAIT = 0.35 -- after a round, the arena is on its way out before the cards come in
+local DEAL_STAGGER, DEAL_TIME, FLIP_TIME = 0.1, 0.41, 0.37
+local DEAL_WAIT = 0.25 -- after a round, the arena is on its way out before the cards come in
 local LIFT_SPEED = 14 -- how fast the hovered card slides up
 local REVEAL_SOUND = { rare = "revealRare", epic = "revealEpic", legendary = "revealLegendary" }
 
@@ -1726,32 +1762,52 @@ end
 
 -- A round ended: count a win for every card the winner holds (if the winner is ours).
 function Match:recordRound(st)
-  local entered = st.state == "roundOver" and self.prevState ~= "roundOver"
-  if self.role == "client" and st.state == "matchOver" and self.prevState ~= "matchOver" and st.winner then
-    local me = self.proxies[self.mySlot]
-    if me and (me == st.winner or (st.winner.team and me.team == st.winner.team)) then Profile.bump("wins") end
-  end
+  local Ach = require "core.achievements"
+  local prev = self.prevState
   self.prevState = st.state
-  if not entered or not st.winner then return end
-  for i, p in ipairs(self:players()) do
-    local won = p == st.winner or (st.winner.team and p.team == st.winner.team)
-    if won and self:isMine(i) then
-      if p == st.winner then
-        for _, c in ipairs(p.cards) do Profile.add(c.id, "wins") end
+  if st.state == prev then return end
+  local players = self:players()
+  if st.state == "countdown" then
+    local _, _, _, map = self:scene()
+    if map and map.id and not self.practice then Profile.visitMap(map.id) end
+  elseif st.state == "roundOver" and st.winner then
+    for i, p in ipairs(players) do
+      local won = p == st.winner or (st.winner.team and p.team == st.winner.team)
+      if won and self:isMine(i) then
+        if p == st.winner then
+          for _, c in ipairs(p.cards) do Profile.add(c.id, "wins") end
+        end
+        Profile.bump("rounds")
+        if st.hill then Profile.bump("hillWins") end
+        if p.stats and p.hp and p.hp >= p.stats.maxHp and not p.dead then Profile.bump("flawless") end
+        if st.suddenLeft and st.suddenLeft <= 0 then Profile.bump("sudden") end
       end
-      Profile.bump("rounds")
-      if st.hill then Profile.bump("hillWins") end
-      Profile.save()
     end
+    Ach.check()
+    Profile.save()
+  elseif st.state == "matchOver" then
+    for i, p in ipairs(players) do
+      if self:isMine(i) then
+        Profile.bump("matches")
+        if st.winner and (p == st.winner or (st.winner.team and p.team == st.winner.team)) then Profile.bump("wins") end
+        Profile.record("peakCards", #p.cards)
+        Profile.bump("synergies", #require("game.synergies").active(p.cards, Cards.rules))
+        local blocks = p.st and p.st.blocks or 0
+        self.countedBlocks = self.countedBlocks or {}
+        if blocks > (self.countedBlocks[i] or 0) then
+          Profile.bump("blocks", blocks - (self.countedBlocks[i] or 0))
+          self.countedBlocks[i] = blocks
+        end
+      end
+    end
+    Ach.check()
+    Profile.save()
   end
 end
 
 -- Where a player's score panel is (for flying cards).
 function Match:panelPos(slot)
-  local n = #self:players()
-  if n <= 2 then return slot == 1 and 140 or app.W - 140, 60 end
-  local pw = hud.chipWidth(n)
-  return hud.chipX(slot, n, pw) + pw / 2, 60
+  return app.W - 40, 26 + (slot - 1) * 38
 end
 
 function Match:drawFlyers()
@@ -1774,9 +1830,9 @@ function Match:drawFlyers()
 end
 
 function Match:drawCardPick(st)
-  -- Lighter while the arena is still sliding away, so you can see it go.
+  -- The arena is leaving; the backdrop darkens behind the cards as it goes.
   local _, slideK = self:mapOffset()
-  love.graphics.setColor(0, 0, 0, self.mapSlide and (0.35 + 0.4 * slideK) or 0.75)
+  love.graphics.setColor(0.06, 0.06, 0.09, self.mapSlide and (0.35 + 0.6 * slideK) or 0.97)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
 
   local cp = st.pick
@@ -1787,18 +1843,14 @@ function Match:drawCardPick(st)
   local name = (p and p.name or ("Player " .. cp.slot)):upper()
   local pu = self.pickUI
   local count = cp.total > 1 and ("  (" .. cp.num .. "/" .. cp.total .. ")") or ""
+  local a = self.pickAnim
+  local inK = a and math.max(0, math.min(1, a.t / 0.4)) or 1
 
   local title
-  if pu and self.role ~= "local" then
-    title = "PICK A CARD" .. count
-  elseif pu then
-    title = name .. " - PICK A CARD" .. count
-  else
-    title = name .. " IS PICKING" .. count
-  end
-  local inK = self.pickAnim and math.max(0, math.min(1, self.pickAnim.t / 0.5)) or 1
-  app.centered(title, app.fonts.big, 80, { color[1], color[2], color[3], inK })
-
+  if pu and self.role ~= "local" then title = "PICK A CARD" .. count
+  elseif pu then title = name .. " - PICK A CARD" .. count
+  else title = name .. " IS PICKING" .. count end
+  app.centered(title, app.fonts.big, 18, { color[1], color[2], color[3], inK })
   local hint
   if pu then
     if self.discardMode then hint = "Choose a card to throw away" end
@@ -1806,20 +1858,19 @@ function Match:drawCardPick(st)
   else
     hint = "Watching " .. (p and p.name or "them") .. " choose"
   end
-  if hint then app.centered(hint, app.fonts.med, 128, { 1, 1, 1, 0.7 * inK }) end
+  if hint then app.centered(hint, app.fonts.med, 64, { 1, 1, 1, 0.7 * inK }) end
 
-  -- Pick timer
   if cp.timeLeft then
     local total = math.max(1, Cards.rules.pickTimer or cp.timeLeft)
     local frac = math.max(0, math.min(1, cp.timeLeft / total))
     local bw = 420
     love.graphics.setColor(1, 1, 1, 0.12)
-    love.graphics.rectangle("fill", (app.W - bw) / 2, 160, bw, 6, 3, 3)
+    love.graphics.rectangle("fill", (app.W - bw) / 2, 94, bw, 6, 3, 3)
     love.graphics.setColor(frac < 0.25 and { 1, 0.35, 0.3 } or color)
-    love.graphics.rectangle("fill", (app.W - bw) / 2, 160, bw * frac, 6, 3, 3)
+    love.graphics.rectangle("fill", (app.W - bw) / 2, 94, bw * frac, 6, 3, 3)
     love.graphics.setFont(app.fonts.small)
     love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.printf(math.ceil(cp.timeLeft) .. "s", (app.W + bw) / 2 + 10, 154, 60, "left")
+    love.graphics.printf(math.ceil(cp.timeLeft) .. "s", (app.W + bw) / 2 + 10, 88, 60, "left")
   end
 
   if #cp.queued > 0 then
@@ -1827,42 +1878,47 @@ function Match:drawCardPick(st)
     for _, slot in ipairs(cp.queued) do
       names[#names + 1] = players[slot] and players[slot].name or ("Player " .. slot)
     end
-    app.centered("Up next: " .. table.concat(names, ", "), app.fonts.med, 676, { 1, 1, 1, 0.55 })
+    love.graphics.setColor(1, 1, 1, 0.55)
+    ui.printFit("Up next: " .. table.concat(names, ", "), app.fonts.med, 24, 680, 340, "left")
   end
 
   if pu and self.discardMode then return self:drawDiscard(cp, color) end
 
   local index = pu and pu.index or cp.hover
-  -- Mouse hover selects for whoever controls the pick (local player 1 can use the mouse too).
-  if pu and not pu.waiting and ui.mouseMoved then
-    local mx, my = app.mouse()
-    for i, r in ipairs(hud.cardRects(#cp.options, 0)) do
-      if mx >= r[1] and mx <= r[1] + r[3] and my >= r[2] and my <= r[2] + r[4] then pu.index = i end
-    end
-    index = pu.index
-  end
-  local a = self.pickAnim
   local rects = hud.cardRects(#cp.options, index, a and a.lift)
-  for i, card in ipairs(cp.options) do
-    local r = rects[i]
+  local handX, handY = app.W / 2, 610
+  local function drawOne(i)
+    local card, r = cp.options[i], rects[i]
     local appear = a and (a.t - (i - 1) * DEAL_STAGGER) / DEAL_TIME or 1
-    if appear > 0 then
-      local dx = (1 - ease(appear)) * 900
-      local flip = a and a.flip[i] or (cp.flipped[i] and 1 or 0)
-      local cx = r[1] + dx + r[3] / 2
-      local sx = flip < 0.5 and (1 - 2 * flip) or (2 * flip - 1)
-      love.graphics.push()
-      love.graphics.translate(cx, 0)
-      love.graphics.scale(math.max(0.02, sx), 1)
-      love.graphics.translate(-cx, 0)
-      if flip < 0.5 then
-        hud.drawCardBack(r[1] + dx, r[2], r[3], r[4], i == index, color)
-      else
-        hud.drawCard(card, r[1] + dx, r[2], r[3], r[4], i == index, color)
-      end
-      love.graphics.pop()
+    if appear <= 0 then return end
+    local e = ease(appear)
+    local lift = a and (a.lift[i] or 0) or (i == index and 1 or 0)
+    local cx = handX + (r.cx - handX) * e
+    local cy = handY + (r.cy - handY) * e
+    local flip = a and a.flip[i] or (cp.flipped[i] and 1 or 0)
+    local sx = (flip < 0.5 and (1 - 2 * flip) or (2 * flip - 1))
+    local w, h = r[3], r[4]
+    love.graphics.push()
+    love.graphics.translate(cx, cy)
+    love.graphics.rotate(r.a * e)
+    local s = (0.35 + 0.65 * e) * (1 + 0.08 * lift)
+    love.graphics.scale(math.max(0.02, sx) * s, s)
+    if flip < 0.5 then
+      hud.drawCardBack(-w / 2, -h / 2, w, h, i == index, color)
+    else
+      hud.drawCard(card, -w / 2, -h / 2, w, h, i == index, color)
     end
+    if i ~= index then
+      love.graphics.setColor(0.04, 0.04, 0.07, 0.42 * (1 - lift))
+      love.graphics.rectangle("fill", -w / 2, -h / 2, w, h, 14, 14)
+    end
+    love.graphics.pop()
   end
+  for i = 1, #cp.options do
+    if i ~= index then drawOne(i) end
+  end
+  drawOne(index)
+
   if a then
     for _, sp in ipairs(a.sparkles) do
       local c = sp.color
@@ -1873,9 +1929,22 @@ function Match:drawCardPick(st)
     end
   end
 
+  -- The picker's character, aiming at the selected card.
+  local fig = self.pickFig
+  if not fig or fig.owner ~= cp.slot then
+    fig = { owner = cp.slot, x = app.W / 2, y = 590, r = 62, slot = cp.slot, facing = 1, aimX = 0, aimY = -1, armReach = 230 }
+    self.pickFig = fig
+  end
+  if p then fig.color, fig.hat, fig.eyes, fig.mouth, fig.detail = p.color, p.hat, p.eyes, p.mouth, p.detail end
+  local sel = rects[index]
+  local tx, ty = sel.cx, sel.cy + sel[4] * 0.56
+  local dx, dy = tx - fig.x, ty - fig.y
+  local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+  fig.aimX, fig.aimY, fig.gunTarget = dx / d, dy / d, { tx, ty }
+  require("game.body").drawFigure(fig, love.timer.getDelta())
+
   if pu and not pu.waiting and self:canDiscard(pu.slot) then
-    local label = "Discard a card instead"
-    if ui.button(label, app.W / 2 - 180, 612, 360, 44, { font = app.fonts.med }) then
+    if ui.button("Discard instead", app.W - 256, 664, 236, 40, { font = app.fonts.med }) then
       self.discardMode, self.discardIndex = true, 1
     end
   end
@@ -1937,6 +2006,10 @@ local KILL_WORDS = {
 }
 
 function Match:addKill(victimSlot, killerSlot, kind)
+  if killerSlot and self:isMine(killerSlot) then
+    Profile.bump("kills")
+    if kind == "melee" then Profile.bump("meleeKills") end
+  end
   self.killFeed = self.killFeed or {}
   table.insert(self.killFeed, 1, { victim = victimSlot, killer = killerSlot, kind = kind, t = 5 })
   if #self.killFeed > 5 then table.remove(self.killFeed) end
@@ -1948,7 +2021,7 @@ function Match:drawKillFeed()
   if not feed then return end
   local players = self:players()
   local dt = love.timer.getDelta()
-  local y = 120
+  local y = math.max(120, (hud.cardsBottom or 0) + 8)
   love.graphics.setFont(app.fonts.small)
   for i = #feed, 1, -1 do
     feed[i].t = feed[i].t - dt
@@ -2154,9 +2227,45 @@ function Match:drawVersus(players, k)
   end
 end
 
+-- Between sub-rounds: each side's progress toward the next point.
+function Match:drawSubRound(st)
+  local players = self:players()
+  local need = math.max(1, Cards.rules.subRounds or 1)
+  local sides, seen = {}, {}
+  for i, p in ipairs(players) do
+    local key = p.team or -i
+    if not seen[key] then
+      seen[key] = true
+      sides[#sides + 1] = p
+    end
+  end
+  local t = math.max(0, World.SUB_ROUND_TIME - (st.timer or 0))
+  local k = ease(t / 0.3)
+  love.graphics.setColor(0, 0, 0, 0.55 * k)
+  love.graphics.rectangle("fill", 0, 0, app.W, app.H)
+  local r, gap = 74, 40
+  local total = #sides * r * 2 + (#sides - 1) * gap
+  local x = (app.W - total) / 2 + r
+  local line
+  for _, p in ipairs(sides) do
+    local fresh = st.winner and (p == st.winner or (st.winner.team and p.team == st.winner.team))
+    hud.drawPie(x, 300, r * k, need, p.subWins or 0, p.color, k, fresh and ease((t - 0.2) / 0.45) or nil)
+    if (p.subWins or 0) == need - 1 and need > 1 then
+      local who = (p.team and World.TEAM_NAMES[p.team]) or p.name or "Player"
+      line = line and "Everyone is one win away" or (who .. " is one win away")
+    end
+    x = x + r * 2 + gap
+  end
+  if line then
+    app.centered(line, app.fonts.title, 400, { 1, 1, 1, k })
+  elseif st.winner == nil then
+    app.centered("Draw", app.fonts.title, 400, { 1, 1, 1, k })
+  end
+end
+
 function Match:drawRoundBanner(st)
   local t = self.roundT or 0
-  local k = ease(t / 0.55)
+  local k = ease(t / 0.42)
   local c = st.winner and st.winner.color or { 1, 1, 1 }
   local text = st.winner and ((st.winner.name or "Player"):upper() .. " WINS THE ROUND") or "DRAW"
   love.graphics.setColor(0, 0, 0, 0.6)
@@ -2193,8 +2302,17 @@ function Match:drawPodium(st)
       love.graphics.rectangle("fill", x + 8, baseY - h, colW - 16, h, 8, 8)
       love.graphics.setColor(p.color)
       love.graphics.rectangle("fill", x + 8, baseY - h, colW - 16, 4)
-      local look = { math.sin(love.timer.getTime() * 0.9 + i) * 0.6, 0 }
-      Cosmetics.drawPreview(x + colW / 2, baseY - h - 34, 30, p.color, p.hat, p.face, look)
+      self.podium = self.podium or {}
+      local f = self.podium[rank]
+      if not f then
+        f = { r = 30, slot = rank, facing = 1, aimX = 1, aimY = 0, x = x + colW / 2, y = baseY - h - 44 }
+        self.podium[rank] = f
+      end
+      f.x, f.y = x + colW / 2, baseY - h - 44
+      f.color, f.hat, f.eyes, f.mouth, f.detail = p.color, p.hat, p.eyes, p.mouth, p.detail
+      f.aimX = math.sin(love.timer.getTime() * 0.9 + i) * 0.8
+      f.aimY = -0.5
+      require("game.body").drawFigure(f, love.timer.getDelta())
       love.graphics.setColor(1, 1, 1, 0.9)
       ui.printFit(tostring(p.score), app.fonts.title, x + 8, baseY - h + 8, colW - 16, "center")
       love.graphics.setColor(1, 1, 1, 0.75)
@@ -2234,6 +2352,7 @@ function Match:drawMatchOver(st)
     ui.printFit((winner.name or "Player"):upper() .. " WINS!", app.fonts.huge, 80, 8, app.W - 160, "center")
   end
   self:drawPodium(st)
+  require("core.achievements").draw(500)
 
   local x, w, h = app.W / 2 - 280, 560, 52
   local nextScore = st.winScore + World.CONTINUE_ROUNDS
@@ -2348,6 +2467,7 @@ function Match:draw()
 
   local objs, effects, barrier = self:sceneObjects()
   local slideX = self:mapOffset()
+  require("game.body").showNames = self.role ~= "local"
   if not self.mapHidden then
   love.graphics.push()
   love.graphics.translate(sx + slideX, sy)
@@ -2371,10 +2491,13 @@ function Match:draw()
     if barrier then hud.drawBarrier(barrier, true) end
     for _, b in ipairs(bullets) do b:draw() end
     for _, p in ipairs(players) do p:drawGlow() end
+    fx.glowPass = true
     fx.draw()
+    fx.glowPass = false
   end, app.canvas)
   end
 
+  if not self.mapHidden then self:drawBubbles(players) end
   local cardItems = hud.drawScores(players, st.winScore)
   if st.state == "playing" or st.state == "countdown" or st.state == "roundOver" then hud.drawTimer(st.suddenLeft) end
   if st.hill then
@@ -2412,6 +2535,8 @@ function Match:draw()
   elseif st.state == "roundOver" then
     self.roundT = (self.roundT or 0) + love.timer.getDelta()
     self:drawRoundBanner(st)
+  elseif st.state == "subRound" then
+    self:drawSubRound(st)
   elseif st.state == "cardPick" then
     self:drawCardPick(st)
   elseif st.state == "mapVote" then

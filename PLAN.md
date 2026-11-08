@@ -1,211 +1,103 @@
-# Deckshot v0.5.1 plan
+# Deckshot v0.5.1 rework plan
 
-Status: **waiting for your review. Nothing has been implemented yet.** Edit anything here and tell me when to start.
+Status: **waiting for your review. Nothing in this plan has been implemented yet.** Edit anything here and tell me when to start.
 
-Online play will not be compatible with v0.5.0: chat, the round timer, the lobby settings view, map votes, bans, King of the Hill and cosmetics change the wire format, so `session.PROTOCOL` goes from `"5"` to `"6"`.
+This all ships in v0.5.1, which is still unreleased. The network protocol stays at `"6"`, because no public build has used it yet.
 
-**Size warning:** everything below ships together as v0.5.1, as you chose. It is now closer to a major release: rebuilding all 55 maps (item 20) and King of the Hill (item 25) are the two largest pieces, so nothing is playable by you until the whole list is done.
+## Please check these
 
-## Approved
-
-- 51 one-tier card rarity moves (item 7).
-- The barrier stays drawn after it stops at the final box.
-- The first-run tutorial counts as part of How to Play.
-- Mode and Rounds are set only in Settings > Gameplay.
-
-## New defaults to check
-
-These are my picks for details you haven't decided. Change any of them here.
-
-1. **Map vote:** runs before every round, including the first, with a 10 second limit. Ties are random and bots vote randomly. On by default, as you asked, so every round gets this extra step.
-2. **Card bans:** everyone bans 1 card at the same time before the starting cards, with a 30 second limit. Bans last for that match only.
-3. **King of the Hill:** first side to 30 points wins the round. The hill moves every 20 seconds. Only one side inside scores; two sides inside contests it. Dead players respawn after 3 seconds. Losers pick cards as usual.
-4. **KotH sudden death:** at zero the hill moves to the arena centre and stays there while the barrier closes.
-5. **Unlocks:** 12 hats and 8 faces, a few available from the start, the rest earned from wins, rounds played, card picks and KotH wins. Purely visual.
+1. **Own look, not a copy.** I'll build the layouts and mechanics you described: corner HUD, character aiming at cards, pie-shaped progress, cosmetic slots. The art, colours, wording and character designs will be Deckshot's own rather than a match for ROUNDS.
+2. **Confirm key on the card screen.** I read your answer as: local players confirm with their current selection key (fire) or their jump key, and online confirms with your Jump binding, Space by default. A mouse click won't confirm anything.
+3. **Phones keep tapping cards.** They have no left/right keys, so without this they couldn't pick at all. Mouse input is off on every other device.
+4. **Matches get about twice as long.** With 2 sub-round wins per point and "first to 5" points, a match is at least 10 sub-rounds. I suggest lowering the default to first to 3. Tell me if you'd rather keep 5.
+5. **Taller characters.** With the body riding above its legs, characters are about 14 units taller for terrain. The tightest gap on any built-in map is 72 units and a default character will be about 54, so they fit. Cards that make you much bigger may scrape in tight spots.
+6. **Earned cosmetics carry over.** Your current win, kill and card counts will count toward the new achievements, so you start with some unlocked.
 
 ## Items
 
-### 1. What's New click-through
-The menu buttons underneath take the click first, so Close also presses Credits or Quit. What's New becomes its own pushed screen. Only the top screen's widgets get input, so nothing behind it can be clicked.
+### 1. Transition speed
+Every transition goes to the midpoint between the earlier and current values.
 
-### 2. Red edge and barrier
-- The arena's left, right and bottom edges are no longer drawn in normal play. They still hurt and throw you back, with the existing impact burst.
-- When the timer ends, a red barrier closes in from all four sides, including the top.
-- The top edge starts above the screen, so a player in the air isn't snapped down and damaged the moment it starts.
+| Transition | Earlier | Now | New |
+|---|---|---|---|
+| Screen change | 0.35s | 0.6s | 0.47s |
+| Arena slide | 0.55s | 0.85s | 0.7s |
+| Card deal stagger | 0.07s | 0.13s | 0.1s |
+| Card deal time | 0.28s | 0.55s | 0.41s |
+| Card flip | 0.32s | 0.42s | 0.37s |
+| Round-win pause | 1.6s | 2.1s | 1.85s |
+| Map vote result | 1.1s | 1.7s | 1.4s |
 
-### 3. Match settings in one place
-Settings > Gameplay becomes a scrolling page with these sections:
-- **Match:** Mode (Elimination or King of the Hill), Teams, Rounds to win, Friendly fire (when Teams is on), Cards offered, Picks per round, Starting cards, Pick timer, Allow discarding, Map vote and maps shown, Card bans.
-- **Sudden death:** see item 11.
-- **Rarity chances:** see item 7.
-- **Content:** Card Library, Map Pool, Editor.
-- **Reset**, with a confirmation.
+The menu button entrances, round banner and map vote fade-in also go to their midpoints. The splash and match loading screens keep at least 1 second of loading, as you asked.
 
-Other changes:
-- Rounds is removed from the lobby. The host's value is published when the host closes Settings.
-- Local Play loses Mode, Rounds and Friendly fire. It keeps players, colours and teams, plus a one-line summary and a Settings button.
-- Editor leaves the main menu. It is disabled while you are in a lobby or match, and its Back returns to Settings.
+### 2, 3, 5, 11. Noodle limbs rebuilt
+- **Standing:** the body rides one leg-length above the ground, and the legs visibly hold it up. Terrain collision extends below the body to the feet. Bullets, melee and hazards still only hit the round body. Bots, spawns, edges and the barrier all use the new feet position.
+- **No more stuck feet:** a foot can never trail further than its reach. It steps as soon as it falls behind, and step length follows your speed, so landing and running can't leave a leg behind.
+- **Noodles:** longer, thin, curved limbs that swing and overshoot, with arms and legs about 30% longer.
+- **Firing:** the gun arm kicks back and springs into place, harder for bigger shots. This is cosmetic only.
+- **Squash and stretch removed** from the body.
+- **Jump and land:** the legs tuck up when you jump, and pull up on landing, so impacts read better.
 
-### 4. Card Library (Codex + Card Pool + Synergies)
-One new screen under Settings > Gameplay replaces all three:
-- Tabs for Cards and Synergies, with search and rarity / disabled filters.
-- Card preview, rarity, enabled toggle, your pick statistics and related synergies.
-- `screens/codex.lua`, `cards.lua` and `synergies.lua` are removed.
+### 4. Map vote time
+It uses the same value as the card pick timer. When that's Off, which is always the case in local play, the vote waits until everyone has voted. Bots vote on their own.
 
-The main menu becomes: Local Play, Online Play, Customize (item 26), How to Play, Settings, Credits, Quit.
+### 6, 10. Card picking screen
+- The arena is gone, with a dark themed backdrop.
+- A large version of the picker's character stands at the bottom, with their hat, eyes and mouth, and their block circle in the left hand.
+- Cards fan in an arc above the character. The right arm stretches to the selected card and follows it.
+- Selection uses left/right only, with cards still turning over as you reach them. Discard stays on the Down key.
+- The mouse no longer hovers or selects (see items 2 and 3 above for confirm keys and phones).
+- Online, everyone watches the picker's character and arm.
 
-### 5. Controls explanations
-Removed from the Online choice, LAN and lobby screens, the Local Play gamepad line, the Settings > Controls note, and the unused `Menu.controlsText`. I'll also audit the pause, practice and card-pick screens. The one-line "click a binding, then press a key" instruction stays, because it explains that screen rather than the controls.
+### 7. In-round HUD
+- **Top left:** a row of points for each player or team. The next point's dot shows sub-round progress as filled pie segments.
+- **Top right:** each player's cards as small boxes with 2-letter initials, in their colour, wrapping as they fill. Hovering one shows the full card.
+- The round timer stays top middle. King of the Hill bars sit under it.
 
-### 6. Known overlaps
-- **Settings > Video:** the note runs through the right column. It moves into the free space under Apply in the left column.
-- **LAN lobby:** the browser link wraps onto Copy Browser Link. The link will be fitted to a single line, as part of the lobby redesign in item 10.
+### 8. Sub-rounds
+- New host setting in Settings > Gameplay: **Wins per point**, 1 to 5, default 2.
+- First player or team to that many sub-round wins gets a point, everyone else picks a card, all progress resets, and the next map starts.
+- Between sub-rounds the same map restarts with no map vote or slide. Health, breakables, hazards and the sudden-death timer all reset.
+- A draw just replays the sub-round. King of the Hill uses sub-rounds too.
+- **Progress overlay, about 1.5 seconds:** each player's circle cut into n segments, with the new segment filling in and a short line such as "Blue is one win away".
 
-### 7. Rarities
-**Chances** always total exactly 100%. Raising one lowers the others proportionally, in whole percents. New defaults are **55 / 28 / 12 / 4 / 1**. Saved settings are migrated: old defaults become the new ones, and customised values are scaled to 100.
+### 9. Explosions
+The circle is replaced by chunky cartoon smoke puffs that swell and fade, a bright fiery core, flying debris and bloom. It covers bullets, barrels, gas, mines and explosive triggers, follows the Particles setting, and shows for online clients. Blast damage and radius don't change.
 
-**Cards** go from 40/44/33/19/14 to **55/45/28/14/8**:
+### 12. Achievements and cosmetics
+- About 60 cosmetics in four slots: roughly 20 hats, 15 eyes, 15 mouths and 10 details. Some are free from the start and the rest are earned. All are original designs.
+- **A mouth by default**, which changes with your expression.
+- About 40 achievements that unlock cosmetics: match wins, kills, card and synergy milestones, King of the Hill, block and melee feats, and map variety. Local play, bots and online all count.
+- Earned achievements appear on the match-over screen and the next menu visit, and there's a full list on Customize.
+- Customize is rebuilt with tabs per slot and a live character preview.
 
-| Move | Count | Cards |
-|---|---|---|
-| Legendary → Epic | 5 | Thunder God, Titan Grip, Reroll, Table Flip, Shrine of Order |
-| Legendary → Rare | 1 | Fortress |
-| Epic → Rare | 11 | Blitz, Chain Reaction, Repulsor, Stasis Field, Shield Generator, Swap Shot, Counter Puncher, Titan Rounds, Time Warp, Ricochet King, Overdrive |
-| Rare → Epic (outlier) | 1 | Last Stand |
-| Rare → Uncommon | 16 | Aerial Ace, Bone Breaker, Ground Pound, Panic Button, Riposte, Smoke Dash, Trickster, Uppercut, Bomb Squad, Retaliate, Piercing Rounds, Lock and Load, Sticky Mines, Overcharge, Momentum, Deadeye |
-| Uncommon → Common | 16 | Hazard Proof, Edge Runner, Heavy Mag, Hot Barrel, Haymaker, Lunge, Iron Guard, Glass Fists, Pickpocket, Dash Reload, Sprint Block, Slipstream, Rapid Block, Wall Kicker, Marksman, Frost Guard |
-| Common → Uncommon (outlier) | 1 | Glass Cannon |
+### 13. Chat bubbles
+In-match messages also appear in a bubble above the sender for about 4 seconds, following them, with long messages wrapped. They show on every player's screen.
 
-Legendaries stay: Bullet Hell, Mirror Shot, Phoenix, Laser, Black Hole, Ghost Bullets, Sentry, Railgun.
-
-Epics after the change: Juggernaut, Blood Pact, Orbiters, Nova, Cluster Bombs, Vampire, Hydra, Lucky Shot, Last Stand, Thunder God, Titan Grip, Reroll, Table Flip, Shrine of Order.
-
-### 8. Practice under Local Play
-Local Play opens a choice screen styled like Online's Steam / LAN choice: **Versus** or **Practice**. Practice leaves the main menu.
-
-### 9. Lobby settings for everyone
-- Steam, LAN and Local Play setup all have a Settings button.
-- Clients keep their own Video, Audio and Controls. Their Gameplay tab shows the **host's** values, read-only, under a "Host's settings" banner.
-- Card Library and Map Pool show the host's lists, including custom content (marked with the wrench), read-only. Editors can't be opened from there.
-- The host sends rules and content lists when a player joins and whenever the host closes Settings. Client-side color and team display will use these too.
-
-### 10. Chat
-- Works in Steam and LAN lobbies, and in matches. In a match, the Chat key (default Enter, rebindable) opens a small box, and messages fade after a few seconds.
-- While typing, the player's movement and firing are held so typed letters don't move you.
-- The host checks each message: 120 characters at most, about 3 messages per 5 seconds, control characters and invalid text removed. The host names the sender, so names can't be spoofed.
-- Join and leave lines appear in chat. History carries between lobby and match. Browser and phone players get the on-screen keyboard through a chat button.
-- New message kind `CHAT = 18`.
-- The lobby layout is redone: players on the left, join info above chat on the right, and Leave / Settings / Start along the bottom.
-
-### 11. Sudden death
-- A countdown at the top middle of the screen, in every match type and any player count. It turns red and ticks for the last 10 seconds, then the barrier starts.
-- The old "30 seconds after a 1v1 in 3-4 player games" rule is removed.
-- With 3-4 players the score chips leave a gap so the timer has room.
-- It closes toward the arena centre and stops at the box. Bots learn to move inside it.
-- Practice, the editor test and the menu background have no timer.
-
-| Setting | Options | Default |
-|---|---|---|
-| Timer | Off, 1:00, 1:30, 2:00, 3:00, 4:00, 5:00, 7:00, 10:00 | 3:00 |
-| Closing speed | Slow 40s, Normal 20s, Fast 10s | Normal |
-| Final box size | Small 360×264, Medium 504×384, Large 768×528 (sized for the bigger arena) | Medium |
-| Barrier damage | Low ×0.5, Normal, High ×2 | Normal |
-
-"Off" replaces the old on/off barrier setting, and saved settings with the barrier off migrate to it.
-
-### 12. Overlap sweep
-A test harness walks every screen at Small, Normal and Large text, records each widget and text rectangle, flags intersections and takes screenshots, and I review those. This runs **after** the new font is in, because the font changes text widths. Long labels and values will shrink to fit their widgets.
-
-### 13. Feel and polish
-Original work only: no ROUNDS assets or look-alikes.
-- **Better deaths:** characters burst into coloured chunks that bounce off the map, with a sound. This also shows for online clients.
-- **Music:** original synthesized synthwave, generated in-game. A menu loop and a match loop, with an extra layer fading in at sudden death. New Music volume setting. The browser build gets a lighter version.
-- **Match moments:** a short versus intro with player names, an animated round-win banner, and a winner podium showing the final build.
-- **UI theme and font:** Russo One titles with a matching clean body font (open licence, credited in Credits), and shared colours, spacing and panels on every screen.
-- **Logo and splash:** a drawn Deckshot logo on the menu, a short skippable splash and a matching window icon.
-- **Animated menus:** buttons ease on hover and press, with staggered entrances.
-- **Safety dialogs:** confirmations for leaving a match or lobby, Quit and every Reset button.
-- **First-run tutorial:** a short guided session in the practice range using your actual key bindings. See decision 3.
-
-### 14. README
-- **Top:** logo banner, gameplay GIF, a one-line pitch, Play in Browser and Download buttons, highlights, screenshots.
-- **Bottom:** a "For developers" section with collapsible blocks for building, architecture and netcode.
-- **Media you supply**, in `docs/media/`: `gameplay.gif`, `card-pick.png`, `arena-1.png`, `arena-2.png`, `arena-3.png`, `editor.png`, `lobby.png`. I'll commit labelled placeholder images under those names so the page has no broken images. Replace the files and the README updates itself.
-- `docs/` is excluded from the game package.
-
-### 15. Update checker and auto-update (new)
-**Flow:** on the main menu, a prompt shows the new version and its notes with **Update Now** and **Later**. Update Now shows download progress, verifies the SHA-256 published in the release, replaces the game and restarts it. Any failure leaves the current game untouched and links to the Releases page. It never prompts in a lobby or match. A "Check for updates" setting can turn it off.
-
-- **Linux:** runs when launched as the AppImage. It downloads beside the existing file, verifies it, swaps it in with an atomic rename and relaunches.
-- **Windows:** a running exe can't overwrite itself. It downloads and extracts the zip, then a small helper script waits for the game to exit, copies the new files in and relaunches. Save data isn't touched.
-- **Notice only** (no install) for runs from source, folders the game can't write to (such as Program Files), and `.love` runs. The browser version does nothing.
-
-Limits to know:
-- **v0.5.0 players must install v0.5.1 by hand.** The first automatic update will be from v0.5.1 to whatever comes next.
-- The checksum catches corrupted downloads but not a compromised GitHub account, because it comes from the same release. Signing could be added later.
-- I can test the Linux path here against a fake local release. **The Windows path needs a real test on your Windows PC**, unless it runs properly under Wine here.
-
-### 16. Practice card menu
-Cards are sorted by rarity under rarity headings, with no gaps in the grid. Hovering a card shows its full card, including what it does, in a popup placed so it doesn't cover the card you're pointing at.
-
-### 17. Bullet drop
-Default `bulletGravity` goes from 0.25 to **0.45**, so a straight 1000-unit shot falls about 450 instead of 250. Bullet speed is unchanged. Bots already aim using this stat, and cards that change drop still multiply it.
-
-### 18. Thunder God
-Lightning strike delay goes from 0.75s to **0.35s**. Damage stays 30.
-
-### 19. Card pick feel
-- The flip slows from 0.2s to about 0.3s. Dealing speed stays the same.
-- The hovered card slides up smoothly instead of jumping. Hover detection ignores the slide, so the card can't flicker at its bottom edge.
-- Changing hover plays the same sound as hovering a menu button, for mouse, keyboard and gamepad. It plays only for the player choosing, not for people watching.
-
-### 20. Bigger maps
-- The arena becomes **1536×864**, 20% larger, with the whole arena always on screen. Players look about 17% smaller. Player size, speed and jump height don't change.
-- The menus and HUD stay at their current size. Only the game world zooms out. This touches arena constants in the player, bot, world, map, barrier, Mirror Shot and editor code, and mouse and touch aiming.
-- **Built-in maps are rebuilt, not just stretched.** All 55 are spread out to the new size, then each gets new platforms, hazards or breakables in the added space, keeping its character. Each map gets at least two new features.
-- Every map must pass the editor validation and finish bot-vs-bot rounds. I'll make a contact sheet of all 55 for you to look over.
-- **Custom maps and old share codes** still load: their layout is spread to the new size automatically, but nothing new is added to them. The map format moves to version 2.
-
-### 21. Sound
-- **Impact variety:** separate sounds for walls, players, blocks, breakables and heavy damage.
-- **Tension audio:** sound and music muffle at low health and during death moments, with short musical stingers for round wins and match point.
-
-### 22. Feel
-- **Living characters:** eyes follow your aim, blink, squint when hurt and react to firing, jumping and dying. Online players see this on everyone.
-- **Movement effects:** dust on jumps and landings, wall-slide sparks, dash trails.
-- **Map atmosphere:** themed colours and layered parallax backgrounds by map group, with light ambient motion. The browser build gets a lighter version. None of it affects gameplay.
-
-### 23. Map vote
-A host option, **on by default**, with the number of maps shown adjustable from 2 to 6 (default 3). Maps come from the enabled Map Pool. If it's off, maps are picked randomly as they are now.
-
-### 24. Card bans
-A host option, **off by default**. Banned cards can't be offered to anyone that match, and everyone can see what was banned. Bots ban a strong card.
-
-### 25. King of the Hill
-A new mode that works in free-for-all and teams, using the rules under "New defaults to check". It needs respawning, scoring and an on-screen score display, hill locations worked out per map, snapshot data for online play, and bots that go for the hill.
-
-### 26. Cosmetics and unlocks
-A new **Customize** screen on the main menu for choosing a hat and face, showing how to unlock the rest. Progress is saved with your profile. Your choices are shown to everyone in online and LAN games. All designs are original.
+### Your extras
+- **Name tags** above players online.
+- **Reactive expressions:** angry when hurt, grinning on a kill, shocked at low health. These work online using existing data.
+- **Full characters in the lobby** with noodle limbs and an idle wobble.
 
 ## Order of work
 
-1. Foundations: scrolling region, read-only widgets, confirmation dialog, theme and font.
-2. Arena: the 1536×864 world and camera (item 20 code), because later work depends on it.
-3. Menus and settings: items 1, 3, 4, 5, 8, 16.
-4. Gameplay: items 2, 7, 11, 17, 18, including bots.
-5. Rebuild all 55 maps (item 20 content).
-6. Online: items 9, 10, and the protocol bump.
-7. New match features: items 23, 24, 25, 26.
-8. Polish: items 13, 19, 21, 22.
-9. Auto-update: item 15.
-10. Item 6 and the item 12 sweep.
-11. README, `CLAUDE.md`, What's New notes (item 14).
+1. Transition midpoints and map vote timer.
+2. Standing, noodle limbs, recoil, jump and land.
+3. Sub-rounds, the setting, the overlay and online data.
+4. New HUD.
+5. Card picking screen and key-only input.
+6. Explosions.
+7. Cosmetic slots, mouths, expressions, name tags, lobby characters.
+8. Achievements and the new Customize screen.
+9. Chat bubbles.
+10. What's New notes, `CLAUDE.md` and README updates.
 
-## Checks before release
+## Checks
 
 - Syntax check on every file.
-- Bot-vs-bot rounds on every rebuilt map, with the timer on, in both Elimination and King of the Hill.
-- Loopback online test and a real two-process LAN test, including chat, read-only settings, map vote, bans, King of the Hill and cosmetics.
-- Headless browser test of the web build, including phone layout.
-- Screenshots of every changed screen.
-- Local `./build.sh all` smoke test, then version 0.5.1, commit, push and the `v0.5.1` tag.
+- Bot rounds on all 55 maps in both modes with the new standing height and sub-rounds, plus map validation.
+- Loopback and two-process LAN tests covering sub-rounds, new HUD data, explosions, bubbles and cosmetics.
+- The overlap and tight-spacing sweep at all text sizes, including the new screens.
+- Screenshots of the card screen, HUD, overlay and Customize.
+- Browser build test, then local `./build.sh all`.
+- Commit locally. No push or tag until you say so.

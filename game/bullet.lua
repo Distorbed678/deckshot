@@ -348,7 +348,7 @@ function Bullet:bounce(game, normal)
   local be = self.owner.stats and self.owner.stats.bounceExplode or 0
   if be > 0 and not self.isChild and not self.laser then
     local r = 45 * (1 + 0.3 * (be - 1)) * (self.owner.stats.explosionSize or 1)
-    fx.ring(self.x, self.y, r, self.color)
+    fx.explosion(self.x, self.y, r, self.color)
     sfx.play("explosionSmall", self.x, 0.5)
     for _, p in ipairs(game.players) do
       if p ~= self.owner and not p.dead and (not game.isEnemy or game:isEnemy(self.owner, p))
@@ -505,8 +505,7 @@ end
 
 function Bullet:explode(game, mult)
   if self.explosion <= 0 then return end
-  fx.ring(self.x, self.y, self.explosion, self.color)
-  fx.burst(self.x, self.y, self.color, 16, 300, 4)
+  fx.explosion(self.x, self.y, self.explosion, self.color)
   fx.addShake(5)
   if not self.isCluster then sfx.play(self.explosion > 100 and "explosion" or "explosionSmall", self.x) end
   local dmg = self:currentDamage() * (mult or 0.5)

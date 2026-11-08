@@ -78,7 +78,7 @@ local function rectOf(o)
 end
 
 local function playerBox(p)
-  return p.x - p.r, p.y - p.r, p.r * 2, p.r * 2
+  return p.x - p.r, p.y - p.r, p.r * 2, p.r * 2 + (p.leg or 0) -- feet touch floor hazards and pads
 end
 
 local function overlapsPlayer(o, p)
@@ -552,7 +552,7 @@ T.crusher = {
           if not p:freeAt(p.x, p.y, others) then
             local side = p.x < o.x + o.w / 2 and -1 or 1
             p.x = side < 0 and o.x - p.r - 1 or o.x + o.w + p.r + 1
-            if p:freeAt(p.x, p.y, others) == false then p.y = o.y - p.r end
+            if p:freeAt(p.x, p.y, others) == false then p.y = o.y - p.r - p.leg end
             Objects.hazardHit(world, o, p, o.damage, side, -0.3, "crusher", 1)
           end
         end
@@ -1007,8 +1007,7 @@ T.glass = {
 }
 
 local function explodeAt(world, x, y, radius, damage, source, color)
-  fx.ring(x, y, radius, color)
-  fx.burst(x, y, color, 24, 380, 5)
+  fx.explosion(x, y, radius, color)
   fx.addShake(9)
   sfx.play("explosion", x)
   for _, p in ipairs(world.players) do

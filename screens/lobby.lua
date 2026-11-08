@@ -35,14 +35,14 @@ function Lobby:enter()
   end
   self.friends = active.get().kind == "steam" and active.get().friendsOnline() or {}
   self.invited = {}
-  local hat, face = Cosmetics.mine()
+  local hat, eyes, mouth, detail = Cosmetics.mine()
   session.cosmetics = session.cosmetics or {}
-  session.cosmetics[session.myId()] = { hat = hat, face = face }
+  session.cosmetics[session.myId()] = { hat = hat, eyes = eyes, mouth = mouth, detail = detail }
   if session.isHost then
     self:sendInfo()
   else
     -- Tells the host our look and asks for its settings (for the read-only view).
-    session.transport:send(session.hostId, net.encodeLobbyHello(hat, face), true)
+    session.transport:send(session.hostId, net.encodeLobbyHello(hat, eyes, mouth, detail), true)
   end
 end
 
@@ -96,7 +96,7 @@ function Lobby.slots(session)
   for i, m in ipairs(session.members) do
     if i > session.MAX_PLAYERS then break end
     local look = cos[m.id] or {}
-    slots[i] = { peer = m.id, name = m.name, color = m.color, hat = look.hat, face = look.face }
+    slots[i] = { peer = m.id, name = m.name, color = m.color, hat = look.hat, eyes = look.eyes, mouth = look.mouth, detail = look.detail }
   end
   for _, b in ipairs(session.bots or {}) do
     if #slots >= session.MAX_PLAYERS then break end
@@ -172,8 +172,8 @@ function Lobby:update(dt)
       Chat.handle(session, msg)
     elseif session.isHost then
       if kind == net.MSG.LOBBYHELLO then
-        local ok, hat, face = pcall(net.decodeLobbyHello, msg.data)
-        if ok then session.cosmetics[msg.from] = { hat = hat, face = face } end
+        local ok, hat, eyes, mouth, detail = pcall(net.decodeLobbyHello, msg.data)
+        if ok then session.cosmetics[msg.from] = { hat = hat, eyes = eyes, mouth = mouth, detail = detail } end
         self:sendInfo(msg.from)
       end
     elseif msg.from == session.hostId then
@@ -245,7 +245,16 @@ function Lobby:drawPlayers(session, lx, ly, lw)
     love.graphics.rectangle("fill", lx + 16, ry, lw - 32, 50, 10, 10)
     if sl then
       local c = World.PALETTE[sl.color] or World.COLORS[i]
-      Cosmetics.drawPreview(lx + 46, ry + 26, 15, c, sl.hat, sl.face, { 0.5, 0 })
+      self.figs = self.figs or {}
+      local fig = self.figs[sl.peer]
+      if not fig then
+        fig = { x = lx + 46, y = ry + 18, r = 12, slot = i, facing = 1, aimX = 1, aimY = 0 }
+        self.figs[sl.peer] = fig
+      end
+      fig.x, fig.y, fig.color, fig.hat, fig.eyes, fig.mouth, fig.detail = lx + 46, ry + 18, c, sl.hat, sl.eyes, sl.mouth, sl.detail
+      fig.aimX = math.cos(love.timer.getTime() * 0.7 + i) * 0.9
+      fig.aimY = math.sin(love.timer.getTime() * 0.5 + i) * 0.4
+      require("game.body").drawFigure(fig, love.timer.getDelta())
       love.graphics.setColor(1, 1, 1)
       ui.printFit(sl.name, app.fonts.med, lx + 78, ry + 4, lw - 280, "left")
       local st = (session.peerStreaks or {})[sl.peer] or (session.peerStreaks or {})[sl.name]

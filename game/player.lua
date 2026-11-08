@@ -64,7 +64,7 @@ end
 
 -- `input` is an input state table (see input.lua) that this player reads every frame.
 function Player.new(id, color, input)
-  local p = setmetatable({ id = id, color = color, input = input, cards = {}, score = 0 }, Player)
+  local p = setmetatable({ id = id, color = color, input = input, cards = {}, score = 0, r = 20, leg = 14 }, Player)
   p:resetStats()
   p:recompute()
   return p
@@ -107,6 +107,7 @@ function Player:recompute()
   s.radius = math.max(10, s.radius)
   self.stats = s
   self.r = s.radius
+  self.leg = self.r * 0.7 -- the body rides this far above the ground on its legs
 end
 
 -- Match statistics (scoreboard): kills, deaths, damage dealt, shots, bullet hits, blocks, melee hits.
@@ -136,6 +137,14 @@ end
 
 function Player:spawn(x, y, facing, game)
   self.game = game
+  -- Maps made before characters stood on legs can have spawns too close to the ground.
+  local rects = game and (game.solids or (game.map and game.map.rects))
+  if rects then
+    for _ = 1, 10 do
+      if self:freeAt(x, y, rects) then break end
+      y = y - 6
+    end
+  end
   self.spawnX, self.spawnY = x, y
   self.x, self.y = x, y
   self.vx, self.vy = 0, 0
@@ -434,7 +443,7 @@ function Player:update(dt, frozen)
 
   -- Footstep dust, wall-slide sparks, dash afterimages, refilled dash.
   if self.onGround and math.abs(self.vx) > 250 and love.math.random() < dt * 7 then
-    fx.spray(self.x, self.y + self.r, self.vx > 0 and math.pi * 1.15 or -math.pi * 0.15, 0.5,
+    fx.spray(self.x, self.y + self.r + self.leg, self.vx > 0 and math.pi * 1.15 or -math.pi * 0.15, 0.5,
       { 0.7, 0.7, 0.75 }, 2, 90, 2.5, 0.15)
   end
   if self.wallDir ~= 0 and not self.onGround and self.vy >= MOVE.wallSlide - 1 and love.math.random() < dt * 28 then
@@ -542,8 +551,8 @@ end
 function Player:landed(fallSpeed)
   if fallSpeed > 250 then
     local k = math.min(1, (fallSpeed - 250) / 900)
-    fx.spray(self.x - self.r * 0.6, self.y + self.r, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
-    fx.spray(self.x + self.r * 0.6, self.y + self.r, 0, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
+    fx.spray(self.x - self.r * 0.6, self.y + self.r + self.leg, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
+    fx.spray(self.x + self.r * 0.6, self.y + self.r + self.leg, 0, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
     self:emitSound("land", 0.35 + 0.65 * k, 1.1 - 0.3 * k)
     if fallSpeed > 600 then self:trigger("land") end
   end
@@ -566,8 +575,8 @@ function Player:checkBounds(x0, y0, x1, y1, top, damageMul)
   elseif self.x + r > x1 then
     self.x = x1 - r
     side = "right"
-  elseif self.y + r > y1 then
-    self.y = y1 - r
+  elseif self.y + r + self.leg > y1 then
+    self.y = y1 - r - self.leg
     side = "bottom"
   elseif top and self.y - r < y0 then
     self.y = y0 + r
@@ -688,23 +697,23 @@ end
 
 -- Is the player's box at (x, y) free of solid rects? One-way platforms don't count.
 function Player:freeAt(x, y, rects)
-  local r = self.r
+  local r, leg = self.r, self.leg
   for _, b in ipairs(rects) do
-    if not b.oneway and Map.overlaps(x - r, y - r, r * 2, r * 2, b) then return false end
+    if not b.oneway and Map.overlaps(x - r, y - r, r * 2, r * 2 + leg, b) then return false end
   end
   return true
 end
 
 function Player:moveX(dx, rects)
-  local r = self.r
+  local r, leg = self.r, self.leg
   self.x = self.x + dx
   for _, b in ipairs(rects) do
-    if not b.oneway and Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
+    if not b.oneway and Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
       -- Ledge correction: clipping the top corner of a block steps up onto it.
-      local lift = (self.y + r) - b.y
+      local lift = (self.y + r + leg) - b.y
       if dx ~= 0 and self.vy >= 0 and lift > 0 and lift <= MOVE.cornerLedge
-          and self:freeAt(self.x, b.y - r, rects) then
-        self.y = b.y - r
+          and self:freeAt(self.x, b.y - r - leg, rects) then
+        self.y = b.y - r - leg
       else
         if dx > 0 then self.x = b.x - r elseif dx < 0 then self.x = b.x + b.w + r end
         self.vx = 0
@@ -714,25 +723,25 @@ function Player:moveX(dx, rects)
 end
 
 function Player:moveY(dy, rects)
-  local r = self.r
-  local prevBottom = self.y + r
+  local r, leg = self.r, self.leg
+  local prevBottom = self.y + r + leg
   self.onGround = false
   self.groundOneway = false
   self.groundRect = nil
   self.y = self.y + dy
   for _, b in ipairs(rects) do
-    if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2, b) then
+    if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
       if b.oneway then
         -- Only lands from above, and not while dropping through.
         if dy >= 0 and prevBottom <= b.y + 0.5 and self.dropTimer <= 0 then
-          self.y = b.y - r
+          self.y = b.y - r - leg
           self.vy = 0
           self.onGround = true
           self.groundOneway = true
           self.groundRect = b
         end
       elseif dy > 0 then
-        self.y = b.y - r
+        self.y = b.y - r - leg
         self.vy = 0
         self.onGround = true
         self.groundRect = b
@@ -784,9 +793,9 @@ function Player:jumpPressed(fromBuffer)
     self.onGround = false
     self.jumping = true
     self.dashTimer = 0
-    fx.burst(self.x, self.y + self.r, { 0.8, 0.8, 0.85 }, 5, 110, 3)
+    fx.burst(self.x, self.y + self.r + self.leg, { 0.8, 0.8, 0.85 }, 5, 110, 3)
     self:emitSound("jump")
-    fx.spray(self.x, self.y + self.r, math.pi / 2, 2.6, { 0.75, 0.75, 0.8 }, 6, 150, 2.5, 0.15)
+    fx.spray(self.x, self.y + self.r + self.leg, math.pi / 2, 2.6, { 0.75, 0.75, 0.8 }, 6, 150, 2.5, 0.15)
     self:trigger("jump")
   elseif self.wallDir ~= 0 or self.wallCoyote > 0 then
     local wall = self.wallDir ~= 0 and self.wallDir or self.lastWallDir
@@ -807,9 +816,9 @@ function Player:jumpPressed(fromBuffer)
     self.vy = -s.jump * 0.9
     self.jumping = true
     self.dashTimer = 0
-    fx.burst(self.x, self.y + self.r, self.color, 6, 150, 3)
+    fx.burst(self.x, self.y + self.r + self.leg, self.color, 6, 150, 3)
     self:emitSound("doubleJump")
-    fx.ring(self.x, self.y + self.r, 36, self.color)
+    fx.ring(self.x, self.y + self.r + self.leg, 36, self.color)
     self:trigger("jump")
   elseif not fromBuffer then
     self.jumpBuffer = MOVE.jumpBuffer -- try again on landing
@@ -981,7 +990,7 @@ function Player:blockPressed()
     })
   end
   for i = 1, s.mineLayer do
-    local m = Bullet.new(self, self.x + (i - (s.mineLayer + 1) / 2) * 22, self.y + self.r - 6, 0, 0)
+    local m = Bullet.new(self, self.x + (i - (s.mineLayer + 1) / 2) * 22, self.y + self.r + self.leg - 6, 0, 0)
     m.laser = false
     m:becomeMine()
     m.armTime = 0.8
@@ -1017,8 +1026,8 @@ function Player:blink(dist)
   local r = self.r
   for d = dist, 30, -15 do
     local nx, ny = self.x + self.aimX * d, self.y + self.aimY * d
-    if nx > 20 and nx < 1260 and ny > 20 and ny < 700
-        and not Map.hit(rects, nx - r, ny - r, r * 2, r * 2) then
+    if nx > 20 and nx < Map.W - 20 and ny > 20 and ny < Map.H - 20
+        and not Map.hit(rects, nx - r, ny - r, r * 2, r * 2 + self.leg) then
       fx.burst(self.x, self.y, self.color, 14, 220, 3)
       self.x, self.y = nx, ny
       self.vy = math.min(self.vy, 0)
@@ -1101,7 +1110,7 @@ function Player:volley(primary, mult)
     self:spawnBullet(base + math.pi + (i - (s.backShot + 1) / 2) * 0.18, 1, empowered, mult)
   end
 
-  local mx, my = self.x + self.aimX * (self.r + 28), self.y + self.aimY * (self.r + 28)
+  local mx, my = self.x + self.aimX * (self.r + 36), self.y + self.aimY * (self.r + 36)
   fx.muzzle(mx, my, base, s.bulletSize / 5)
   fx.kick(-self.aimX * 1.5, -self.aimY * 1.5)
   self.shotT = 0.12
@@ -1308,8 +1317,7 @@ function Player:die(outOfBounds)
 
   if self.stats.martyr > 0 then
     local radius = 200
-    fx.ring(self.x, self.y, radius, self.color)
-    fx.burst(self.x, self.y, { 1, 0.6, 0.2 }, 50, 600, 6)
+    fx.explosion(self.x, self.y, radius, self.color)
     fx.addShake(18)
     for _, e in ipairs(self.game:enemiesOf(self)) do
       local dx, dy = e.x - self.x, e.y - self.y
@@ -1445,10 +1453,7 @@ function Player:draw()
     love.graphics.setColor(c[1], c[2], c[3], A)
   end
   -- Squash and stretch: stretched while moving fast vertically, squashed on landing.
-  local stretch = math.min(0.18, math.abs(self.vy or 0) / 5000) - (self.landSquash or 0)
-  local sy = 1 + stretch
-  local sx = 1 / sy
-  local by0 = self.y + r * (1 - sy) -- keep the feet in place
+  local sx, sy, by0 = 1, 1, self.y
   love.graphics.ellipse("fill", self.x, by0, r * sx, r * sy)
   if self.slowTimer > 0 then
     love.graphics.setColor(0.7, 0.9, 1, 0.7 * A)
@@ -1459,9 +1464,10 @@ function Player:draw()
   -- Face and hat. The eyes follow your aim, blink, and react to shooting and getting hurt.
   local blink = (love.timer.getTime() * 0.31 + (self.slot or 1) * 0.37) % 1 < 0.045
   local lookY = self.aimY + ((self.vy or 0) < -250 and -0.4 or (self.vy or 0) > 350 and 0.4 or 0)
-  Cosmetics.drawFace(self.x + self.facing * r * 0.14, by0 - r * 0.22 * sy, r, self.face,
+  Cosmetics.drawFace(self.x + self.facing * r * 0.14, by0 - r * 0.22 * sy, r,
     { self.aimX, math.max(-1, math.min(1, lookY)) },
-    { blink = blink, hurt = self.hitFlash > 0, firing = (self.shotT or 0) > 0 }, A)
+    { blink = blink, hurt = self.hitFlash > 0, firing = (self.shotT or 0) > 0, expr = Body.expression(self) }, A,
+    self.eyes, self.mouth, self.detail)
   if A > 0.3 then Cosmetics.drawHat(self.x, by0 - r * 0.92 * sy, r, self.hat, c) end
   Body.drawArms(self, A)
 
@@ -1497,6 +1503,13 @@ function Player:draw()
       love.graphics.setColor(1, 1, 1, (i <= self.ammo and 0.9 or 0.2) * A)
       love.graphics.circle("fill", startX + (i - 1) * spacing, py, 2.5)
     end
+  end
+
+  if Body.showNames and A > 0.3 then
+    local font = require("core.app").fonts.small
+    love.graphics.setFont(font)
+    love.graphics.setColor(1, 1, 1, 0.8)
+    love.graphics.printf(self.name or "", self.x - 90, py - 8 - font:getHeight(), 180, "center")
   end
 end
 

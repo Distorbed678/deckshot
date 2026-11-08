@@ -72,6 +72,7 @@ function Menu:update(dt)
   end
 end
 
+
 function Menu:drawBackground()
   local w = self.bg
   if not w or not w.map then return end
@@ -114,6 +115,8 @@ function Menu:draw()
   if not platform.web and ui.button("Quit", x + half + 10, y, half, h) then
     require("screens.confirm").ask("Quit Deckshot?", "See you next round.", function() love.event.quit() end, { yes = "Quit", danger = true })
   end
+
+  require("core.achievements").draw()
 
   -- Version, what's new, update notice
   love.graphics.setFont(app.fonts.small)

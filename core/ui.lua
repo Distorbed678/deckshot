@@ -163,7 +163,7 @@ local function animate(id, x, y, w, h, focused, noEnter)
   local scale = 1 + 0.018 * st.hover - 0.035 * st.press
   local dy = 0
   if not app().noSlide and not noEnter then
-    local k = math.max(0, math.min(1, (enterT - math.min(0.35, (id - 1) * 0.025)) / 0.34))
+    local k = math.max(0, math.min(1, (enterT - math.min(0.28, (id - 1) * 0.02)) / 0.27))
     local e = 1 - (1 - k) ^ 3
     dy, a = (1 - e) * 16, e
   end
