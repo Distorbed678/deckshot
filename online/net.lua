@@ -62,11 +62,13 @@ function net.decodeInput(data, s)
 end
 
 ---------------------------------------------------------------- start
--- slots: list of { peer = id string, name = string }
+-- slots: list of { peer = id string, name = string, color = palette index (final, after teams),
+-- team = 1 / 2 / nil, bot = difficulty or nil }
 function net.encodeStart(winScore, slots)
   local parts = { pack("string", "<BHB", M.START, winScore, #slots) }
   for _, s in ipairs(slots) do
-    parts[#parts + 1] = pack("string", "<s1s1", truncate(s.peer, 40), truncate(s.name, 64))
+    parts[#parts + 1] = pack("string", "<s1s1BBB", truncate(s.peer, 40), truncate(s.name, 64), s.color or 0,
+      s.team or 0, s.bot or 0)
   end
   return table.concat(parts)
 end
@@ -75,9 +77,10 @@ function net.decodeStart(data)
   local _, winScore, n, pos = unpack("<BHB", data)
   local slots = {}
   for i = 1, n do
-    local peer, name
-    peer, name, pos = unpack("<s1s1", data, pos)
-    slots[i] = { peer = peer, name = name }
+    local peer, name, color, team, bot
+    peer, name, color, team, bot, pos = unpack("<s1s1BBB", data, pos)
+    slots[i] = { peer = peer, name = name, color = color > 0 and color or nil, team = team > 0 and team or nil,
+      bot = bot > 0 and bot or nil }
   end
   return winScore, slots
 end

@@ -296,7 +296,8 @@ function Bullet:step(dt, game)
   for _, p in ipairs(game.players) do
     -- A bullet can only hit its own shooter after it has bounced.
     if not p.dead and not (self.hitSet and self.hitSet[p])
-        and (p ~= self.owner or (self.bounced and self.age > 0.15)) then
+        and (p ~= self.owner or (self.bounced and self.age > 0.15))
+        and (p == self.owner or not game.isEnemy or game:isEnemy(self.owner, p)) then
       local dx, dy = p.x - self.x, p.y - self.y
       local reach = p.r + r
       if p:isBlocking() then reach = p.r + 14 + r end
@@ -340,7 +341,8 @@ function Bullet:bounce(game, normal)
     fx.ring(self.x, self.y, r, self.color)
     sfx.play("explosionSmall", self.x, 0.5)
     for _, p in ipairs(game.players) do
-      if p ~= self.owner and not p.dead and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
+      if p ~= self.owner and not p.dead and (not game.isEnemy or game:isEnemy(self.owner, p))
+          and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
         p:hit(self:currentDamage() * 0.3, p.x - self.x, p.y - self.y, 300, self.owner, "explosion")
       end
     end
@@ -499,7 +501,7 @@ function Bullet:explode(game, mult)
   local dmg = self:currentDamage() * (mult or 0.5)
   if game.objects then objects().explosion(game, self.x, self.y, self.explosion, dmg * 2, self.owner) end
   for _, p in ipairs(game.players) do
-    if p ~= self.owner and not p.dead then
+    if p ~= self.owner and not p.dead and (not game.isEnemy or game:isEnemy(self.owner, p)) then
       local dx, dy = p.x - self.x, p.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
       if d < self.explosion + p.r then

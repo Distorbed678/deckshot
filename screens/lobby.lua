@@ -16,6 +16,18 @@ end
 
 function Lobby:enter()
   love.mouse.setVisible(true)
+  -- Take your saved colour, or the first free one.
+  local session = active.get()
+  if session.setColor then
+    local want = Settings.values.playerColor or 1
+    local taken = {}
+    for _, m in ipairs(session.members) do if m.id ~= session.myId() and m.color then taken[m.color] = true end end
+    for k = 0, #World.PALETTE - 1 do
+      local c = (want - 1 + k) % #World.PALETTE + 1
+      if not taken[c] then want = c break end
+    end
+    session.setColor(want)
+  end
   self.friends = active.get().kind == "steam" and active.get().friendsOnline() or {}
   self.invited = {}
 end
@@ -29,15 +41,50 @@ function Lobby:keypressed(key)
   if key == "escape" then toMenu() end
 end
 
-function Lobby:start()
-  local session = active.get()
+-- Everyone in the lobby plus the host's bots, with final colours and teams.
+function Lobby.slots(session)
   local slots = {}
   for i, m in ipairs(session.members) do
     if i > session.MAX_PLAYERS then break end
-    slots[i] = { peer = m.id, name = m.name }
+    slots[i] = { peer = m.id, name = m.name, color = m.color }
   end
+  for _, b in ipairs(session.bots or {}) do
+    if #slots >= session.MAX_PLAYERS then break end
+    slots[#slots + 1] = { peer = "bot" .. #slots, name = "Bot (" .. require("game.bot").NAMES[b.level] .. ")",
+      bot = b.level, color = b.color }
+  end
+  local v = Settings.values
+  if v.teams then
+    local teams = {}
+    for i, s in ipairs(slots) do
+      s.team = (i - 1) % 2 + 1
+      teams[i] = s.team
+    end
+    for i, idx in ipairs(World.teamColorIndices(teams)) do slots[i].color = idx end
+  else
+    -- Fill in missing / clashing colours with free ones.
+    local used = {}
+    for _, s in ipairs(slots) do
+      if s.color and not used[s.color] then used[s.color] = true else s.color = nil end
+    end
+    for _, s in ipairs(slots) do
+      if not s.color then
+        for k = 1, #World.PALETTE do
+          if not used[k] then s.color, used[k] = k, true break end
+        end
+      end
+    end
+  end
+  return slots
+end
+
+function Lobby:start()
+  local session = active.get()
+  local slots = Lobby.slots(session)
   local data = net.encodeStart(session.rounds, slots)
-  for i = 2, #slots do session.transport:send(slots[i].peer, data, true) end
+  for i = 2, #slots do
+    if not slots[i].bot then session.transport:send(slots[i].peer, data, true) end
+  end
   session.setJoinable(false)
   app.switch(require("screens.match").newHost(slots, session.rounds, session.transport))
 end
@@ -94,38 +141,81 @@ function Lobby:draw()
   local session = active.get()
   app.centered(session.kind == "lan" and "LAN LOBBY" or "LOBBY", app.fonts.big, 28)
 
-  -- Players
+  -- Players (members, then the host's bots)
   local lx, ly, lw, lh = 60, 90, 560, 380
   ui.panel(lx, ly, lw, lh)
+  local slots = Lobby.slots(session)
   love.graphics.setFont(app.fonts.title)
   love.graphics.setColor(1, 1, 1)
-  love.graphics.print("Players  " .. #session.members .. " / " .. session.MAX_PLAYERS, lx + 24, ly + 18)
+  love.graphics.print("Players  " .. #slots .. " / " .. session.MAX_PLAYERS, lx + 24, ly + 14)
+  if Settings.values.teams and session.isHost then
+    love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(1, 1, 1, 0.5)
+    love.graphics.printf("TEAMS", lx, ly + 22, lw - 24, "right")
+  end
   local me = session.myId()
+  local botIndex = 0
   for i = 1, session.MAX_PLAYERS do
-    local m = session.members[i]
-    local ry = ly + 70 + (i - 1) * 74
-    local c = World.COLORS[i]
+    local sl = slots[i]
+    local ry = ly + 56 + (i - 1) * 62
     love.graphics.setColor(0.17, 0.17, 0.22)
-    love.graphics.rectangle("fill", lx + 20, ry, lw - 40, 60, 10, 10)
-    if m then
+    love.graphics.rectangle("fill", lx + 20, ry, lw - 40, 54, 10, 10)
+    if sl then
+      local c = World.PALETTE[sl.color] or World.COLORS[i]
       love.graphics.setColor(c)
-      love.graphics.circle("fill", lx + 56, ry + 30, 18)
+      love.graphics.circle("fill", lx + 52, ry + 27, 16)
       love.graphics.setColor(0.1, 0.1, 0.12)
-      love.graphics.circle("fill", lx + 52, ry + 26, 2.5)
-      love.graphics.circle("fill", lx + 62, ry + 26, 2.5)
+      love.graphics.circle("fill", lx + 48, ry + 23, 2.5)
+      love.graphics.circle("fill", lx + 58, ry + 23, 2.5)
       love.graphics.setFont(app.fonts.title)
       love.graphics.setColor(1, 1, 1)
-      love.graphics.print(m.name, lx + 90, ry + 15)
+      love.graphics.print(sl.name, lx + 84, ry + 12)
       local tags = {}
-      if m.id == session.hostId then tags[#tags + 1] = "HOST" end
-      if m.id == me then tags[#tags + 1] = "YOU" end
+      if sl.peer == session.hostId then tags[#tags + 1] = "HOST" end
+      if sl.peer == me then tags[#tags + 1] = "YOU" end
+      if sl.team then tags[#tags + 1] = World.TEAM_NAMES[sl.team]:upper() end
       love.graphics.setFont(app.fonts.small)
       love.graphics.setColor(c)
-      love.graphics.printf(table.concat(tags, "  "), lx + 20, ry + 22, lw - 60, "right")
+      love.graphics.printf(table.concat(tags, "  "), lx + 20, ry + 19, lw - (sl.bot and 110 or 60), "right")
+      if sl.bot then
+        botIndex = botIndex + 1
+        local bi = botIndex
+        if session.isHost and ui.button("x", lx + lw - 76, ry + 12, 36, 30, { font = app.fonts.small, back = true }) then
+          table.remove(session.bots, bi)
+        end
+      end
     else
       love.graphics.setFont(app.fonts.med)
       love.graphics.setColor(1, 1, 1, 0.3)
-      love.graphics.print("Waiting for player...", lx + 90, ry + 19)
+      love.graphics.print("Waiting for player...", lx + 84, ry + 17)
+    end
+  end
+  -- Your colour
+  if session.setColor and not Settings.values.teams then
+    local taken = {}
+    for _, m in ipairs(session.members) do if m.id ~= me and m.color then taken[m.color] = true end end
+    for _, bb in ipairs(session.bots or {}) do if bb.color then taken[bb.color] = true end end
+    local myColor
+    for _, m in ipairs(session.members) do if m.id == me then myColor = m.color end end
+    local sx = lx + 24
+    for k, col in ipairs(World.PALETTE) do
+      local x = sx + (k - 1) * 43
+      local y = ly + lh - 44
+      local mx, my = app.mouse()
+      local over = mx >= x and mx <= x + 36 and my >= y and my <= y + 34
+      love.graphics.setColor(col[1], col[2], col[3], taken[k] and 0.2 or 1)
+      love.graphics.rectangle("fill", x, y, 36, 34, 6, 6)
+      if k == myColor or (over and not taken[k]) then
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.setLineWidth(3)
+        love.graphics.rectangle("line", x - 2, y - 2, 40, 38, 7, 7)
+      end
+      if ui.click and over and not taken[k] then
+        session.setColor(k)
+        Settings.values.playerColor = k
+        Settings.save()
+        ui.click = nil
+      end
     end
   end
 
@@ -241,14 +331,28 @@ function Lobby:drawControls(session)
   -- Bottom controls
   local by = 495
   if session.isHost then
-    local d = ui.cycler("Rounds to win", tostring(session.rounds), 60, by, 560, 50)
+    local d = ui.cycler("Rounds", tostring(session.rounds), 60, by, 270, 50)
     if d ~= 0 then
       local opts = Settings.ROUND_OPTIONS
       local idx = 1
       for k, v in ipairs(opts) do if v == session.rounds then idx = k end end
       session.setRounds(opts[(idx - 1 + d) % #opts + 1])
     end
-    local enough = #session.members >= 2
+    -- Bots fill empty seats (only the host's game runs them).
+    session.bots = session.bots or {}
+    local full = #session.members + #session.bots >= session.MAX_PLAYERS
+    love.graphics.setFont(app.fonts.small)
+    for k, name in ipairs(require("game.bot").NAMES) do
+      if ui.button("+ " .. name, 340 + (k - 1) * 94, by, 90, 50, { font = app.fonts.small, disabled = full }) then
+        local used = {}
+        for _, m in ipairs(session.members) do if m.color then used[m.color] = true end end
+        for _, bb in ipairs(session.bots) do used[bb.color] = true end
+        local col = 1
+        for c = 1, #World.PALETTE do if not used[c] then col = c break end end
+        table.insert(session.bots, { level = k, color = col })
+      end
+    end
+    local enough = #session.members + #session.bots >= 2
     if ui.button(enough and "Start Match" or "Need 2+ players", 660, by, 560, 50,
       { disabled = not enough, color = { 0.4, 1, 0.5 } }) then
       self:start()

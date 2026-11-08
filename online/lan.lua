@@ -55,7 +55,7 @@ local CONNECT_TIMEOUT = 6
 local WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- LAN control messages. Game messages (online/net.lua) are below 200 and pass straight through.
-local CTL = { HELLO = 200, WELCOME = 201, REJECT = 202, MEMBERS = 203, PING = 204 }
+local CTL = { HELLO = 200, WELCOME = 201, REJECT = 202, MEMBERS = 203, PING = 204, COLOR = 205 }
 lan.CTL = CTL
 
 local function now() return love.timer.getTime() end
@@ -358,7 +358,7 @@ end
 ---------------------------------------------------------------- messages
 local function membersMsg()
   local parts = { pack("string", "<BBBBB", CTL.MEMBERS, lan.rounds, lan.pickFrom, lan.picks, #lan.members) }
-  for _, m in ipairs(lan.members) do parts[#parts + 1] = pack("string", "<s1s1", m.id, m.name) end
+  for _, m in ipairs(lan.members) do parts[#parts + 1] = pack("string", "<s1s1B", m.id, m.name, m.color or 0) end
   return table.concat(parts)
 end
 
@@ -405,6 +405,12 @@ local function hostMessage(c, data)
     lan.members[#lan.members + 1] = { id = c.peer, name = lan.cleanName(name) }
     c:sendMsg(pack("string", "<Bs1", CTL.WELCOME, c.peer), true)
     push({ type = "joined", id = c.peer })
+    broadcastMembers()
+  elseif kind == CTL.COLOR and c.peer then
+    local color = data:byte(2) or 0
+    for _, m in ipairs(lan.members) do
+      if m.id == c.peer then m.color = color > 0 and color or nil end
+    end
     broadcastMembers()
   elseif kind and kind < 200 and c.peer then
     lan.inbox[#lan.inbox + 1] = { from = c.peer, data = data }
@@ -478,8 +484,9 @@ local function clientMessage(data)
     local list = {}
     for i = 1, n do
       local id, name
-      id, name, pos = unpack("<s1s1", data, pos)
-      list[i] = { id = id, name = name }
+      local color
+      id, name, color, pos = unpack("<s1s1B", data, pos)
+      list[i] = { id = id, name = name, color = color > 0 and color or nil }
     end
     lan.members = list
   elseif kind and kind < 200 and lan.active then
@@ -583,7 +590,7 @@ function lan.host(rounds, rules)
   lan.conns, lan.byPeer, lan.nextPeer = {}, {}, 0
   lan.token = tostring(love.math.random(1, 2 ^ 30))
   lan.active, lan.isHost, lan.me, lan.joinable = true, true, lan.hostId, true
-  lan.members = { { id = lan.hostId, name = myName() } }
+  lan.members = { { id = lan.hostId, name = myName(), color = lan.myColor } }
   lan.events, lan.inbox = {}, {}
   lan.rounds = rounds or 5
   lan.ipList = lan.addresses()
@@ -660,6 +667,18 @@ function lan.publishRules(rules)
 end
 
 -- New players can't join while a match is running.
+-- Your colour in the lobby (palette index).
+function lan.setColor(idx)
+  lan.myColor = idx
+  if not lan.active then return end
+  if lan.isHost then
+    if lan.members[1] then lan.members[1].color = idx end
+    broadcastMembers()
+  elseif lan.conn then
+    lan.conn:sendMsg(string.char(CTL.COLOR, idx), true)
+  end
+end
+
 function lan.setJoinable(on)
   lan.joinable = on
 end

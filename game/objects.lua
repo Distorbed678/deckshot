@@ -1290,7 +1290,7 @@ function Objects.update(world, dt)
       fx.addShake(4)
       sfx.play("laserFire", e.x, 0.8, 1.6)
       for _, p in ipairs(world.players) do
-        if not p.dead and p ~= e.owner and circleHitsPlayer(e.x, e.y, e.radius, p) then
+        if not p.dead and p ~= e.owner and (not e.owner or world:isEnemy(e.owner, p)) and circleHitsPlayer(e.x, e.y, e.radius, p) then
           p:hit(e.damage, p.x - e.x, -1, 300, e.owner, "lightning")
         end
       end

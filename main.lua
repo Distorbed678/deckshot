@@ -83,6 +83,10 @@ function love.textinput(t)
   app.textinput(t)
 end
 
+function love.gamepadpressed(joystick, button)
+  app.gamepadpressed(joystick, button)
+end
+
 function love.focus(focused)
   sfx.focus(focused, Settings.values.muteUnfocused)
 end

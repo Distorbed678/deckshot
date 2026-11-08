@@ -4,18 +4,61 @@ local Player = require "game.player"
 local Map = require "game.map"
 local Cards = require "game.cards"
 local Objects = require "game.objects"
+local Bot = require "game.bot"
 local fx = require "gfx.fx"
 local sfx = require "gfx.sfx"
 
 local World = {}
 World.__index = World
 
-World.COLORS = {
-  { 1, 0.55, 0.15 },
-  { 0.25, 0.6, 1 },
-  { 0.35, 0.9, 0.4 },
-  { 1, 0.4, 0.75 },
+-- Player colours players can choose (lobby / local setup). No two players share one.
+World.PALETTE = {
+  { 1, 0.55, 0.15 },   -- orange
+  { 0.25, 0.6, 1 },    -- blue
+  { 0.35, 0.9, 0.4 },  -- green
+  { 1, 0.4, 0.75 },    -- pink
+  { 0.95, 0.25, 0.25 },-- red
+  { 0.2, 0.9, 0.9 },   -- cyan
+  { 1, 0.9, 0.25 },    -- yellow
+  { 0.65, 0.45, 1 },   -- purple
+  { 0.95, 0.95, 0.95 },-- white
+  { 0.6, 0.85, 0.2 },  -- lime
+  { 0.2, 0.45, 0.85 }, -- navy
+  { 0.75, 0.5, 0.3 },  -- brown
 }
+World.PALETTE_NAMES = { "Orange", "Blue", "Green", "Pink", "Red", "Cyan", "Yellow", "Purple", "White", "Lime", "Navy", "Brown" }
+-- Teams mode: team 1 gets warm colours, team 2 cool ones.
+World.TEAM_COLORS = { { 5, 1, 7, 12 }, { 2, 6, 11, 8 } }
+World.TEAM_NAMES = { "Red Team", "Blue Team" }
+
+-- The colour of each slot this match (World.setSlotColors); used everywhere players are drawn.
+World.COLORS = { World.PALETTE[1], World.PALETTE[2], World.PALETTE[3], World.PALETTE[4] }
+
+-- colorIndex per slot (palette indices). Duplicates are replaced by the first free colour.
+function World.setSlotColors(indices)
+  local used = {}
+  for i = 1, 4 do
+    local idx = indices and indices[i]
+    if not idx or not World.PALETTE[idx] or used[idx] then
+      idx = nil
+      for k = 1, #World.PALETTE do
+        if not used[k] then idx = k break end
+      end
+    end
+    used[idx] = true
+    World.COLORS[i] = World.PALETTE[idx]
+  end
+end
+
+-- Palette indices for a teams match: each team's players get that team's colours in order.
+function World.teamColorIndices(teams)
+  local out, count = {}, { 0, 0 }
+  for i, t in ipairs(teams) do
+    count[t] = count[t] + 1
+    out[i] = World.TEAM_COLORS[t][count[t]]
+  end
+  return out
+end
 World.CONTINUE_ROUNDS = 3
 
 -- Match-over votes (a suggestion to the host): 0 none, 1 continue, 2 new match.
@@ -53,6 +96,8 @@ function World.new(defs, winScore, rules)
     p.slot = i
     p.name = d.name
     p.peer = d.peer
+    p.team = (w.rules.teams and (d.team or ((i - 1) % 2 + 1))) or nil
+    p.isBot = d.bot
     w.players[i] = p
   end
   w.startPlayers = #defs
@@ -72,19 +117,28 @@ function World:addBullet(b)
   table.insert(self.pending, b)
 end
 
--- Living, connected players other than p.
+-- Can a hurt b? (Teammates can't, unless friendly fire is on.)
+function World:isEnemy(a, b)
+  if a == b then return false end
+  if self.rules.teams and a.team and b.team and a.team == b.team then return self.rules.friendlyFire == true end
+  return true
+end
+
+-- Living, connected players p can hurt.
 function World:enemiesOf(p)
   local list = {}
   for _, e in ipairs(self.players) do
-    if e ~= p and not e.dead then list[#list + 1] = e end
+    if not e.dead and self:isEnemy(p, e) then list[#list + 1] = e end
   end
   return list
 end
 
+-- Opponents for AI and homing: other team's players (teammates never, even with friendly fire).
 function World:nearestEnemy(p, x, y, visibleOnly)
   local best, bestD
   for _, e in ipairs(self.players) do
-    if e ~= p and not e.dead and not (visibleOnly and e.cloakTimer > 0) then
+    if e ~= p and not e.dead and not (visibleOnly and e.cloakTimer > 0)
+        and not (self.rules.teams and p.team and e.team == p.team) then
       local dx, dy = e.x - x, e.y - y
       local d = dx * dx + dy * dy
       if not bestD or d < bestD then best, bestD = e, d end
@@ -175,6 +229,8 @@ function World:update(dt)
     end
   elseif self.state == "cardPick" then
     local pk = self.pick
+    if pk and self.players[pk.slot] and self.players[pk.slot].isBot then Bot.pick(self, pk, dt) end
+    pk = self.pick
     if pk and pk.timeLeft then
       pk.timeLeft = pk.timeLeft - dt
       if pk.timeLeft <= 0 then
@@ -188,6 +244,9 @@ function World:update(dt)
     local sdt = (self.state == "roundOver") and dt * 0.35 or dt
     self.time = self.time + sdt
     Objects.update(self, sdt)
+    for _, p in ipairs(self.players) do
+      if p.isBot then Bot.update(p, self, sdt) end
+    end
     for _, p in ipairs(self.players) do p:update(sdt, false) end
     self:updateBarrier(sdt)
     for i = #self.bullets, 1, -1 do
@@ -260,16 +319,31 @@ function World:connectedCount()
 end
 
 function World:checkRoundEnd()
-  local alive, last = 0, nil
+  local alive, last, teams = 0, nil, {}
   for _, p in ipairs(self.players) do
     if not p.dead and not p.disconnected then
       alive = alive + 1
       last = p
+      if p.team then teams[p.team] = true end
     end
   end
-  if alive > 1 then return end
+  if self.rules.teams then
+    local n = 0
+    for _ in pairs(teams) do n = n + 1 end
+    if n > 1 then return end
+  elseif alive > 1 then
+    return
+  end
   self.roundWinner = last
-  if last then last.score = last.score + 1 end
+  if last then
+    if self.rules.teams and last.team then
+      for _, p in ipairs(self.players) do
+        if p.team == last.team then p.score = p.score + 1 end
+      end
+    else
+      last.score = last.score + 1
+    end
+  end
   sfx.play("roundWin")
   self.state = "roundOver"
   self.timer = 1.6
@@ -292,8 +366,10 @@ end
 function World:openPicks()
   if not self.roundWinner then return self:startRound() end
   local pickers = {}
+  local winTeam = self.rules.teams and self.roundWinner.team
   for _, p in ipairs(self.players) do
-    if p ~= self.roundWinner and not p.disconnected then pickers[#pickers + 1] = p end
+    local won = p == self.roundWinner or (winTeam and p.team == winTeam)
+    if not won and not p.disconnected then pickers[#pickers + 1] = p end
   end
   table.sort(pickers, function(a, b)
     if a.score ~= b.score then return a.score < b.score end

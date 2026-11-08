@@ -151,6 +151,17 @@ function app.mousemoved()
   ui.mouseMoved = true
 end
 
+-- Gamepad buttons: the top screen may use them (in a match); otherwise they drive menus
+-- like the keyboard (d-pad = arrows, A = Enter, B / Start = Escape).
+local PAD_KEYS = { dpup = "up", dpdown = "down", dpleft = "left", dpright = "right", a = "return", b = "escape",
+  start = "escape" }
+function app.gamepadpressed(joystick, button)
+  local s = app.top()
+  if s and s.gamepadpressed and s:gamepadpressed(joystick, button) then return end
+  local key = PAD_KEYS[button]
+  if key then app.keypressed(key) end
+end
+
 function app.textinput(t)
   ui.textinput(t)
   forward("textinput", t)

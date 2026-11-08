@@ -44,22 +44,58 @@ local function settingsRules(online)
 end
 
 ---------------------------------------------------------------- construction
--- opts (optional): map = play only this map, test = editor test play (player 2 stands still),
--- returnTo = screen to go back to on Esc.
+-- An input for a local slot kind: "p1" / "p2" (keyboard), "pad1".."pad4", "bot1".."bot3".
+function Match.localInput(kind)
+  local binds = Settings.values.binds
+  if kind == "p1" or kind == "p2" then return Input.keys(binds[kind]) end
+  local pad = kind:match("^pad(%d)$")
+  if pad then return Input.pad(Input.pads()[tonumber(pad)]) end
+  local bot = kind:match("^bot(%d)$")
+  if bot then return Input.bot(tonumber(bot)) end
+  return Input.keys(binds.p1)
+end
+
+-- opts (optional): setup = { { kind, color, team }, ... } (from the local setup screen),
+-- map = play only this map, test = editor test play (player 2 stands still),
+-- returnTo = screen to go back to on Esc, teams = 2v2.
 function Match.newLocal(winScore, opts)
   opts = opts or {}
   local m = newMatch("local")
   m.returnTo = opts.returnTo
-  local binds = Settings.values.binds
-  m.inputs = { Input.keys(binds.p1), opts.test and Input.remote() or Input.keys(binds.p2) }
-  if opts.test then m.inputs[2].aim = nil end
   local rules = settingsRules(false)
+  rules.teams = opts.teams and true or false
   if opts.map then rules.forceMap = opts.map end
   if opts.test then rules.startCards = 0 end
-  m.world = World.new({
-    { name = "Player 1", input = m.inputs[1] },
-    { name = opts.test and "Dummy" or "Player 2", input = m.inputs[2] },
-  }, winScore, rules)
+  local setup = opts.setup or { { kind = "p1", color = 1, team = 1 }, { kind = opts.test and "dummy" or "p2", color = 2, team = 2 } }
+  m.inputs = {}
+  local defs, colors, keyCount, padCount = {}, {}, 0, 0
+  for i, sl in ipairs(setup) do
+    local inp, name, bot
+    if sl.kind == "dummy" then
+      inp = Input.remote()
+      inp.aim = nil
+      name = "Dummy"
+    else
+      inp = Match.localInput(sl.kind)
+      bot = sl.kind:match("^bot(%d)$")
+      if bot then
+        name = "Bot (" .. require("game.bot").NAMES[tonumber(bot)] .. ")"
+      else
+        name = "Player " .. i
+      end
+    end
+    m.inputs[i] = inp
+    colors[i] = sl.color
+    defs[i] = { name = name, input = inp, team = sl.team, bot = bot and tonumber(bot) or nil }
+  end
+  if rules.teams then
+    local teams = {}
+    for i, sl in ipairs(setup) do teams[i] = sl.team or ((i - 1) % 2 + 1) end
+    World.setSlotColors(World.teamColorIndices(teams))
+  else
+    World.setSlotColors(colors)
+  end
+  m.world = World.new(defs, winScore, rules)
   m:hookWorld()
   fx.recorder = nil
   m.world:beginMatch()
@@ -80,12 +116,15 @@ function Match.newHost(slots, winScore, transport, opts)
   m.myInput = Input.mouse(Settings.values.binds.online)
   m.mySlot = 1
   m.peers = {}
-  local defs = {}
+  local defs, colors = {}, {}
   for i, s in ipairs(slots) do
-    local input = (i == 1) and m.myInput or Input.remote()
-    defs[i] = { name = s.name, input = input, peer = s.peer }
-    if i > 1 then m.peers[s.peer] = { slot = i, seq = -1 } end
+    local input
+    if i == 1 then input = m.myInput elseif s.bot then input = Input.bot(s.bot) else input = Input.remote() end
+    defs[i] = { name = s.name, input = input, peer = s.peer, team = s.team, bot = s.bot }
+    colors[i] = s.color
+    if i > 1 and not s.bot then m.peers[s.peer] = { slot = i, seq = -1 } end
   end
+  World.setSlotColors(colors)
   m.world = World.new(defs, winScore, settingsRules(true))
   m:hookWorld()
   m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
@@ -108,6 +147,9 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.myInput = Input.mouse(Settings.values.binds.online)
   m.inputSeq = 0
   m.pending = pending
+  local colors = {}
+  for i, s in ipairs(slots) do colors[i] = s.color end
+  World.setSlotColors(colors)
   m.view = { state = "countdown", timer = 0, winScore = winScore, mapIndex = 1, winner = 0,
     pick = { slot = 0, queued = {}, options = {}, flipped = {} } }
   m.proxies = {}
@@ -211,9 +253,16 @@ function Match:currentPick()
   }
 end
 
--- Does this machine make the choice for that slot?
+-- Does this machine make the choice for that slot? (Bots pick by themselves.)
 function Match:controlsPick(slot)
-  if self.role == "local" then return true end
+  if self.role == "local" then
+    local p = self.world.players[slot]
+    return p and not p.isBot
+  end
+  if self.role == "host" then
+    local p = self.world.players[slot]
+    if p and p.isBot then return false end
+  end
   return slot == self.mySlot
 end
 
@@ -599,7 +648,9 @@ function Match:update(dt, isTop)
   self:recordRound(self:status())
   local mx, my = app.mouse()
   if self.role == "local" then
-    for _, inp in ipairs(self.inputs) do Input.poll(inp, suppressed) end
+    for _, inp in ipairs(self.inputs) do
+      if inp.kind ~= "bot" then Input.poll(inp, suppressed) end
+    end
     if not self.paused then self.world:update(dt) end
     self:syncPick(dt)
   elseif self.role == "host" then
@@ -681,6 +732,43 @@ function Match:keypressed(key)
   end
 end
 
+-- Gamepad buttons in a match. Returns true when used (otherwise they drive the menus).
+function Match:gamepadpressed(j, button)
+  if button == "start" then
+    self.paused = not self.paused
+    ui.reset()
+    return true
+  end
+  if self.paused then return false end
+  local st = self:status().state
+  if st == "matchOver" then return false end
+  local pu = self.pickUI
+  if pu then
+    -- Only the picker's own pad (local) or any pad (online, it's your pick) steers the pick.
+    local inp = self.role == "local" and self.world.players[pu.slot].input or self.myInput
+    if self.role == "local" and (inp.kind ~= "pad" or inp.joystick ~= j) then return true end
+    local cp = self:currentPick()
+    local n = cp and #cp.options or 0
+    if self.discardMode then
+      local owned = self:ownedCards(pu.slot)
+      self.discardIndex = math.max(1, math.min(#owned, self.discardIndex or 1))
+      if button == "dpleft" then self.discardIndex = (self.discardIndex - 2) % #owned + 1
+      elseif button == "dpright" then self.discardIndex = self.discardIndex % #owned + 1
+      elseif button == "a" and owned[self.discardIndex] then self:discardCard(owned[self.discardIndex].pos)
+      elseif button == "b" or button == "dpdown" then self.discardMode = false end
+    elseif n > 0 then
+      if button == "dpleft" then pu.index = (pu.index - 2) % n + 1
+      elseif button == "dpright" then pu.index = pu.index % n + 1
+      elseif button == "a" then self:choosePick(pu.index)
+      elseif button == "dpdown" and self:canDiscard(pu.slot) then self.discardMode, self.discardIndex = true, 1 end
+    end
+    return true
+  end
+  local inputs = self.role == "local" and self.inputs or { self.myInput }
+  for _, inp in ipairs(inputs) do Input.gamepadpressed(inp, j, button) end
+  return true
+end
+
 -- Key sets (as lookup tables) for moving the pick selection left / right and taking a card.
 function Match:pickKeys(slot)
   local function set(...)
@@ -689,7 +777,9 @@ function Match:pickKeys(slot)
     return t
   end
   if self.role == "local" then
-    local b = Settings.values.binds["p" .. slot] or Settings.values.binds.p1
+    local inp = self.world.players[slot] and self.world.players[slot].input
+    if not inp or inp.kind ~= "keys" then return {}, {}, {}, {} end -- pads use gamepadpressed
+    local b = inp.controls
     return set(b.left), set(b.right), set(b.fire), set(b.down)
   end
   local b = Settings.values.binds.online
@@ -878,11 +968,14 @@ function Match:drawCardPick(st)
   app.centered(title, app.fonts.big, 80, color)
 
   local hint
-  local b = self.role == "local" and pu and (Settings.values.binds["p" .. pu.slot] or Settings.values.binds.p1)
-    or Settings.values.binds.online
+  local pickInput = self.role == "local" and pu and self.world.players[pu.slot].input
+  local b = (pickInput and pickInput.kind == "keys" and pickInput.controls) or Settings.values.binds.online
+  local padPick = pickInput and pickInput.kind == "pad"
   if pu then
     if self.discardMode then
       hint = "Choose a card to throw away  -  " .. Input.keyName(b.down) .. " to go back"
+    elseif padPick then
+      hint = "D-pad to turn over and choose, A to take, D-pad down to discard instead"
     elseif self.role == "local" then
       hint = Input.keyName(b.left) .. " / " .. Input.keyName(b.right) .. " to turn over and choose, " ..
         Input.keyName(b.fire) .. " to take"

@@ -121,6 +121,8 @@ function session.refreshMembers()
   for i = 0, MM.GetNumLobbyMembers(session.lobby) - 1 do
     local raw = MM.GetLobbyMemberByIndex(session.lobby, i)
     local m = { id = tostring(raw), raw = raw, name = Steam.Friends.GetFriendPersonaName(raw) }
+    local ok, c = pcall(MM.GetLobbyMemberData, session.lobby, raw, "color")
+    m.color = ok and tonumber(c) or nil
     if m.id == session.hostId then host = m else list[#list + 1] = m end
   end
   if host then table.insert(list, 1, host) end
@@ -236,6 +238,15 @@ function session.joinByCode(code)
     end
     session.joinLobby(MM.GetLobbyByIndex(0))
   end)
+end
+
+-- Your colour in the lobby (palette index), shared through Steam lobby member data.
+function session.setColor(idx)
+  session.myColor = idx
+  if session.lobby then
+    pcall(S().Matchmaking.SetLobbyMemberData, session.lobby, "color", tostring(idx))
+    session.refreshMembers()
+  end
 end
 
 function session.leave()

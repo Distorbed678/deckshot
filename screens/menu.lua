@@ -48,7 +48,7 @@ function Menu:draw()
   local x = (app.W - w) / 2
   local y = 250
   if ui.button("Local Play", x, y, w, h) then
-    app.switch(require("screens.match").newLocal(Settings.values.roundsToWin))
+    app.switch(require("screens.localsetup").new())
   end
   if ui.button("Online Play", x, y + 72, w, h) then
     app.switch(require("screens.online").new())

@@ -56,6 +56,29 @@ function Input.mouse(binds)
   return s
 end
 
+-- A gamepad (LÖVE Joystick with a gamepad mapping). Left stick moves, right stick aims.
+function Input.pad(joystick)
+  local s = newState("pad")
+  s.joystick = joystick
+  s.aim = 0
+  return s
+end
+
+-- A bot: game/bot.lua fills this in every frame.
+function Input.bot(difficulty)
+  local s = newState("bot")
+  s.difficulty = difficulty or 2
+  s.aim = 0
+  return s
+end
+
+-- Gamepad buttons: which action each one does.
+Input.PAD = {
+  jump = { "a" }, dash = { "b", "leftshoulder" }, melee = { "x" }, block = { "rightshoulder", "y" },
+  fire = "triggerright", block2 = "triggerleft",
+}
+local DEAD = 0.3
+
 -- Network player, filled in from received packets.
 function Input.remote()
   local s = newState("remote")
@@ -81,6 +104,27 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.left, s.right, s.up, s.down, s.fire = down(c.left), down(c.right), down(c.up), down(c.down), down(c.fire)
     s.jumpHeld = s.up
     s.meleeHeld = down(c.melee)
+  elseif s.kind == "pad" then
+    local j = s.joystick
+    if not j or not j:isConnected() then return clearHeld(s) end
+    local lx, ly = j:getGamepadAxis("leftx"), j:getGamepadAxis("lefty")
+    s.left = lx < -DEAD or j:isGamepadDown("dpleft")
+    s.right = lx > DEAD or j:isGamepadDown("dpright")
+    s.up = ly < -0.6 or j:isGamepadDown("dpup")
+    s.down = ly > 0.6 or j:isGamepadDown("dpdown")
+    s.jumpHeld = j:isGamepadDown("a")
+    s.meleeHeld = j:isGamepadDown("x")
+    s.fire = j:getGamepadAxis("triggerright") > 0.4
+    local rx, ry = j:getGamepadAxis("rightx"), j:getGamepadAxis("righty")
+    if rx * rx + ry * ry > DEAD * DEAD then
+      s.aim = math.atan2(ry, rx)
+    elseif s.left ~= s.right then
+      s.aim = s.left and math.pi or 0 -- aim where you're moving when the right stick is idle
+    end
+    -- Triggers fire / block like buttons (block on the press).
+    local lt = j:getGamepadAxis("triggerleft") > 0.4
+    if lt and not s.ltWasDown then s.blockCount = s.blockCount + 1 end
+    s.ltWasDown = lt
   elseif s.kind == "mouse" then
     s.left, s.right, s.down = down(c.left), down(c.right), down(c.down)
     s.jumpHeld = down(c.jump) or down(c.jump2)
@@ -93,6 +137,7 @@ end
 -- A key or mouse button ("mouse1"...) was pressed.
 local function pressed(s, b)
   local c = s.controls
+  if not c or (s.kind ~= "keys" and s.kind ~= "mouse") then return end
   if b == c.dash then s.dashCount = s.dashCount + 1 end
   if b == c.melee then s.meleeCount = s.meleeCount + 1 end
   if s.kind == "keys" then
@@ -110,6 +155,27 @@ end
 
 function Input.mousepressed(s, button)
   pressed(s, "mouse" .. button)
+end
+
+-- A gamepad button was pressed on joystick j.
+function Input.gamepadpressed(s, j, button)
+  if s.kind ~= "pad" or s.joystick ~= j then return end
+  local P = Input.PAD
+  local function is(list) for _, b in ipairs(list) do if b == button then return true end end end
+  if is(P.jump) then s.jumpCount = s.jumpCount + 1 end
+  if is(P.dash) then s.dashCount = s.dashCount + 1 end
+  if is(P.melee) then s.meleeCount = s.meleeCount + 1 end
+  if is(P.block) then s.blockCount = s.blockCount + 1 end
+end
+
+-- Connected gamepads, in order.
+function Input.pads()
+  local out = {}
+  if not love.joystick then return out end
+  for _, j in ipairs(love.joystick.getJoysticks()) do
+    if j:isGamepad() then out[#out + 1] = j end
+  end
+  return out
 end
 
 return Input

@@ -70,6 +70,10 @@ local defaults = {
   hazards = true,        -- map hazards on (breakables always stay)
   barrier = true,        -- sudden-death barrier in 3-4 player matches
   synergiesOn = true,    -- card synergies (individual ones can be turned off)
+  teams = false,         -- 2v2 teams (local setup / host)
+  friendlyFire = false,  -- teams: bullets and explosions hurt teammates
+  localSetup = "p1:1:1;p2:2:2;off:3:1;off:4:2", -- local play slots: kind:colour:team
+  playerColor = 1,       -- your colour in online lobbies
   settingsVersion = 2,
   playerName = "Player", -- shown to others in LAN games
   volMaster = 8,         -- volumes in steps of 0..10
@@ -319,7 +323,8 @@ function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
     startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
-    hazards = v.hazards, barrier = v.barrier, synergies = v.synergiesOn, synergyOff = {} }
+    hazards = v.hazards, barrier = v.barrier, synergies = v.synergiesOn, synergyOff = {},
+    teams = v.teams, friendlyFire = v.friendlyFire }
   for _, syn in ipairs(require("game.synergies").list) do
     if v.synergies[syn.id] then rules.synergyOff[syn.index] = true end
   end
