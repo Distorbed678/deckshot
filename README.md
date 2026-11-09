@@ -86,7 +86,7 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 
 - Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.
 - **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online, and **V** (or clicking the right stick) is push-to-talk when voice chat is on. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
-- **Touch:** drag on the left half to move (push up to jump), drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
+- **Touch:** drag on the left half to move, drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
 - **Card picks:** left/right (or hover) to turn cards over and choose, fire (or click / A) to take, down to discard a card instead.
 
 ## Play with friends

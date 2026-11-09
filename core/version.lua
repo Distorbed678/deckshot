@@ -3,9 +3,11 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.4",
+  VERSION = "0.5.5",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Touch: pushing the move stick up no longer jumps, so use the Jump button.",
+    "Touch: the pause button is now in the top right corner.",
     "Phones: sharper picture, full colour in the browser, and the pause button no longer covers the round timer.",
     "Fixed: keyboard outlines showing on touch screens, and an empty tutorial panel during the countdown.",
     "The browser version is sharp on phones and scaled displays.",

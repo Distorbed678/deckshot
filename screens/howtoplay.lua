@@ -107,7 +107,7 @@ function Screen:draw()
       { "Melee", "{x}  (hold for heavy)" }, { "Discard a card", "{y}" }, { "Scoreboard", "{back}" }, { "Pause", "{start}" },
       { "Menus", "{dpad}  and  {a},  {b} to go back" } }, x, y, w)
   else
-    kv({ { "Move", "drag on the left half (push up to jump, down to drop)" },
+    kv({ { "Move", "drag on the left half (push down to drop; use the Jump button to jump)" },
       { "Aim and fire", "drag on the right half; it fires while you hold. A quick tap fires once." },
       { "Buttons", "Jump, Block, Dash, Melee (hold for heavy) and pause" },
       { "Layout", "Settings > Controls > Touch layout lets you move and resize the buttons" },

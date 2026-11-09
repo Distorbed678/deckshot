@@ -141,7 +141,8 @@ end
 
 -- Top left: a row of points for each player or team; the next point shows sub-round progress.
 -- Top right: every player's cards as boxes with 2-letter initials. Returns hover items.
-function hud.drawScores(players, winScore)
+-- rightInset: room to leave at the right edge for the touch pause button.
+function hud.drawScores(players, winScore, rightInset)
   local hover = {}
   local need = math.max(1, Cards.rules.subRounds or 1)
   local gap = math.min(24, 460 / math.max(1, winScore))
@@ -179,7 +180,7 @@ function hud.drawScores(players, winScore)
       local card = p.cards[k]
       local col = (k - 1) % perRow
       local row = math.floor((k - 1) / perRow)
-      local x, by = app.W - 14 - size - col * (size + sp), rowY + row * (size + sp)
+      local x, by = app.W - 14 - (rightInset or 0) - size - col * (size + sp), rowY + row * (size + sp)
       love.graphics.setColor(0.06, 0.06, 0.09, 0.72 * a)
       love.graphics.rectangle("fill", x, by, size, size, 5, 5)
       love.graphics.setColor(c[1], c[2], c[3], 0.85 * a)

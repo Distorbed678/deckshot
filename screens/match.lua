@@ -2686,7 +2686,7 @@ function Match:draw()
   end
 
   if not self.mapHidden then self:drawBubbles(players) end
-  local cardItems = hud.drawScores(players, st.winScore)
+  local cardItems = hud.drawScores(players, st.winScore, self:usesTouch() and 62 or 0)
   if st.state == "playing" or st.state == "countdown" or st.state == "roundOver" then hud.drawTimer(st.suddenLeft) end
   if st.hill then
     local function scoreOf(i)

@@ -1,5 +1,5 @@
 -- Touch controls (phones / tablets, mostly through the browser build).
---   Left half: a floating move stick (up = jump, down = fast fall / drop through).
+--   Left half: a floating move stick (down = fast fall / drop through; only the button jumps).
 --   Right half: a floating aim stick that fires while held (a tap fires once).
 --   Buttons: Jump, Block, Dash, Melee (hold for heavy), plus a pause button.
 -- Turned on by the first touch (Settings: touchControls = auto / on / off). Positions are in
@@ -8,7 +8,7 @@ local Touch = { enabled = false, touches = {}, move = nil, aim = nil, held = {},
 
 Touch.DEFAULT_LAYOUT = {
   jump = { 1160, 590, 62 }, block = { 1036, 640, 48 }, dash = { 1180, 455, 46 }, melee = { 1050, 515, 46 },
-  pause = { 776, 32, 26 }, -- just right of the round timer
+  pause = { 1248, 32, 26 }, -- top right; the card chips move over to make room (hud.drawScores)
 }
 Touch.BUTTONS = { "jump", "block", "dash", "melee", "pause" }
 Touch.LABELS = { jump = "JUMP", block = "BLOCK", dash = "DASH", melee = "MELEE", pause = "II" }
@@ -20,7 +20,7 @@ function Touch.setLayout(text, opacity)
   Touch.layout = {}
   for k, v in pairs(Touch.DEFAULT_LAYOUT) do Touch.layout[k] = { v[1], v[2], v[3] } end
   for name, x, y, r in (text or ""):gmatch("(%a+)=([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)") do
-    if Touch.layout[name] and not (name == "pause" and x == "640" and y == "32") then -- the old default sat on the timer
+    if Touch.layout[name] and not (name == "pause" and y == "32" and (x == "640" or x == "776")) then -- old defaults, in the middle
       Touch.layout[name] = { tonumber(x), tonumber(y), tonumber(r) }
     end
   end
@@ -100,13 +100,8 @@ function Touch.apply(s, dt)
     local dx, dy = m.x - m.x0, m.y - m.y0
     s.left, s.right = dx < -18, dx > 18
     s.down = dy > 40
-    local up = dy < -45
-    if up and not s.stickJump then s.jumpCount = s.jumpCount + 1 end
-    s.stickJump = up
-  else
-    s.stickJump = false
   end
-  s.jumpHeld = (Touch.held.jump or s.stickJump) and true or false
+  s.jumpHeld = Touch.held.jump and true or false
   local a = Touch.aim
   if a then
     local dx, dy = a.x - a.x0, a.y - a.y0
