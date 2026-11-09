@@ -71,7 +71,7 @@ Stats.LIST = {
   -- Movement
   { "speed", 340, "Movement", "pct", "high", "move speed" },
   { "jump", 930, "Movement", "pct", "high", "jump power" },
-  { "airJumps", 1, "Movement", "flat", "high", "air jumps" },
+  { "airJumps", 0, "Movement", "flat", "high", "air jumps" },
   { "gravityMul", 1, "Movement", "pct", "low", "gravity" },
   { "dashes", 1, "Movement", "flat", "high", "air dashes" },
   { "dashSpeed", 950, "Movement", "pct", "high", "dash speed" },

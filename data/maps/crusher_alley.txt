@@ -1,0 +1,18 @@
+deckshot-map 4
+name Crusher Alley
+theme foundry
+spawn 288 696
+spawn 1248 696
+spawn 192 696
+spawn 1344 696
+rect 144 744 1248 48
+rect 120 96 1296 36
+oneway 216 540 168 14
+oneway 1152 540 168 14
+obj crusher damage=60 h=60 id=1 phase=0.0 travel=500 w=120 wait=2.2 x=432 y=132
+obj crusher damage=60 h=60 id=2 phase=0.6 travel=500 w=120 wait=2.2 x=624 y=132
+obj crusher damage=60 h=60 id=3 phase=1.2 travel=500 w=120 wait=2.2 x=792 y=132
+obj crusher damage=60 h=60 id=4 phase=1.7999999999999998 travel=500 w=120 wait=2.2 x=984 y=132
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=456 y=696
+obj block drop=0.08 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=1020 y=696
+obj block h=120 hp=150 id=7 material=brick physics=true w=48 x=744 y=624

@@ -15,6 +15,44 @@ local LEVEL = {
   { reaction = 0.14, aimError = 0.035, blockChance = 0.8, dodge = 0.7, melee = 0.9, heavy = true, fireHold = 1 },
 }
 
+-- A loose object moving fast towards p, if any.
+function Bot.incomingObject(w, p)
+  for _, o in ipairs(w.objects or {}) do
+    if o.alive and o.body and o.body:isAwake() and o.type ~= "arm" and o.type ~= "rail" and not o.parent then
+      local vx, vy = o.body:getLinearVelocity()
+      local cx, cy = o.x, o.y
+      if o.w then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
+      if vx * vx + vy * vy > 160000 then
+        local dx, dy = p.x - cx, p.y - cy
+        if dx * dx + dy * dy < 90000 and dx * vx + dy * vy > 0 then return { x = cx, y = cy } end
+      end
+    end
+  end
+end
+
+-- Somewhere better to shoot than straight at the enemy.
+function Bot.physicsShot(w, p, t, clear)
+  -- A rope holding something up, with the enemy underneath it.
+  for _, o in ipairs(w.objects or {}) do
+    if o.alive and o.type == "rope" and o.held and o.held.alive and o.segs then
+      local h = o.held
+      local hx = h.w and h.x + h.w / 2 or h.x
+      if math.abs(hx - t.x) < 70 and h.y < t.y then
+        local seg = o.segs[math.ceil(#o.segs / 2)]
+        if seg and seg.alive and seg.body then
+          local x, y = seg.body:getPosition()
+          if Objects.lineClear(w, p.x, p.y, x, y) then return { x = x, y = y } end
+        end
+      end
+    end
+  end
+  -- Breakable cover between us: shoot it out of the way.
+  if not clear then
+    local hit, hx, hy = Physics.ray(w, p.x, p.y, t.x, t.y)
+    if hit and hit.isObject and (hit.hp or 0) > 0 then return { x = hx, y = hy } end
+  end
+end
+
 local function solidAt(w, x, y, ww, hh)
   return Physics.hit(w, x, y, ww, hh) ~= nil
 end
@@ -71,7 +109,7 @@ end
 
 ---------------------------------------------------------------- platform graph
 -- Surfaces are the tops of the map's rects; edges are jumps (single or double) and drops.
-local JUMP_UP, DOUBLE_UP, JUMP_GAP, DROP_GAP = 160, 300, 250, 400
+local JUMP_UP, DOUBLE_UP, JUMP_GAP, DROP_GAP = 160, 165, 250, 400
 
 local function buildGraph(w)
   local surf = {}
@@ -252,7 +290,7 @@ function Bot.update(p, w, dt)
     if not p.onGround then
       local cx = (c.x0 + c.x1) / 2
       dir = (cx > p.x + 10) and 1 or (cx < p.x - 10) and -1 or 0
-      if p.y + p.r + p.leg > c.y and p.vy > -120 and p.jumpsLeft > 0 then
+      if p.y + p.r + p.leg > c.y and p.vy > -120 and (p.jumpsLeft > 0 or p.fallJump) then
         press(inp, "jumpCount")
         b.jumpHold = 0.3
       elseif p.y + p.r + p.leg > c.y and p.vy > 0 and p.dashesLeft > 0 and p.dashCd <= 0 then
@@ -265,7 +303,7 @@ function Bot.update(p, w, dt)
   end
   -- Pressed against a wall in the air: double jump, then dash, to get over it.
   if not p.onGround and dir ~= 0 and p.wallDir == dir and p.vy > -150 then
-    if p.jumpsLeft > 0 then
+    if (p.jumpsLeft > 0 or p.fallJump) then
       press(inp, "jumpCount")
       b.jumpHold = 0.3
     elseif p.dashesLeft > 0 and p.dashCd <= 0 then
@@ -288,6 +326,12 @@ function Bot.update(p, w, dt)
       if landing then wantJump = true else dir = 0 end
     end
   end
+  -- Something heavy coming down or flying at us: get out from under it.
+  local incoming = Bot.incomingObject(w, p)
+  if incoming then
+    dir = p.x >= incoming.x and 1 or -1
+    if p.onGround and love.math.random() < dt * 5 then wantJump = true end
+  end
   if hazardNear(w, p.x + dir * 50, p.y, 70) then
     if p.onGround then wantJump = true else dir = -dir end
   end
@@ -304,7 +348,7 @@ function Bot.update(p, w, dt)
 
   -- Falling with nothing below: double jump / dash back up toward the middle.
   if not p.onGround and p.vy > 150 and not groundBelow(w, p.x, p.y, 420) then
-    if p.jumpsLeft > 0 and love.math.random() < dt * 8 then
+    if (p.jumpsLeft > 0 or p.fallJump) and love.math.random() < dt * 8 then
       press(inp, "jumpCount")
       b.jumpHold = 0.25
     elseif p.dashesLeft > 0 and p.dashCd <= 0 and love.math.random() < dt * 6 then
@@ -339,6 +383,13 @@ function Bot.update(p, w, dt)
     local ax = t.x + t.vx * tt * 0.8
     local ay = t.y + t.vy * tt * 0.5 - 0.5 * 1800 * s.bulletGravity * tt * tt
     inp.aim = math.atan2(ay - p.y, ax - p.x) + b.noise
+    -- Use the map: cut a rope over the enemy's head, or break the cover they hide behind.
+    local trick = Bot.physicsShot(w, p, t, clear)
+    if trick then
+      inp.aim = math.atan2(trick.y - p.y, trick.x - p.x) + b.noise * 0.5
+      b.trick = 0.4
+    end
+    b.trick = math.max(0, (b.trick or 0) - dt)
     if not clear and b.blind > 1.5 then
       b.lobT = (b.lobT or 0) - dt
       if b.lobT <= 0 then

@@ -1,0 +1,34 @@
+deckshot-map 4
+name Chain Bridge
+theme ice
+spawn 204 492
+spawn 1332 492
+spawn 120 492
+spawn 1416 492
+rect 96 540 216 96
+rect 1224 540 216 96
+obj liquid buoyant=true color=#3A8BE0 h=84 id=1 w=912 x=312 y=780
+obj block h=16 id=2 material=wood physics=true w=108 x=336 y=540
+obj rope id=3 segHp=60 slack=1.05 target=2 x=342 x2=342 y=240 y2=540
+obj rope id=4 segHp=40 slack=1.05 target=2 x=438 x2=438 y=240 y2=540
+obj block h=16 id=5 material=wood physics=true w=108 x=456 y=540
+obj rope id=6 segHp=60 slack=1.05 target=5 x=462 x2=462 y=240 y2=540
+obj rope id=7 segHp=40 slack=1.05 target=5 x=558 x2=558 y=240 y2=540
+obj block h=16 id=8 material=wood physics=true w=108 x=576 y=540
+obj rope id=9 segHp=60 slack=1.05 target=8 x=582 x2=582 y=240 y2=540
+obj rope id=10 segHp=40 slack=1.05 target=8 x=678 x2=678 y=240 y2=540
+obj block h=16 id=11 material=wood physics=true w=108 x=696 y=540
+obj rope id=12 segHp=60 slack=1.05 target=11 x=702 x2=702 y=240 y2=540
+obj rope id=13 segHp=40 slack=1.05 target=11 x=798 x2=798 y=240 y2=540
+obj block h=16 id=14 material=wood physics=true w=108 x=816 y=540
+obj rope id=15 segHp=60 slack=1.05 target=14 x=822 x2=822 y=240 y2=540
+obj rope id=16 segHp=40 slack=1.05 target=14 x=918 x2=918 y=240 y2=540
+obj block h=16 id=17 material=wood physics=true w=108 x=936 y=540
+obj rope id=18 segHp=60 slack=1.05 target=17 x=942 x2=942 y=240 y2=540
+obj rope id=19 segHp=40 slack=1.05 target=17 x=1038 x2=1038 y=240 y2=540
+obj block h=16 id=20 material=wood physics=true w=108 x=1056 y=540
+obj rope id=21 segHp=60 slack=1.05 target=20 x=1062 x2=1062 y=240 y2=540
+obj rope id=22 segHp=40 slack=1.05 target=20 x=1158 x2=1158 y=240 y2=540
+obj block h=16 id=23 material=wood physics=true w=108 x=1176 y=540
+obj rope id=24 segHp=60 slack=1.05 target=23 x=1182 x2=1182 y=240 y2=540
+obj rope id=25 segHp=40 slack=1.05 target=23 x=1278 x2=1278 y=240 y2=540

@@ -1,0 +1,20 @@
+deckshot-map 4
+name Gas Main
+theme jungle
+spawn 288 696
+spawn 1248 696
+spawn 192 696
+spawn 1344 696
+rect 144 744 1248 48
+rect 432 600 96 144
+rect 1008 600 96 144
+oneway 636 456 264 14
+oneway 216 516 168 14
+oneway 1152 516 168 14
+obj block h=42 hp=20 id=1 material=gas onBreak=gas physics=true radius=110 w=28 x=564 y=702
+obj block h=42 hp=20 id=2 material=gas onBreak=gas physics=true radius=110 w=28 x=672 y=702
+obj block h=42 hp=20 id=3 material=gas onBreak=gas physics=true radius=110 w=28 x=780 y=702
+obj block h=42 hp=20 id=4 material=gas onBreak=gas physics=true radius=110 w=28 x=900 y=702
+obj block h=42 hp=20 id=5 material=gas onBreak=gas physics=true radius=110 w=28 x=456 y=558
+obj block h=42 hp=20 id=6 material=gas onBreak=gas physics=true radius=110 w=28 x=1052 y=558
+obj spikes anchored=true damage=30 dir=up h=16 id=7 w=264 x=636 y=728

@@ -1,0 +1,26 @@
+# Default settings for every map object, and the block materials. The editor and the game both
+# read this. "density" is how heavy it is for its size; "bounce" how springy it is in collisions.
+
+object block w=48 h=48 material=stone hp=0
+object saw r=28 damage=25 physics=true density=1.6 bounce=0.2
+object spikes w=80 h=16 dir=up damage=30 physics=true density=1.2
+object laser dir=down off=2 warn=0.8 on=1 damage=40 density=1.5
+object crusher w=120 h=60 travel=200 wait=1.8 damage=60
+object flame dir=up length=150 off=2.5 warn=0.5 on=1 damage=12 density=1.5
+object liquid w=200 h=40 color=#3A8BE0 damage=0 buoyant=true
+object turret hp=60 rate=2 damage=20 physics=true density=2
+object pad w=70 h=14 power=1350
+object fan w=80 h=260 dir=up force=3000
+object arm length=110 spin=1.6 force=1 density=0.3
+object rail speed=120 force=1 density=1
+object rope segHp=60 slack=1
+object weight r=26 damage=60 physics=true density=4
+
+material stone name=Stone hp=100 density=2
+material crate name=Crate hp=60 density=0.8
+material wood name=Wood hp=40 density=0.7
+material brick name=Brick hp=150 density=2.2
+material glass name=Glass hp=1 density=0.5 bounce=0.05
+material metal name=Metal hp=200 density=1.5
+material barrel name=Barrel hp=30 density=1 bounce=0.15
+material gas name=Gas\ can hp=20 density=0.6 bounce=0.2

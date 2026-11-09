@@ -1,0 +1,18 @@
+deckshot-map 4
+name The Pond
+theme ice
+spawn 216 648
+spawn 1320 648
+spawn 336 648
+spawn 1200 648
+rect 96 696 312 96
+rect 1128 696 312 96
+rect 408 840 720 24
+rect 408 744 24 96
+rect 1104 744 24 96
+oneway 672 400 192 14
+obj liquid buoyant=true color=#3A8BE0 h=216 id=1 w=672 x=432 y=624
+obj block drop=0.08 h=72 hp=60 id=2 material=crate onBreak=pickup physics=true w=72 x=520 y=520
+obj block drop=0.08 h=72 hp=60 id=3 material=crate onBreak=pickup physics=true w=72 x=660 y=520
+obj block drop=0.08 h=72 hp=60 id=4 material=crate onBreak=pickup physics=true w=72 x=800 y=520
+obj block drop=0.08 h=72 hp=60 id=5 material=crate onBreak=pickup physics=true w=72 x=950 y=520

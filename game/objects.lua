@@ -14,8 +14,8 @@
 -- On clients, objects are rebuilt from the same map list and updated from snapshots; draw()
 -- only reads synced fields (x, y, a, s, alive, flags) plus the map's props.
 local Map = require "game.map"
-local fx = require "gfx.fx"
-local sfx = require "gfx.sfx"
+local fx = require("game.events").fx
+local sfx = require("game.events").sfx
 local Physics = require "game.physics"
 
 local Objects = {}
@@ -45,29 +45,6 @@ end
 Objects.T = {}
 local T = Objects.T
 
-sfx.define("saw", { { wave = "saw", dur = 0.18, f0 = 900, f1 = 700, vol = 0.12, lp = 0.3 },
-  { wave = "noise", dur = 0.15, vol = 0.12, lp = 0.6 } })
-sfx.define("spike", { { wave = "noise", dur = 0.08, vol = 0.35, lp = 0.6 },
-  { wave = "square", dur = 0.08, f0 = 700, f1 = 300, vol = 0.2, lp = 0.5 } })
-sfx.define("crateBreak", { { wave = "noise", dur = 0.22, vol = 0.5, lp = 0.25, decay = 2.5 },
-  { wave = "square", dur = 0.12, f0 = 180, f1 = 90, vol = 0.25, lp = 0.3 } })
-sfx.define("glassBreak", { { wave = "noise", dur = 0.3, vol = 0.4, lp = 0.9, decay = 3 },
-  { wave = "sine", dur = 0.25, f0 = 3200, f1 = 2400, vol = 0.12 }, { wave = "sine", dur = 0.2, f0 = 4100, vol = 0.08, at = 0.04 } })
-sfx.define("ropeSnap", { { wave = "noise", dur = 0.06, vol = 0.4, lp = 0.7 },
-  { wave = "tri", dur = 0.12, f0 = 600, f1 = 200, vol = 0.25 } })
-sfx.define("thud", { { wave = "sine", dur = 0.15, f0 = 110, f1 = 50, vol = 0.5 }, { wave = "noise", dur = 0.08, vol = 0.3, lp = 0.2 } })
-sfx.define("crusher", { { wave = "noise", dur = 0.3, vol = 0.6, lp = 0.15 }, { wave = "sine", dur = 0.3, f0 = 70, f1 = 35, vol = 0.6 } })
-sfx.define("turretShot", { { wave = "square", dur = 0.08, f0 = 600, f1 = 200, vol = 0.22, lp = 0.4 } })
-sfx.define("pad", { { wave = "sine", dur = 0.2, f0 = 200, f1 = 900, vol = 0.35 }, { wave = "tri", dur = 0.15, f0 = 400, f1 = 1200, vol = 0.15 } })
-sfx.define("crumble", { { wave = "noise", dur = 0.3, vol = 0.35, lp = 0.2, attack = 0.05 } })
-sfx.define("gas", { { wave = "noise", dur = 0.6, vol = 0.35, lp = 0.5, attack = 0.05, decay = 1 } })
-sfx.define("pickup", { { wave = "sine", dur = 0.08, f0 = 880, vol = 0.25 }, { wave = "sine", dur = 0.12, f0 = 1320, vol = 0.25, at = 0.07 } })
-sfx.define("laserCharge", { { wave = "saw", dur = 0.5, f0 = 200, f1 = 900, vol = 0.12, lp = 0.2, attack = 0.2, decay = 0.5 } })
-sfx.define("laserFire", { { wave = "saw", dur = 0.35, f0 = 120, f1 = 110, vol = 0.3, lp = 0.4, vib = 30 } })
-sfx.define("flame", { { wave = "noise", dur = 0.5, vol = 0.35, lp = 0.15, attack = 0.05, decay = 1 } })
-sfx.define("barrier", { { wave = "square", dur = 0.25, f0 = 440, vol = 0.2, lp = 0.4 },
-  { wave = "square", dur = 0.25, f0 = 440, vol = 0.2, lp = 0.4, at = 0.4 }, { wave = "square", dur = 0.4, f0 = 330, vol = 0.25, lp = 0.4, at = 0.8 } })
-sfx.define("acid", { { wave = "noise", dur = 0.15, vol = 0.3, lp = 0.3 }, { wave = "sine", dur = 0.1, f0 = 300, f1 = 600, vol = 0.12 } })
 
 ---------------------------------------------------------------- helpers
 local function clamp(v, a, b) return math.max(a, math.min(b, v)) end
@@ -133,30 +110,28 @@ end
 
 ---------------------------------------------------------------- building
 -- Default sizes / props per type (the editor uses these too).
-Objects.DEFAULTS = {
-  block = { w = 48, h = 48, material = "stone", hp = 0 },
-  saw = { r = 28, damage = 25, physics = true },
-  spikes = { w = 80, h = 16, dir = "up", damage = 30, physics = true },
-  laser = { dir = "down", off = 2.0, warn = 0.8, on = 1.0, damage = 40 },
-  crusher = { w = 120, h = 60, travel = 200, wait = 1.8, damage = 60 },
-  flame = { dir = "up", length = 150, off = 2.5, warn = 0.5, on = 1.0, damage = 12 },
-  liquid = { w = 200, h = 40, color = "#3A8BE0", damage = 0, buoyant = true },
-  turret = { hp = 60, rate = 2, damage = 20, physics = true },
-  pad = { w = 70, h = 14, power = 1350 },
-  fan = { w = 80, h = 260, dir = "up", force = 3000 },
-  arm = { length = 110, spin = 1.6, force = 1 },
-  rail = { speed = 120, force = 1 },
-  rope = { segHp = 60, slack = 1 },
-  weight = { r = 26, damage = 60, physics = true },
-}
-
--- Block materials: the HP a block gets when made breakable, and how it looks and breaks.
-Objects.MATERIALS = {
-  stone = { name = "Stone", hp = 100 }, crate = { name = "Crate", hp = 60 }, wood = { name = "Wood", hp = 40 },
-  brick = { name = "Brick", hp = 150 }, glass = { name = "Glass", hp = 1 }, metal = { name = "Metal", hp = 200 },
-  barrel = { name = "Barrel", hp = 30 }, gas = { name = "Gas can", hp = 20 },
-}
-Objects.MATERIAL_LIST = { "stone", "crate", "wood", "brick", "glass", "metal", "barrel", "gas" }
+-- Defaults per object type and the block materials come from data/objects.txt.
+Objects.DEFAULTS, Objects.MATERIALS, Objects.MATERIAL_LIST = {}, {}, {}
+do
+  local function value(v)
+    if v == "true" then return true elseif v == "false" then return false end
+    return tonumber(v) or v
+  end
+  local text = love.filesystem.read("data/objects.txt") or ""
+  for line in text:gmatch("[^\r\n]+") do
+    local kind, name, rest = line:match("^(%a+)%s+(%S+)%s*(.*)$")
+    if kind == "object" or kind == "material" then
+      local t = {}
+      for k, v in rest:gsub("\\ ", "\1"):gmatch("([%w_]+)=(%S+)") do t[k] = value((v:gsub("\1", " "))) end
+      if kind == "object" then
+        Objects.DEFAULTS[name] = t
+      else
+        Objects.MATERIALS[name] = t
+        Objects.MATERIAL_LIST[#Objects.MATERIAL_LIST + 1] = name
+      end
+    end
+  end
+end
 
 -- "#RRGGBB" or "ch3" (a shared colour channel) to r, g, b; nil if unset.
 function Objects.colorOf(value, channels)
@@ -187,12 +162,14 @@ function Objects.build(map)
   local theme
   for i, def in ipairs(map.objects or {}) do
     local o = copy(Objects.DEFAULTS[def.type] or {})
+    o.density, o.bounce = nil, nil -- how it behaves in Box2D, not settings of this instance
     for k, v in pairs(def) do o[k] = v end
     o.index = i
     o.alive = true
     o.a = 0
     o.s = 0
     o.flags = 0
+    o.ANIMATED = o.type == "saw" or o.type == "fan" or o.conveyor or nil
     if o.path then
       local pts = {}
       for k, pt in ipairs(o.path) do pts[k] = { pt[1], pt[2] } end
@@ -306,34 +283,6 @@ T.saw = {
       end
     end
   end,
-  draw = function(o)
-    local teeth = 12
-    local pts = {}
-    for i = 0, teeth * 2 - 1 do
-      local ang = o.a + i * math.pi / teeth
-      local rr = (i % 2 == 0) and o.r or o.r * 0.78
-      pts[#pts + 1] = o.x + math.cos(ang) * rr
-      pts[#pts + 1] = o.y + math.sin(ang) * rr
-    end
-    love.graphics.setColor(0.78, 0.8, 0.86)
-    -- The outline is spiky (not convex), so fill it as triangles from the centre.
-    local n = #pts
-    for i = 1, n, 2 do
-      local j = (i + 1) % n + 1
-      love.graphics.polygon("fill", o.x, o.y, pts[i], pts[i + 1], pts[j], pts[j + 1])
-    end
-    love.graphics.setColor(0.45, 0.47, 0.52)
-    love.graphics.circle("fill", o.x, o.y, o.r * 0.55)
-    love.graphics.setColor(0.25, 0.26, 0.3)
-    love.graphics.circle("fill", o.x, o.y, o.r * 0.18)
-    if o.path and #o.path > 1 then
-      love.graphics.setColor(1, 1, 1, 0.07)
-      love.graphics.setLineWidth(3)
-      local flat = {}
-      for _, pt in ipairs(o.path) do flat[#flat + 1] = pt[1]; flat[#flat + 1] = pt[2] end
-      love.graphics.line(flat)
-    end
-  end,
 }
 
 -- Spikes point in `dir`; retracting ones (props off/warn/on) only hurt while out.
@@ -360,36 +309,6 @@ T.spikes = {
       if not p.dead and overlapsPlayer(o, p) then
         if not (o.cd and (o.cd[p] or -1) > world.time) then sfx.play("spike", p.x) end
         Objects.hazardHit(world, o, p, o.damage, nx * 2 + (p.x - (o.x + o.w / 2)) / 200, ny, "spikes", 0.5)
-      end
-    end
-  end,
-  draw = function(o)
-    local ext = o.s == 2 and 1 or o.s == 1 and 0.25 or (o.on and 0.08 or 1)
-    if o.s == 1 then ext = 0.25 + 0.1 * math.sin(love.timer.getTime() * 40) end
-    local vertical = o.dir == "up" or o.dir == "down"
-    local len = vertical and o.w or o.h
-    local depth = vertical and o.h or o.w
-    local n = math.max(1, math.floor(len / 16 + 0.5))
-    local step = len / n
-    love.graphics.setColor(0.3, 0.31, 0.36)
-    if o.dir == "up" then love.graphics.rectangle("fill", o.x, o.y + o.h - 4, o.w, 4)
-    elseif o.dir == "down" then love.graphics.rectangle("fill", o.x, o.y, o.w, 4)
-    elseif o.dir == "left" then love.graphics.rectangle("fill", o.x + o.w - 4, o.y, 4, o.h)
-    else love.graphics.rectangle("fill", o.x, o.y, 4, o.h) end
-    love.graphics.setColor(0.85, 0.85, 0.9)
-    for i = 0, n - 1 do
-      local a0, a1 = i * step, (i + 1) * step
-      local d = depth * ext
-      if o.dir == "up" then
-        local base = o.y + o.h
-        love.graphics.polygon("fill", o.x + a0, base, o.x + a1, base, o.x + (a0 + a1) / 2, base - d)
-      elseif o.dir == "down" then
-        love.graphics.polygon("fill", o.x + a0, o.y, o.x + a1, o.y, o.x + (a0 + a1) / 2, o.y + d)
-      elseif o.dir == "left" then
-        local base = o.x + o.w
-        love.graphics.polygon("fill", base, o.y + a0, base, o.y + a1, base - d, o.y + (a0 + a1) / 2)
-      else
-        love.graphics.polygon("fill", o.x, o.y + a0, o.x, o.y + a1, o.x + d, o.y + (a0 + a1) / 2)
       end
     end
   end,
@@ -431,35 +350,6 @@ T.laser = {
         Objects.hazardHit(world, o, p, o.damage, side, sideY, "laser", 0.5)
       end
     end
-  end,
-  draw = function(o)
-    local d = DIRS[o.dir] or DIRS.down
-    local len = o.a or 0
-    local ex, ey = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
-    if o.s == 1 then
-      love.graphics.setColor(1, 0.25, 0.25, 0.35 + 0.25 * math.sin(love.timer.getTime() * 30))
-      love.graphics.setLineWidth(2)
-      love.graphics.line(o.x, o.y, ex, ey)
-    elseif o.s == 2 then
-      love.graphics.setColor(1, 0.2, 0.25, 0.85)
-      love.graphics.setLineWidth(10)
-      love.graphics.line(o.x, o.y, ex, ey)
-      love.graphics.setColor(1, 0.9, 0.9)
-      love.graphics.setLineWidth(3)
-      love.graphics.line(o.x, o.y, ex, ey)
-    end
-    love.graphics.setColor(0.35, 0.36, 0.42)
-    love.graphics.rectangle("fill", o.x - 14, o.y - 14, 28, 28, 5, 5)
-    love.graphics.setColor(o.s == 0 and 0.4 or 1, 0.2, 0.25)
-    love.graphics.circle("fill", o.x + d[1] * 8, o.y + d[2] * 8, 6)
-  end,
-  glow = function(o)
-    if o.s ~= 2 then return end
-    local d = DIRS[o.dir] or DIRS.down
-    local len = o.a or 0
-    love.graphics.setColor(1, 0.2, 0.25, 0.9)
-    love.graphics.setLineWidth(12)
-    love.graphics.line(o.x, o.y, o.x + d[1] * (len + 14), o.y + d[2] * (len + 14))
   end,
 }
 
@@ -519,17 +409,6 @@ T.crusher = {
       end
     end
   end,
-  draw = function(o)
-    love.graphics.setColor(0.32, 0.33, 0.4)
-    love.graphics.rectangle("fill", o.x + o.w / 2 - 6, o.top - 400, 12, o.y - o.top + 400)
-    love.graphics.setColor(0.5, 0.42, 0.3)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 4, 4)
-    love.graphics.setColor(0.95, 0.75, 0.2)
-    for i = 0, math.floor(o.w / 24) do
-      love.graphics.polygon("fill", o.x + i * 24, o.y + o.h - 10, o.x + i * 24 + 12, o.y + o.h - 10,
-        o.x + i * 24 + 4, o.y + o.h, o.x + i * 24 - 8, o.y + o.h)
-    end
-  end,
 }
 
 -- Flame jet: a vent at (x, y) that shoots fire upward `length` px on a cycle.
@@ -569,59 +448,6 @@ T.flame = {
         if o.cd[p] ~= before and not p:isBlocking() then p:poisonFor(16, 2) end
       end
     end
-  end,
-  draw = function(o)
-    love.graphics.push()
-    love.graphics.translate(o.x, o.y)
-    love.graphics.rotate(flameAngle(o) + math.pi / 2)
-    love.graphics.setColor(0.3, 0.31, 0.36)
-    love.graphics.rectangle("fill", -20, -2, 40, 10, 2, 2)
-    love.graphics.setColor(0.42, 0.43, 0.5)
-    love.graphics.rectangle("fill", -12, -10, 24, 9, 2, 2)
-    love.graphics.setColor(o.s == 0 and 0.3 or 1, o.s == 0 and 0.28 or 0.45, 0.12)
-    love.graphics.rectangle("fill", -8, -12, 16, 3)
-    local reach = o.a > 0 and o.a or o.length
-    if o.s == 2 then
-      local t = love.timer.getTime()
-      local blocked = reach < o.length - 2
-      -- Outer flame to white-hot core; each layer is a stack of flickering tongues.
-      for layer = 1, 3 do
-        local spread = ({ 24, 15, 7 })[layer]
-        local c = ({ { 0.95, 0.22, 0.05, 0.55 }, { 1, 0.55, 0.1, 0.8 }, { 1, 0.92, 0.55, 0.95 } })[layer]
-        love.graphics.setColor(c)
-        local n = 9
-        for i = 0, n do
-          local f = i / n
-          local w = spread * (0.55 + 0.75 * math.sin(f * math.pi * 0.85)) * (blocked and 1 or (1 - f * 0.55))
-          local wob = math.sin(t * 26 + i * 1.7 + layer) * (2 + f * 7)
-          local h = reach * (1 + layer * 0.08) / n * 1.1
-          love.graphics.ellipse("fill", wob, -12 - reach * f, math.max(1.5, w + math.sin(t * 31 + i) * 3), h)
-        end
-      end
-      if blocked then
-        -- Licks sideways along whatever it hit.
-        for side = -1, 1, 2 do
-          for i = 1, 4 do
-            local f = i / 4
-            love.graphics.setColor(1, 0.45 + 0.35 * f, 0.1, 0.75 * (1 - f * 0.7))
-            love.graphics.ellipse("fill", side * (10 + 13 * i + math.sin(t * 20 + i) * 4), -12 - reach + f * 5, 12 * (1.2 - f), 7 * (1.2 - f))
-          end
-        end
-      end
-    elseif o.s == 1 then
-      love.graphics.setColor(1, 0.5, 0.15, 0.55)
-      love.graphics.ellipse("fill", 0, -16, 7, 6 + math.sin(love.timer.getTime() * 40) * 2)
-    end
-    love.graphics.pop()
-  end,
-  glow = function(o)
-    if o.s ~= 2 then return end
-    love.graphics.push()
-    love.graphics.translate(o.x, o.y)
-    love.graphics.rotate(flameAngle(o) + math.pi / 2)
-    love.graphics.setColor(1, 0.5, 0.1, 0.5)
-    love.graphics.rectangle("fill", -14, -12 - o.a, 28, o.a)
-    love.graphics.pop()
   end,
 }
 
@@ -664,25 +490,6 @@ T.liquid = {
       fx.spray(b.x, o.y, -math.pi / 2, 1, o.rgb, 3, 180, 2.5, 1)
     end
   end,
-  draw = function(o)
-    local c = o.rgb
-    love.graphics.setColor(c[1], c[2], c[3], 0.72)
-    love.graphics.rectangle("fill", o.x, o.y + 4, o.w, o.h - 4)
-    love.graphics.setColor(math.min(1, c[1] + 0.25), math.min(1, c[2] + 0.25), math.min(1, c[3] + 0.25))
-    local t = love.timer.getTime()
-    local pts, n = {}, math.max(4, math.floor(o.w / 12))
-    for i = 0, n do
-      pts[#pts + 1] = o.x + o.w * i / n
-      pts[#pts + 1] = o.y + 4 + math.sin(t * 3 + i * 0.9) * 2.5
-    end
-    love.graphics.setLineWidth(3)
-    love.graphics.line(pts)
-  end,
-  glow = function(o)
-    local c = o.rgb
-    love.graphics.setColor(c[1], c[2], c[3], 0.3)
-    love.graphics.rectangle("fill", o.x, o.y + 4, o.w, o.h - 4)
-  end,
 }
 
 -- Turret: shoots the nearest visible player every `rate` seconds. Breakable.
@@ -709,30 +516,6 @@ T.turret = {
       o.timer = o.rate
       if target then Objects.turretFire(world, o) end
     end
-  end,
-  draw = function(o)
-    if not o.alive then
-      love.graphics.setColor(0.25, 0.25, 0.28)
-      love.graphics.rectangle("fill", o.x - 16, o.y + 6, 32, 10, 3, 3)
-      return
-    end
-    love.graphics.setColor(0.4, 0.41, 0.48)
-    if o.rot then
-      love.graphics.push()
-      love.graphics.translate(o.x, o.y)
-      love.graphics.rotate(o.rot)
-      love.graphics.rectangle("fill", -18, 4, 36, 14, 4, 4)
-      love.graphics.pop()
-    else
-      love.graphics.rectangle("fill", o.x - 18, o.y + 4, 36, 14, 4, 4)
-    end
-    love.graphics.setColor((o.hitFlash or 0) > 0 and 1 or 0.55, 0.56, 0.64)
-    love.graphics.circle("fill", o.x, o.y, 16)
-    love.graphics.setColor(0.8, 0.82, 0.88)
-    love.graphics.setLineWidth(7)
-    love.graphics.line(o.x, o.y, o.x + math.cos(o.a) * 28, o.y + math.sin(o.a) * 28)
-    love.graphics.setColor(1, o.s == 1 and 0.2 or 0.6, 0.2)
-    love.graphics.circle("fill", o.x, o.y, 5)
   end,
   hitTest = function(o, x, y, r)
     return o.alive and (x - o.x) ^ 2 + (y - o.y) ^ 2 < (18 + r) ^ 2
@@ -788,6 +571,7 @@ T.pad = {
         p.jumping = false
         p.dashesLeft = p.stats.dashes
         p.jumpsLeft = p.stats.airJumps
+        p.fallJump = true
         o.s = 1
         sfx.play("pad", o.x + o.w / 2)
         fx.spray(o.x + o.w / 2, o.y, -math.pi / 2, 1.2, { 0.5, 1, 0.9 }, 8, 300, 3, 0.5)
@@ -800,17 +584,6 @@ T.pad = {
       b.vx = b.vx * 1.15
       o.s = 1
     end
-  end,
-  draw = function(o)
-    local squash = (o.s or 0) * 6
-    love.graphics.setColor(0.3, 0.31, 0.36)
-    love.graphics.rectangle("fill", o.x, o.y + o.h - 5, o.w, 5)
-    love.graphics.setColor(0.35, 0.95, 0.8)
-    love.graphics.rectangle("fill", o.x + 4, o.y + squash, o.w - 8, o.h - 5 - squash, 4, 4)
-  end,
-  glow = function(o)
-    love.graphics.setColor(0.35, 0.95, 0.8, 0.4)
-    love.graphics.rectangle("fill", o.x + 4, o.y, o.w - 8, o.h - 5)
   end,
 }
 
@@ -837,21 +610,6 @@ T.fan = {
       fx.spray(x, y, math.atan2(d[2], d[1]), 0.2, { 0.8, 0.9, 1 }, 1, 260, 1.5, 0)
     end
   end,
-  draw = function(o)
-    local d = DIRS[o.dir] or DIRS.up
-    love.graphics.setColor(0.7, 0.85, 1, 0.05)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-    -- The fan housing sits at the stream's source end.
-    local bx, by = o.x + o.w / 2, o.y + o.h
-    if d[2] > 0 then by = o.y elseif d[1] > 0 then bx, by = o.x, o.y + o.h / 2 elseif d[1] < 0 then bx, by = o.x + o.w, o.y + o.h / 2 end
-    love.graphics.setColor(0.35, 0.36, 0.42)
-    love.graphics.circle("fill", bx, by, 22)
-    love.graphics.setColor(0.75, 0.77, 0.85)
-    for i = 0, 2 do
-      local ang = o.a + i * math.pi * 2 / 3
-      love.graphics.ellipse("fill", bx + math.cos(ang) * 10, by + math.sin(ang) * 10, 9, 4)
-    end
-  end,
 }
 
 -- Crumbling platform: breaks shortly after someone stands on it, then comes back.
@@ -859,42 +617,10 @@ T.fan = {
 -- Rotating blade arm: `count` saws (1 or 2) on a bar spinning around (x, y).
 -- Arm: a beam on a motor. It does nothing by itself; attach objects to it.
 T.arm = {
-  draw = function(o)
-    love.graphics.setColor(0.4, 0.41, 0.48)
-    love.graphics.rectangle("fill", (o.count == 1) and o.x or (o.x - o.length), o.y - 5, o.count == 1 and o.length or o.length * 2, 10, 4, 4)
-    love.graphics.setColor(0.3, 0.31, 0.36)
-    love.graphics.circle("fill", o.x, o.y, 12)
-    love.graphics.setColor(0.6, 0.62, 0.7)
-    love.graphics.circle("fill", o.x, o.y, 4)
-  end,
 }
 
 -- Rail: a track. Attach objects to it and its carriage drives them along the path.
 T.rail = {
-  draw = function(o)
-    local path = o.path
-    if path and #path >= 2 then
-      local flat = {}
-      for _, p in ipairs(path) do
-        flat[#flat + 1] = p[1]
-        flat[#flat + 1] = p[2]
-      end
-      if o.loop then
-        flat[#flat + 1] = path[1][1]
-        flat[#flat + 1] = path[1][2]
-      end
-      love.graphics.setColor(0.3, 0.32, 0.4, 0.8)
-      love.graphics.setLineWidth(5)
-      love.graphics.line(flat)
-      love.graphics.setColor(0.55, 0.58, 0.68, 0.8)
-      love.graphics.setLineWidth(1.5)
-      love.graphics.line(flat)
-    end
-    love.graphics.setColor(0.32, 0.34, 0.42)
-    love.graphics.circle("fill", o.x, o.y, 9)
-    love.graphics.setColor(0.75, 0.78, 0.88)
-    love.graphics.circle("fill", o.x, o.y, 4)
-  end,
 }
 
 -- Moving platform: solid, follows its path, carries riders.
@@ -917,7 +643,7 @@ local function explodeAt(world, x, y, radius, damage, source, color)
     if not p.dead then
       local dx, dy = p.x - x, p.y - y
       local d = math.sqrt(dx * dx + dy * dy)
-      if d < radius + p.r then p:hit(damage * (1 - 0.4 * d / (radius + p.r)), dx, dy - 40, 700, source, "explosion") end
+      if d < radius + p.r and Physics.canReach(world, x, y, p.x, p.y) then p:hit(damage * (1 - 0.4 * d / (radius + p.r)), dx, dy - 40, 700, source, "explosion") end
     end
   end
   Objects.explosion(world, x, y, radius, damage, source)
@@ -928,97 +654,6 @@ Objects.explodeAt = explodeAt
 
 
 -- A bridge plank (or any hanging platform): solid, held by a rope.
-
--- How each block material looks; every other block property is a toggle.
-local function crateDraw(o, f)
-  love.graphics.setColor(f and 1 or 0.62, f and 1 or 0.45, f and 1 or 0.26)
-  love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 3, 3)
-  love.graphics.setColor(0.42, 0.29, 0.16)
-  love.graphics.setLineWidth(4)
-  love.graphics.rectangle("line", o.x + 2, o.y + 2, o.w - 4, o.h - 4, 2, 2)
-  love.graphics.line(o.x + 4, o.y + 4, o.x + o.w - 4, o.y + o.h - 4)
-  local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
-  if dmg > 0.3 then
-    love.graphics.setColor(0.2, 0.13, 0.07)
-    love.graphics.setLineWidth(2)
-    love.graphics.line(o.x + o.w * 0.7, o.y, o.x + o.w * 0.55, o.y + o.h * 0.4, o.x + o.w * 0.75, o.y + o.h * 0.6)
-  end
-end
-
-local function brickDraw(o, f)
-  love.graphics.setColor(f and 0.7 or 0.42, f and 0.7 or 0.38, f and 0.7 or 0.36)
-  love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-  love.graphics.setColor(0.32, 0.29, 0.27)
-  love.graphics.setLineWidth(2)
-  for row = 0, math.floor(o.h / 20) do
-    local y = o.y + row * 20
-    love.graphics.line(o.x, y, o.x + o.w, y)
-    local off = (row % 2) * 15
-    for col = 0, math.floor(o.w / 30) do
-      local x = o.x + off + col * 30
-      if x < o.x + o.w then love.graphics.line(x, y, x, math.min(o.y + o.h, y + 20)) end
-    end
-  end
-  local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
-  if dmg > 0.25 then
-    love.graphics.setColor(0.12, 0.1, 0.1, 0.8)
-    love.graphics.setLineWidth(3)
-    love.graphics.line(o.x + o.w * 0.3, o.y + o.h * 0.1, o.x + o.w * 0.6, o.y + o.h * 0.35, o.x + o.w * 0.4, o.y + o.h * 0.55)
-    if dmg > 0.6 then
-      love.graphics.line(o.x + o.w * 0.7, o.y + o.h * 0.5, o.x + o.w * 0.35, o.y + o.h * 0.8, o.x + o.w * 0.6, o.y + o.h)
-    end
-  end
-end
-
-local MATERIAL_DRAW = {
-  stone = function(o, f)
-    local c, e = o.rgb or { 0.35, 0.33, 0.4 }, o.edgeRgb or o.rgb or { 0.6, 0.58, 0.68 }
-    if f then love.graphics.setColor(1, 1, 1) else love.graphics.setColor(c) end
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-    love.graphics.setColor(e[1], e[2], e[3], 0.8)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
-  end,
-  crate = crateDraw,
-  brick = brickDraw,
-  wood = function(o, f)
-    love.graphics.setColor(f and 1 or 0.55, f and 1 or 0.4, f and 1 or 0.24)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 2, 2)
-    love.graphics.setColor(0.4, 0.28, 0.15)
-    love.graphics.setLineWidth(2)
-    love.graphics.line(o.x + 4, o.y + o.h / 2, o.x + o.w - 4, o.y + o.h / 2)
-  end,
-  glass = function(o)
-    love.graphics.setColor(0.6, 0.85, 1, 0.25)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-    love.graphics.setColor(0.8, 0.95, 1, 0.7)
-    love.graphics.setLineWidth(2)
-    love.graphics.rectangle("line", o.x, o.y, o.w, o.h)
-    love.graphics.line(o.x + o.w * 0.2, o.y + 6, o.x + o.w * 0.2, o.y + o.h * 0.4)
-  end,
-  metal = function(o, f)
-    love.graphics.setColor(f and 1 or 0.36, f and 1 or 0.38, f and 1 or 0.48)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 4, 4)
-    love.graphics.setColor(0.6, 0.65, 0.85)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
-  end,
-  barrel = function(o, f)
-    love.graphics.setColor(f and 1 or 0.78, f and 1 or 0.2, f and 1 or 0.16)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 6, 6)
-    love.graphics.setColor(0.45, 0.1, 0.08)
-    love.graphics.rectangle("fill", o.x, o.y + o.h * 0.2, o.w, 4)
-    love.graphics.rectangle("fill", o.x, o.y + o.h * 0.75, o.w, 4)
-    love.graphics.setColor(1, 0.85, 0.2)
-    love.graphics.polygon("fill", o.x + o.w / 2, o.y + o.h * 0.35, o.x + o.w / 2 - 7, o.y + o.h * 0.62, o.x + o.w / 2 + 7, o.y + o.h * 0.62)
-  end,
-  gas = function(o, f)
-    love.graphics.setColor(f and 1 or 0.45, f and 1 or 0.7, f and 1 or 0.3)
-    love.graphics.rectangle("fill", o.x, o.y + 6, o.w, o.h - 6, 8, 8)
-    love.graphics.setColor(0.3, 0.32, 0.3)
-    love.graphics.rectangle("fill", o.x + o.w / 2 - 5, o.y, 10, 8)
-    love.graphics.setColor(0.15, 0.2, 0.1)
-    love.graphics.circle("fill", o.x + o.w / 2, o.y + o.h * 0.55, 6)
-  end,
-}
 
 local BREAK_COLOR = { crate = { 0.62, 0.45, 0.26 }, wood = { 0.55, 0.4, 0.24 }, brick = { 0.42, 0.38, 0.36 },
   stone = { 0.45, 0.43, 0.5 }, metal = { 0.5, 0.52, 0.6 }, barrel = { 0.6, 0.15, 0.12 }, gas = { 0.4, 0.6, 0.3 } }
@@ -1066,48 +701,6 @@ T.block = {
       o.s = o.state == "solid" and 0 or o.state == "shaking" and 1 or 2
     end
   end,
-  draw = function(o)
-    if not o.alive then return end
-    if o.crumble and o.s == 2 then
-      love.graphics.setColor(1, 1, 1, 0.06)
-      love.graphics.rectangle("line", o.x, o.y, o.w, o.h, 3, 3)
-      return
-    end
-    local f = (o.hitFlash or 0) > 0
-    love.graphics.push()
-    if o.crumble and o.s == 1 then love.graphics.translate((love.math.random() - 0.5) * 3, 0) end
-    if o.oneway then
-      local c = o.rgb or { 0.35, 0.33, 0.4 }
-      love.graphics.setColor(c[1], c[2], c[3], 0.55)
-      love.graphics.rectangle("fill", o.x, o.y, o.w, math.min(o.h, 10))
-      local e = o.edgeRgb or { 0.8, 0.5, 0.9 }
-      love.graphics.setColor(e)
-      love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
-    else
-      local draw = MATERIAL_DRAW[o.material] or MATERIAL_DRAW.stone
-      draw(o, f)
-    end
-    if o.conveyor then
-      love.graphics.setColor(0.55, 0.56, 0.62)
-      local off = o.a or 0
-      for i = 0, math.floor(o.w / 20) do
-        local x = o.x + ((i * 20 + off) % o.w)
-        love.graphics.polygon("fill", x, o.y + 4, x + 6 * ((o.speed or 0) > 0 and 1 or -1), o.y + o.h / 2, x, o.y + o.h - 4)
-      end
-    end
-    if o.crumble then
-      love.graphics.setColor(0.2, 0.17, 0.15, 0.55)
-      love.graphics.setLineWidth(2)
-      for i = 1, math.floor(o.w / 30) do
-        love.graphics.line(o.x + i * 30, o.y, o.x + i * 30 - 6, o.y + o.h)
-      end
-    end
-    if o.burning then
-      love.graphics.setColor(0.05, 0.03, 0.02, 0.5)
-      love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 3, 3)
-    end
-    love.graphics.pop()
-  end,
   broken = function(o, world, source)
     local cx, cy = o.x + o.w / 2, o.y + o.h / 2
     if o.material == "glass" then
@@ -1134,45 +727,12 @@ T.block = {
 
 -- Weight / chandelier: hangs from a rope, crushes whoever it falls on.
 T.weight = {
-  draw = function(o)
-    if not o.alive then return end
-    love.graphics.setColor(0.3, 0.3, 0.34)
-    love.graphics.polygon("fill", o.x - o.r, o.y + o.r, o.x + o.r, o.y + o.r, o.x + o.r * 0.6, o.y - o.r * 0.6,
-      o.x - o.r * 0.6, o.y - o.r * 0.6)
-    love.graphics.setColor(0.95, 0.85, 0.4)
-    for i = -1, 1 do love.graphics.circle("fill", o.x + i * o.r * 0.6, o.y + o.r + 4, 4) end
-  end,
 }
 
 -- Rope: anchor (x, y), holds object `target` (map object index). The swinging is a Box2D joint.
 -- Rope: a chain of Box2D segments between (x, y) and (x2, y2). Each segment has its own health;
 -- one end or both can be tied to objects (`from`, `target`). See Physics.addRope.
 T.rope = {
-  draw = function(o)
-    if not o.alive then return end
-    love.graphics.setColor(0.72, 0.6, 0.42)
-    love.graphics.setLineWidth(3)
-    local pts = o.pts
-    if pts and #pts >= 2 then
-      local run = {}
-      local function flush()
-        if #run >= 4 then love.graphics.line(run) end
-        run = {}
-      end
-      for _, p in ipairs(pts) do
-        if p[3] then flush() end
-        run[#run + 1] = p[1]
-        run[#run + 1] = p[2]
-      end
-      flush()
-    else
-      love.graphics.line(o.x, o.y, o.x2, o.y2)
-    end
-    if not o.heldFrom then
-      love.graphics.setColor(0.35, 0.36, 0.42)
-      love.graphics.circle("fill", o.x, o.y, 5)
-    end
-  end,
 }
 
 ---------------------------------------------------------------- world hooks
@@ -1185,7 +745,7 @@ function Objects.explosion(world, x, y, radius, damage, source)
       local cx, cy = o.x, o.y
       if o.w then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
       local d = math.sqrt((cx - x) ^ 2 + (cy - y) ^ 2)
-      if d < radius + 30 then
+      if d < radius + 30 and Physics.canReach(world, x, y, cx, cy, o) then
         do
           if damageable(o) then Objects.damage(world, o, damage, source, cx, cy) end
           local power = 1100 * (1 - 0.5 * d / (radius + 30))
@@ -1308,13 +868,15 @@ function Objects.update(world, dt)
       fx.addShake(4)
       sfx.play("laserFire", e.x, 0.8, 1.6)
       for _, p in ipairs(world.players) do
-        if not p.dead and (not e.owner or world:canHurt(e.owner, p)) and circleHitsPlayer(e.x, e.y, e.radius, p) then
+        if not p.dead and (not e.owner or world:canHurt(e.owner, p)) and circleHitsPlayer(e.x, e.y, e.radius, p)
+            and Physics.canReach(world, e.x, e.y, p.x, p.y) then
           p:hit(e.damage, p.x - e.x, -1, 300, e.owner, "lightning")
         end
       end
     elseif e.type == "cloud" then
       for _, p in ipairs(world.players) do
-        if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (p.poisonTimer or 0) < 0.6 then
+        if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (p.poisonTimer or 0) < 0.6
+            and Physics.canReach(world, e.x, e.y, p.x, p.y) then
           p:poisonFor(8, 1)
           p.lastAttacker = e.source or p.lastAttacker
           p.lastHitKind = "gas"
@@ -1335,122 +897,19 @@ function Objects.rebuildSolids(world)
   world.solids = solids
 end
 
----------------------------------------------------------------- drawing
-local function centreOf(o)
-  if o.w then return o.x + o.w / 2, o.y + o.h / 2 end
-  return o.x, o.y
-end
-
--- Draw through `fn` turned by the object's angle (turrets turn only their base).
-local function drawTurned(o, fn)
-  if o.rot and o.rot ~= 0 and o.type ~= "turret" and o.type ~= "flame" then
-    local cx, cy = centreOf(o)
-    love.graphics.push()
-    love.graphics.translate(cx, cy)
-    love.graphics.rotate(o.rot)
-    love.graphics.translate(-cx, -cy)
-    fn(o)
-    love.graphics.pop()
-  else
-    fn(o)
-  end
-end
-
--- Bolts: steel for a permanent anchor, orange for one that can be shot off.
-local function drawAnchor(o)
-  local cx, cy = centreOf(o)
-  local points
-  if o.w and o.h and o.w >= 30 and o.h >= 30 then
-    local dx, dy = o.w / 2 - 7, o.h / 2 - 7
-    points = { { cx - dx, cy - dy }, { cx + dx, cy - dy }, { cx - dx, cy + dy }, { cx + dx, cy + dy } }
-  elseif o.w and o.h and o.w > o.h then
-    local dx = o.w / 2 - 8
-    points = { { cx - dx, cy }, { cx + dx, cy } }
-  elseif o.w and o.h then
-    local dy = o.h / 2 - 8
-    points = { { cx, cy - dy }, { cx, cy + dy } }
-  else
-    points = { { cx, cy } }
-  end
-  local breakable = (o.anchorHp or 0) > 0
-  for _, p in ipairs(points) do
-    love.graphics.setColor(0.12, 0.13, 0.16)
-    love.graphics.circle("fill", p[1], p[2], 5)
-    if breakable then love.graphics.setColor(1, 0.62, 0.2) else love.graphics.setColor(0.78, 0.8, 0.86) end
-    love.graphics.circle("fill", p[1], p[2], 3.2)
-  end
-end
-
+-- Drawing lives in gfx/objectview.lua, except this easing of client positions.
 -- Clients get positions at snapshot rate; this eases loose objects between them.
 function Objects.smooth(list, dt)
   local k = math.min(1, dt * 22)
   for _, o in ipairs(list) do
+    -- Purely visual spinning, so it needn't come over the network.
+    if o.type == "saw" then o.a = (o.a + dt * 12) % (math.pi * 2)
+    elseif o.type == "fan" then o.a = (o.a + dt * 20) % (math.pi * 2)
+    elseif o.conveyor then o.a = (o.a + (o.speed or 0) * dt) % 20 end
     if o.tx then
       o.x, o.y = o.x + (o.tx - o.x) * k, o.y + (o.ty - o.y) * k
       local diff = (o.trot - o.rot + math.pi) % (math.pi * 2) - math.pi
       o.rot = o.rot + diff * k
-    end
-  end
-end
-
-function Objects.draw(list, effects)
-  -- Ropes behind what they hold.
-  for _, o in ipairs(list) do
-    if o.type == "rope" then T.rope.draw(o, list) end
-  end
-  for _, o in ipairs(list) do
-    local t = T[o.type]
-    if o.type ~= "rope" and t and t.draw and (o.alive or o.type == "turret") then drawTurned(o, t.draw) end
-  end
-  for _, o in ipairs(list) do
-    if o.alive and o.anchored then drawAnchor(o) end
-  end
-  for _, e in ipairs(effects or {}) do Objects.drawEffect(e) end
-end
-
-function Objects.drawGlow(list, effects)
-  for _, o in ipairs(list) do
-    local t = T[o.type]
-    if o.alive and t and t.glow then drawTurned(o, t.glow) end
-  end
-  for _, e in ipairs(effects or {}) do
-    if e.type == "pickup" then
-      love.graphics.setColor(e.kind == 1 and 0.4 or 1, e.kind == 1 and 1 or 0.85, e.kind == 1 and 0.5 or 0.3, 0.6)
-      love.graphics.circle("fill", e.x, e.y, 14)
-    end
-  end
-end
-
-function Objects.drawEffect(e)
-  local t = love.timer.getTime()
-  if e.type == "pickup" then
-    local a = (e.life or 8) < 2 and (math.floor(t * 10) % 2 == 0 and 0.4 or 1) or 1
-    local y = e.y + math.sin(t * 4) * 3
-    love.graphics.setColor(0.15, 0.15, 0.2, a)
-    love.graphics.circle("fill", e.x, y, 13)
-    if e.kind == 1 then
-      love.graphics.setColor(0.4, 1, 0.5, a)
-      love.graphics.rectangle("fill", e.x - 3, y - 8, 6, 16)
-      love.graphics.rectangle("fill", e.x - 8, y - 3, 16, 6)
-    else
-      love.graphics.setColor(1, 0.85, 0.3, a)
-      for i = -1, 1 do love.graphics.rectangle("fill", e.x + i * 5 - 1.5, y - 7, 3, 14, 1, 1) end
-    end
-  elseif e.type == "strike" then
-    local k = 1 - math.max(0, e.life or 0) / (e.max or 0.75)
-    love.graphics.setColor(0.7, 0.85, 1, 0.15 + 0.35 * k)
-    love.graphics.circle("fill", e.x, e.y, (e.radius or 55) * k)
-    love.graphics.setColor(0.85, 0.95, 1, 0.8)
-    love.graphics.setLineWidth(2)
-    love.graphics.circle("line", e.x, e.y, e.radius or 55)
-    love.graphics.line(e.x, e.y - 400, e.x, e.y - 400 + 400 * k)
-  elseif e.type == "cloud" then
-    local frac = math.min(1, (e.life or 1) / 1)
-    for i = 1, 6 do
-      local ang = t * 0.6 + i
-      love.graphics.setColor(0.45, 0.8, 0.2, 0.12 * frac)
-      love.graphics.circle("fill", e.x + math.cos(ang) * e.radius * 0.35, e.y + math.sin(ang * 1.3) * e.radius * 0.25,
-        e.radius * 0.6)
     end
   end
 end

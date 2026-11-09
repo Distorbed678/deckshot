@@ -133,6 +133,10 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
   end
   ry = ry + gap
 
+  d = ui.cycler("Dynamic lighting", v.lighting and "On" or "Off", rx, ry, colW, h)
+  if d ~= 0 then v.lighting = not v.lighting end
+  ry = ry + gap
+
   d = ui.cycler("Bloom intensity", Settings.BLOOM_LEVELS[v.bloomLevel][1], rx, ry, colW, h)
   if d ~= 0 then
     v.bloomLevel = cycle(v.bloomLevel, #Settings.BLOOM_LEVELS, d)

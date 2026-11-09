@@ -12,7 +12,7 @@
 -- Loose objects keep their usual fields: rect objects keep x, y as the top-left of the unrotated
 -- box, round ones x, y as the centre, and `rot` is the angle in radians.
 local Map = require "game.map"
-local sfx = require "gfx.sfx"
+local sfx = require("game.events").sfx
 
 local Physics = {}
 
@@ -23,14 +23,25 @@ Physics.PLAYER_MASS = 2.5 -- a 50x50 crate weighs 0.8
 
 local CAT_WORLD, CAT_SOLID, CAT_LOOSE, CAT_PLAYER, CAT_HITBOX, CAT_BULLET, CAT_ROPE = 1, 2, 3, 4, 5, 6, 7
 
--- Density by object type; blocks go by their material.
-local DENSITY = { saw = 1.6, weight = 4, turret = 2, spikes = 1.2, flame = 1.5, laser = 1.5, arm = 0.3, rail = 1 }
-local MATERIAL_DENSITY = { stone = 2, crate = 0.8, wood = 0.7, brick = 2.2, glass = 0.5, metal = 1.5, barrel = 1, gas = 0.6 }
-local BOUNCE = { barrel = 0.15, gas = 0.2, glass = 0.05 }
 local OWN_DAMAGE = { saw = true, spikes = true, arm = true, rail = true, flame = true, laser = true } -- these hurt only through their own update
 
+-- Density and bounce come from data/objects.txt, through Objects.
+local function defs() return require("game.objects") end
+
 local function densityOf(o)
-  return o.type == "block" and (MATERIAL_DENSITY[o.material] or 1) or DENSITY[o.type] or 1
+  local O = defs()
+  if o.type == "block" then
+    local m = O.MATERIALS[o.material]
+    return m and m.density or 1
+  end
+  local d = O.DEFAULTS[o.type]
+  return d and d.density or 1
+end
+
+local function bounceOf(o)
+  local O = defs()
+  local src = o.type == "block" and O.MATERIALS[o.material] or O.DEFAULTS[o.type]
+  return src and src.bounce or 0.08
 end
 
 local IMPACT_SOUND = 350  -- speed change that makes a thud
@@ -202,7 +213,7 @@ local function addLoose(ph, o)
   end
   local fixture = P.newFixture(body, shape, densityOf(o))
   fixture:setFriction(0.55)
-  fixture:setRestitution(BOUNCE[o.material or o.type] or 0.08)
+  fixture:setRestitution(bounceOf(o))
   fixture:setUserData(o)
   looseFilter(fixture, o, o.parent ~= nil)
   body:setAngularDamping(0.8)
@@ -388,7 +399,7 @@ function Physics.hurtSegment(world, seg, amount, source)
   seg.body:destroy()
   seg.body, seg.fixture = nil, nil
   sfx.play("ropeSnap", x)
-  require("gfx.fx").spray(x, y, math.pi / 2, 1, { 0.75, 0.6, 0.4 }, 6, 150, 2, 1)
+  require("game.events").fx.spray(x, y, math.pi / 2, 1, { 0.75, 0.6, 0.4 }, 6, 150, 2, 1)
   if rope.joint then
     if not rope.joint:isDestroyed() then rope.joint:destroy() end
     rope.joint = nil
@@ -691,6 +702,25 @@ function Physics.ray(world, x0, y0, x1, y1, accept, exclude)
     return fraction
   end)
   return hit, hx, hy, nx, ny
+end
+
+-- Is the straight line between two points free of solid things? Presence effects and blasts
+-- only reach what they can see. `exclude` is the object at the far end, which doesn't block itself.
+function Physics.canReach(world, x0, y0, x1, y1, exclude)
+  if not world or not world.physics then return true end
+  return Physics.ray(world, x0, y0, x1, y1, nil, exclude) == nil
+end
+
+-- How far a circle reaches in each of n directions, stopped by solid things.
+function Physics.fan(world, x, y, radius, n)
+  local out = {}
+  n = n or 48
+  for i = 1, n do
+    local a = (i - 1) / n * math.pi * 2
+    local _, hx, hy = Physics.ray(world, x, y, x + math.cos(a) * radius, y + math.sin(a) * radius)
+    out[i] = hx and math.sqrt((hx - x) ^ 2 + (hy - y) ^ 2) or radius
+  end
+  return out
 end
 
 ---------------------------------------------------------------- events

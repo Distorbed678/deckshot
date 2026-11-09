@@ -1,0 +1,17 @@
+deckshot-map 4
+name Rope Swing
+theme jungle
+spawn 180 552
+spawn 1356 552
+spawn 288 552
+spawn 1248 552
+rect 96 600 264 48
+rect 1176 600 264 48
+oneway 672 240 192 14
+obj liquid buoyant=false color=#59D934 damage=20 h=34 id=1 w=816 x=360 y=830
+obj block h=14 id=2 material=wood physics=true w=156 x=438 y=420
+obj rope id=3 level=true segHp=60 slack=1 target=2 x=516 y=60
+obj block h=14 id=4 material=wood physics=true w=156 x=690 y=420
+obj rope id=5 level=true segHp=60 slack=1 target=4 x=768 y=60
+obj block h=14 id=6 material=wood physics=true w=156 x=942 y=420
+obj rope id=7 level=true segHp=60 slack=1 target=6 x=1020 y=60

@@ -1,30 +1,10 @@
--- The Deckshot logo: a fan of cards with a crosshair, and the name. Drawn from shapes, so it stays
--- sharp at any size.
+-- The Deckshot logo: a fan of cards with a crosshair, and the name.
 local Logo = {}
-
-local function card(x, y, a, w, h, stripe)
-  love.graphics.push()
-  love.graphics.translate(x, y)
-  love.graphics.rotate(a)
-  love.graphics.setColor(0, 0, 0, 0.35)
-  love.graphics.rectangle("fill", -w / 2 + 4, -h / 2 + 5, w, h, 8, 8)
-  love.graphics.setColor(0.93, 0.93, 0.97)
-  love.graphics.rectangle("fill", -w / 2, -h / 2, w, h, 8, 8)
-  love.graphics.setColor(stripe)
-  love.graphics.rectangle("fill", -w / 2, -h / 2, w, h * 0.24, 8, 8)
-  love.graphics.pop()
-end
 
 -- The card fan and crosshair on their own, centred on (x, y). Also the game's icon.
 function Logo.drawMark(x, y)
-  card(x - 26, y + 4, -0.34, 62, 90, { 0.3, 0.6, 1 })
-  card(x + 26, y + 4, 0.34, 62, 90, { 0.75, 0.35, 1 })
-  card(x, y - 4, 0, 66, 96, { 1, 0.55, 0.15 })
-  love.graphics.setColor(0.1, 0.1, 0.13)
-  love.graphics.setLineWidth(4)
-  love.graphics.circle("line", x, y + 8, 15)
-  love.graphics.line(x - 23, y + 8, x + 23, y + 8)
-  love.graphics.line(x, y + 8 - 23, x, y + 8 + 23)
+  love.graphics.setColor(1, 1, 1)
+  require("core.assets").center("logo_mark", x, y, 180, 132)
 end
 
 -- cx, cy: the centre. alpha fades the whole logo.

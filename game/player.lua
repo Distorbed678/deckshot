@@ -1,8 +1,8 @@
 local Map = require "game.map"
 local Physics = require "game.physics"
-local fx = require "gfx.fx"
+local fx = require("game.events").fx
 local Bullet = require "game.bullet"
-local sfx = require "gfx.sfx"
+local sfx = require("game.events").sfx
 local Triggers = require "game.triggers"
 local CardData = require "game.carddata"
 local Cosmetics = require "core.cosmetics"
@@ -48,6 +48,7 @@ Player.EDGE = EDGE
 
 local ORB_DISTANCE = 55
 local ORB_SIZE = 9
+Player.ORB_SIZE = ORB_SIZE
 local SHOCKWAVE_RADIUS = 170
 local STATIC_RADIUS = 130
 local SENTRY_DELAY = 0.9
@@ -85,6 +86,10 @@ function Player:recompute()
     for _, rule in ipairs(card.triggers or {}) do
       self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
     end
+  end
+  if self.isJugg then
+    s.maxHp = s.maxHp * (self.juggHp or 2.5)
+    s.gunDamage = s.gunDamage * 1.25
   end
   s.maxHp = math.max(10, s.maxHp)
   s.fireDelay = math.max(0.06, s.fireDelay)
@@ -151,6 +156,7 @@ function Player:spawn(x, y, facing, game)
   self.coyote = 0
   self.wallDir = 0
   self.jumpsLeft = self.stats.airJumps
+  self.fallJump = false -- one jump to spend after dropping off something without jumping
   self.controlLock = 0
   self.poisonTimer, self.poisonDps = 0, 0
   self.decay = {}
@@ -395,7 +401,7 @@ function Player:update(dt, frozen)
     if w.owner ~= self then
       local dx, dy = w.x - self.x, w.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
-      if d > 1 and d < w.radius then
+      if d > 1 and d < w.radius and Physics.canReach(game, w.x, w.y, self.x, self.y) then
         local f = w.strength * (1 - d / w.radius) * dt
         self.vx = self.vx + dx / d * f
         self.vy = self.vy + dy / d * f
@@ -433,6 +439,7 @@ function Player:afterStep(dt)
   end
   if self.onGround or self.wallDir ~= 0 then
     self.jumpsLeft = s.airJumps
+    self.fallJump = true
     if self.dashTimer <= 0 and self.dashesLeft < s.dashes then self.dashesLeft = s.dashes end
   end
   if self.onGround and not wasGround then self:landed(fallSpeed) end
@@ -678,7 +685,7 @@ function Player:updateStatic(dt)
   for _, e in ipairs(self.game:enemiesOf(self)) do
     local dx, dy = e.x - self.x, e.y - self.y
     local reach = STATIC_RADIUS + e.r
-    if dx * dx + dy * dy < reach * reach and e.invuln <= 0 and not e:isBlocking() then
+    if dx * dx + dy * dy < reach * reach and e.invuln <= 0 and not e:isBlocking() and Physics.canReach(self.game, self.x, self.y, e.x, e.y) then
       e.hp = e.hp - s.static * dt
       if s.frost > 0 then e.slowTimer = math.max(e.slowTimer, s.frost) end
       if e.hp <= 0 then e:die() end
@@ -742,6 +749,7 @@ function Player:jumpPressed(fromBuffer)
     self.vy = -s.jump
     self.coyote = 0
     self.onGround = false
+    self.fallJump = false
     self.jumping = true
     self.dashTimer = 0
     fx.burst(self.x, self.y + self.r + self.leg, { 0.8, 0.8, 0.85 }, 5, 110, 3)
@@ -752,6 +760,7 @@ function Player:jumpPressed(fromBuffer)
     local wall = self.wallDir ~= 0 and self.wallDir or self.lastWallDir
     local wj = Player.WALL_JUMP
     self.vy = -s.jump * wj.up
+    self.fallJump = false
     self.vx = -wall * s.speed * wj.push
     self.facing = -wall
     self.controlLock = wj.lock
@@ -762,6 +771,15 @@ function Player:jumpPressed(fromBuffer)
     self:emitSound("wallJump")
     fx.spray(self.x, self.y, 0, 6.2, { 1, 0.85, 0.5 }, 7, 170, 2.5, 0.3)
     self:trigger("wallJump")
+  elseif self.fallJump and not fromBuffer then
+    -- Walked or got knocked off an edge: one jump, whenever you like during the fall.
+    self.fallJump = false
+    self.vy = -s.jump
+    self.jumping = true
+    self.dashTimer = 0
+    fx.burst(self.x, self.y + self.r + self.leg, { 0.8, 0.8, 0.85 }, 5, 110, 3)
+    self:emitSound("jump")
+    self:trigger("jump")
   elseif self.jumpsLeft > 0 and not fromBuffer then
     self.jumpsLeft = self.jumpsLeft - 1
     self.vy = -s.jump * 0.9
@@ -949,12 +967,12 @@ function Player:blockPressed()
     for _, e in ipairs(game:enemiesOf(self)) do
       local dx, dy = e.x - self.x, e.y - self.y
       local reach = SHOCKWAVE_RADIUS + e.r
-      if dx * dx + dy * dy < reach * reach then e:hit(15 * s.shockwave, dx, dy, 650, self) end
+      if dx * dx + dy * dy < reach * reach and Physics.canReach(self.game, self.x, self.y, e.x, e.y) then e:hit(15 * s.shockwave, dx, dy, 650, self) end
     end
     for _, b in ipairs(game.bullets) do
       if b.owner ~= self and not b.laser then
         local dx, dy = b.x - self.x, b.y - self.y
-        if dx * dx + dy * dy < SHOCKWAVE_RADIUS * SHOCKWAVE_RADIUS then b.dead = true end
+        if dx * dx + dy * dy < SHOCKWAVE_RADIUS * SHOCKWAVE_RADIUS and Physics.canReach(self.game, self.x, self.y, b.x, b.y) then b.dead = true end
       end
     end
   end
@@ -1270,198 +1288,11 @@ function Player:martyrBlast()
   fx.addShake(18)
   for _, e in ipairs(self.game:enemiesOf(self)) do
     local dx, dy = e.x - self.x, e.y - self.y
-    if math.sqrt(dx * dx + dy * dy) < radius + e.r then
+    if math.sqrt(dx * dx + dy * dy) < radius + e.r and Physics.canReach(self.game, self.x, self.y, e.x, e.y) then
       e:hit(60 * self.stats.martyr, dx, dy, 800, self)
     end
   end
 end
 
 -- Emissive parts only, drawn into the bloom buffer.
-function Player:drawGlow()
-  if self.dead then return end
-  local A = self.cloakTimer > 0 and 0.08 or 1
-  local c = self.color
-  love.graphics.setColor(c[1], c[2], c[3], 0.45 * A)
-  love.graphics.circle("fill", self.x, self.y, self.r)
-  if self:isBlocking() then
-    love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.setLineWidth(4)
-    love.graphics.circle("line", self.x, self.y, self.r + 14)
-  end
-  if self.empowered then
-    love.graphics.setColor(1, 0.9, 0.5, 0.8 * A)
-    love.graphics.circle("fill", self.x + self.aimX * (self.r + 12), self.y + self.aimY * (self.r + 12), 6)
-  end
-  for i = 1, self.stats.orbs do
-    local ox, oy = self:orbPos(i)
-    love.graphics.setColor(c[1], c[2], c[3], 0.9)
-    love.graphics.circle("fill", ox, oy, ORB_SIZE)
-  end
-end
-
--- Melee charge ring, swing arc and stun stars.
-function Player:drawMelee(A)
-  local r, c = self.r, self.color
-  local aim = math.atan2(self.aimY, self.aimX)
-  if self.charging and (self.meleeCharge or 0) > MELEE.lightThreshold then
-    local p = math.min(1, (self.meleeCharge - MELEE.lightThreshold) / math.max(0.05, self.stats.heavyCharge or 0.6))
-    love.graphics.setColor(1, 1, 1, 0.25 * A)
-    love.graphics.setLineWidth(3)
-    love.graphics.circle("line", self.x, self.y, r + 10)
-    love.graphics.setColor(1, p >= 1 and 0.85 or 1, p >= 1 and 0.3 or 1, 0.9 * A)
-    love.graphics.arc("line", "open", self.x, self.y, r + 10, -math.pi / 2, -math.pi / 2 + math.pi * 2 * p)
-  end
-  if (self.swingTimer or 0) > 0 then
-    local t = self.swingTimer / (MELEE.swingShow + (self.swingHeavy and MELEE.lungeTime or 0))
-    local reach = r + (self.stats.meleeRange or 55) * (self.swingHeavy and 1.2 or 1)
-    local spread = MELEE.cone
-    local sweep = aim - spread + (1 - t) * spread * 2
-    love.graphics.setColor(1, 1, 1, 0.55 * t * A)
-    love.graphics.setLineWidth(self.swingHeavy and 8 or 5)
-    love.graphics.arc("line", "open", self.x, self.y, reach, aim - spread, sweep)
-    love.graphics.setColor(c[1], c[2], c[3], 0.35 * t * A)
-    love.graphics.arc("fill", self.x, self.y, reach, aim - spread, sweep)
-  end
-  if (self.stunTimer or 0) > 0 then
-    local t = love.timer.getTime()
-    love.graphics.setColor(1, 0.95, 0.4, A)
-    for i = 1, 3 do
-      local a = t * 5 + i * math.pi * 2 / 3
-      love.graphics.circle("fill", self.x + math.cos(a) * r * 0.9, self.y - r - 8 + math.sin(a) * 4, 3)
-    end
-  end
-end
-
-function Player:draw()
-  if self.dead then return end
-  local r, s = self.r, self.stats
-  local c = self.color
-
-  local A = 1
-  if self.cloakTimer > 0 then
-    A = 0.12
-  elseif self.invuln > 0 and math.floor(self.invuln * 15) % 2 == 0 then
-    A = 0.4
-  end
-
-  if s.stasis > 0 then
-    local sr = Player.stasisRadius(s.stasis)
-    love.graphics.setColor(0.6, 0.8, 1, 0.06 * A)
-    love.graphics.circle("fill", self.x, self.y, sr)
-    love.graphics.setColor(0.6, 0.8, 1, 0.15 * A)
-    love.graphics.setLineWidth(1)
-    love.graphics.circle("line", self.x, self.y, sr)
-  end
-
-  if self:isBlocking() then
-    love.graphics.setColor(1, 1, 1, 0.3)
-    love.graphics.circle("fill", self.x, self.y, r + 14)
-    love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.setLineWidth(3)
-    love.graphics.circle("line", self.x, self.y, r + 14)
-  end
-
-  -- Shield Generator bubble
-  if (self.shield or 0) > 0 then
-    love.graphics.setColor(0.5, 0.8, 1, (0.25 + 0.35 * math.min(1, self.shield / 60)) * A)
-    love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.x, self.y, r + 5)
-  end
-
-  -- Sentry turret
-  if (s.sentry or 0) > 0 then
-    local sx, sy = self:sentryPos()
-    love.graphics.setColor(0.85, 0.85, 0.9, A)
-    love.graphics.rectangle("fill", sx - 7, sy - 5, 14, 10, 3, 3)
-    love.graphics.setColor(c[1], c[2], c[3], A)
-    love.graphics.circle("fill", sx, sy, 3.5)
-  end
-
-  for i = 1, s.orbs do
-    local ox, oy = self:orbPos(i)
-    love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.circle("fill", ox, oy, ORB_SIZE + 1.5)
-    love.graphics.setColor(c)
-    love.graphics.circle("fill", ox, oy, ORB_SIZE)
-  end
-
-  self:drawMelee(A)
-
-  Body.update(self, love.timer.getDelta())
-  Body.drawLegs(self, A)
-
-  -- Body
-  if self.hitFlash > 0 then
-    love.graphics.setColor(1, 1, 1, A)
-  elseif self.poisonTimer > 0 then
-    love.graphics.setColor(c[1] * 0.6 + 0.16, c[2] * 0.6 + 0.36, c[3] * 0.6 + 0.08, A)
-  elseif self.slowTimer > 0 then
-    love.graphics.setColor(c[1] * 0.5 + 0.3, c[2] * 0.5 + 0.4, c[3] * 0.5 + 0.5, A)
-  else
-    love.graphics.setColor(c[1], c[2], c[3], A)
-  end
-  -- Squash and stretch: stretched while moving fast vertically, squashed on landing.
-  local sx, sy, by0 = 1, 1, self.y
-  love.graphics.ellipse("fill", self.x, by0, r * sx, r * sy)
-  if self.slowTimer > 0 then
-    love.graphics.setColor(0.7, 0.9, 1, 0.7 * A)
-    love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.x, self.y, r + 2)
-  end
-
-  -- Face and hat. The eyes follow your aim, blink, and react to shooting and getting hurt.
-  local blink = (love.timer.getTime() * 0.31 + (self.slot or 1) * 0.37) % 1 < 0.045
-  local lookY = self.aimY + ((self.vy or 0) < -250 and -0.4 or (self.vy or 0) > 350 and 0.4 or 0)
-  Cosmetics.drawFace(self.x + self.facing * r * 0.14, by0 - r * 0.22 * sy, r,
-    { self.aimX, math.max(-1, math.min(1, lookY)) },
-    { blink = blink, hurt = self.hitFlash > 0, firing = (self.shotT or 0) > 0, expr = Body.expression(self) }, A,
-    self.eyes, self.mouth, self.detail)
-  if A > 0.3 then Cosmetics.drawHat(self.x, by0 - r * 0.92 * sy, r, self.hat, c) end
-  Body.drawArms(self, A)
-
-  -- HP bar (pending Decay damage shown faded)
-  local pending = 0
-  for _, d in ipairs(self.decay) do pending = pending + d.remaining end
-  local bw, bx, by = 56, self.x - 28, self.y - r - 18
-  local hpFrac = math.max(0, self.hp) / s.maxHp
-  local solidFrac = math.max(0, self.hp - pending) / s.maxHp
-  love.graphics.setColor(0, 0, 0, 0.6 * A)
-  love.graphics.rectangle("fill", bx - 1, by - 1, bw + 2, 8)
-  love.graphics.setColor(c[1], c[2], c[3], 0.35 * A)
-  love.graphics.rectangle("fill", bx, by, bw * hpFrac, 6)
-  love.graphics.setColor(c[1], c[2], c[3], A)
-  love.graphics.rectangle("fill", bx, by, bw * solidFrac, 6)
-
-  -- Phoenix lives
-  for i = 1, self.livesLeft do
-    love.graphics.setColor(1, 0.6, 0.15, A)
-    love.graphics.circle("fill", bx + bw + 4 + i * 8, by + 3, 3)
-  end
-
-  -- Ammo pips, or a reload bar while reloading from empty
-  local py = by - 8
-  if self.ammo == 0 and self.reloadTimer > 0 then
-    love.graphics.setColor(1, 1, 1, 0.8 * A)
-    love.graphics.rectangle("fill", bx, py - 1, bw * (1 - self.reloadTimer / s.reloadTime), 3)
-  else
-    local slots = math.max(s.ammo, self.ammo) -- Supply Drop can overfill
-    local spacing = math.min(9, bw / math.max(1, slots))
-    local startX = self.x - (slots - 1) * spacing / 2
-    for i = 1, slots do
-      love.graphics.setColor(1, 1, 1, (i <= self.ammo and 0.9 or 0.2) * A)
-      love.graphics.circle("fill", startX + (i - 1) * spacing, py, 2.5)
-    end
-  end
-
-  if Body.showNames and A > 0.3 then
-    local font = require("core.app").fonts.small
-    love.graphics.setFont(font)
-    love.graphics.setColor(1, 1, 1, 0.8)
-    love.graphics.printf(self.name or "", self.x - 90, py - 8 - font:getHeight(), 180, "center")
-    if Body.speakingSlot and Body.speakingSlot(self) then
-      require("online.voice").drawIcon(self.x + font:getWidth(self.name or "") / 2 + 14, py - 8 - font:getHeight() / 2)
-    end
-  end
-end
-
 return Player

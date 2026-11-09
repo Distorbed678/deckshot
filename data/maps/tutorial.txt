@@ -1,0 +1,12 @@
+deckshot-map 4
+name Tutorial
+spawn 240 696
+spawn 1280 696
+spawn 336 696
+spawn 1200 696
+rect 96 744 1344 48
+rect 96 552 192 24
+obj block id=1 material=crate physics=true hp=60 x=504 y=696 w=48 h=48
+obj block id=2 material=crate physics=true hp=500 x=744 y=480 w=48 h=48
+obj rope id=3 x=768 y=240 target=2 segHp=60 slack=1
+obj block id=4 material=brick physics=true hp=120 x=984 y=624 w=40 h=120

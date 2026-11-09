@@ -1,0 +1,25 @@
+deckshot-map 4
+name Scrapheap
+theme foundry
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+oneway 240 520 200 14
+oneway 1096 520 200 14
+oneway 660 360 216 14
+obj block h=120 hp=150 id=1 material=brick physics=true w=48 x=612 y=624
+obj block h=120 hp=150 id=2 material=brick physics=true w=48 x=876 y=624
+obj block drop=0.08 h=48 hp=60 id=3 material=crate onBreak=pickup physics=true w=48 x=672 y=696
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=720 y=696
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=696 y=648
+obj block damage=55 h=48 hp=30 id=6 material=barrel onBreak=explode physics=true radius=110 w=36 x=780 y=696
+obj block h=42 hp=20 id=7 material=gas onBreak=gas physics=true radius=110 w=28 x=836 y=702
+obj block h=120 hp=1 id=8 material=glass physics=true w=12 x=960 y=624
+obj block h=120 hp=1 id=9 material=glass physics=true w=12 x=564 y=624
+obj weight damage=60 id=10 physics=true r=26 x=1176 y=200
+obj rope id=11 segHp=60 slack=1 target=10 x=1176 y=60
+obj weight damage=60 id=12 physics=true r=26 x=360 y=200
+obj rope id=13 segHp=60 slack=1 target=12 x=360 y=60
+obj block h=14 id=14 material=wood physics=true w=276 x=630 y=600

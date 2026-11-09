@@ -160,6 +160,8 @@ function app.draw()
   require("core.glyphs").drawMenuHints()
   ui.endFrame()
   love.graphics.setCanvas()
+  local top = app.stack[#app.stack]
+  if top and top.afterCanvas then top:afterCanvas() end
 
   love.graphics.clear(0, 0, 0)
   love.graphics.setColor(1, 1, 1)

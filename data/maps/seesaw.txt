@@ -1,0 +1,14 @@
+deckshot-map 4
+name Seesaw
+theme jungle
+spawn 228 552
+spawn 1308 552
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+rect 144 600 168 144
+rect 1224 600 168 144
+obj block anchorType=hinge anchored=true h=16 hinge=center id=1 material=wood physics=true w=420 x=558 y=560
+obj block h=166 id=2 material=stone w=40 x=748 y=578
+obj block drop=0.08 h=48 hp=60 id=3 material=crate onBreak=pickup physics=true w=48 x=600 y=500
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=888 y=500

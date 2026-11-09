@@ -95,6 +95,12 @@ function love.load(args)
   end
 end
 
+require "gfx.fx"
+require "gfx.sfx"
+require "gfx.objectview"
+require "gfx.playerview"
+require "gfx.bulletview"
+
 function love.update(dt)
   dt = math.min(dt, 1 / 30)
   steam.update()
@@ -103,6 +109,7 @@ function love.update(dt)
   Settings.update()
   sfx.update()
   require("gfx.music").update(dt)
+  pcall(require("online.discord").update, dt)
   require("core.webkeyboard").update()
   app.update(dt)
   require("online.voice").update()

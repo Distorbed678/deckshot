@@ -452,6 +452,7 @@ function CardEditor.drawHub(hub)
   local s = hub.sel
   local acts = {
     { "New Card", true, function() app.switch(CardEditor.new()) end },
+    { "Community", not require("core.platform").web, function() app.switch(require("screens.community").new("cards")) end },
     { "Edit", s ~= nil, function() app.switch(CardEditor.new({ card = s })) end },
     { "Duplicate", s ~= nil, function()
       local def = copyDef(s.def)

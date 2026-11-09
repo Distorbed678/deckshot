@@ -1,9 +1,11 @@
 -- The character's noodle arms and legs, pistol and block circle. Purely visual: the hitbox is still
 -- the round body. Everything is worked out on each machine from synced state (position, aim,
 -- blocking, melee), so it needs no network traffic and works the same for local, host and client.
+local Assets = require "core.assets"
 local Cosmetics = require "core.cosmetics"
 local Stats = require "game.stats"
 
+local Limbs = require "gfx.limbs"
 local Body = { showNames = false }
 
 local function newPoint(x, y) return { x = x, y = y, vx = 0, vy = 0 } end
@@ -139,7 +141,9 @@ function Body.update(p, dt)
     end
     spring(l.knee, (hipX + f.x) / 2 + l.side * r * 0.42, (hipY + f.y) / 2 - r * 0.05, 240, 10, bvx, bvy, dt)
   end
+  b.view = Limbs.update(p, b, dt)
 end
+
 
 -- "grin", "angry", "shock" or nil: what the face is doing.
 function Body.expression(p)
@@ -176,9 +180,11 @@ function Body.drawLegs(p, A)
   local r = p.r
   local w = math.max(2.5, r * 0.17)
   limbColor(p.color, A)
-  for _, l in ipairs(b.legs) do
-    noodle(p.x + l.side * r * 0.5, p.y + r * 0.62, l.knee.x, l.knee.y, l.foot.x, l.foot.y, w)
-    love.graphics.ellipse("fill", l.foot.x + l.side * w * 0.4, l.foot.y, w * 1.3, w * 0.8)
+  local v = b.view or b
+  for i, l in ipairs(b.legs) do
+    local g = v.legs[i] or l
+    noodle(p.x + l.side * r * 0.5, p.y + r * 0.62, g.knee.x, g.knee.y, g.foot.x, g.foot.y, w)
+    love.graphics.ellipse("fill", g.foot.x + l.side * w * 0.4, g.foot.y, w * 1.3, w * 0.8)
   end
 end
 
@@ -212,22 +218,23 @@ local function drawPistol(p, A)
   local w = weaponOf(p)
   local len, h = 26 * w.len, 8 * w.chunk
   love.graphics.push()
-  love.graphics.translate(b.gun.x, b.gun.y)
+  local v = b.view or b
+  love.graphics.translate(v.gun.x, v.gun.y)
   love.graphics.rotate(math.atan2(ay, ax))
   love.graphics.scale(s, ax < 0 and -s or s)
   love.graphics.setColor(0.2, 0.21, 0.25, A)
-  love.graphics.polygon("fill", -2, 1, 5, 1, 3, 11 + w.mag, -4, 11 + w.mag) -- grip and magazine
+  Assets.rect("gun_grip", -4, 1, 9, 10 + w.mag) -- grip and magazine
   for i = 2, w.barrels do -- extra barrels stack on top
     love.graphics.setColor(0.26, 0.27, 0.32, A)
-    love.graphics.rectangle("fill", 0, 2 - h - (i - 1) * 4, len - 8, 3, 1, 1)
+    Assets.rect("gun_slab", 0, 2 - h - (i - 1) * 4, len - 8, 3)
   end
   if p.empowered then love.graphics.setColor(1, 0.85, 0.35, A) else love.graphics.setColor(0.32, 0.33, 0.38, A) end
-  love.graphics.rectangle("fill", -6, 2 - h, len, h, 2, 2)
+  Assets.rect("gun_slab", -6, 2 - h, len, h)
   local stripe = w.accent or { 0.7, 0.72, 0.78 }
   love.graphics.setColor(stripe[1], stripe[2], stripe[3], A)
-  love.graphics.rectangle("fill", -4, 3 - h, len - 6, math.max(2, h * 0.24))
+  Assets.rect("gun_slab", -4, 3 - h, len - 6, math.max(2, h * 0.24))
   love.graphics.setColor(0.13, 0.13, 0.16, A)
-  for i = 1, w.vents do love.graphics.rectangle("fill", i * 5 - 3, 3 - h + h * 0.4, 2.4, h * 0.42) end
+  for i = 1, w.vents do Assets.rect("tile_white", i * 5 - 3, 3 - h + h * 0.4, 2.4, h * 0.42) end
   love.graphics.pop()
 end
 
@@ -238,26 +245,27 @@ function Body.drawArms(p, A)
   local r, side = p.r, p.facing or 1
   local w = math.max(2.5, r * 0.17)
   limbColor(p.color, A)
-  noodle(p.x + side * r * 0.55, p.y + r * 0.05, b.gunE.x, b.gunE.y, b.gun.x, b.gun.y, w)
-  noodle(p.x - side * r * 0.55, p.y + r * 0.05, b.offE.x, b.offE.y, b.off.x, b.off.y, w)
+  local v = b.view or b
+  noodle(p.x + side * r * 0.55, p.y + r * 0.05, v.gunE.x, v.gunE.y, v.gun.x, v.gun.y, w)
+  noodle(p.x - side * r * 0.55, p.y + r * 0.05, v.offE.x, v.offE.y, v.off.x, v.off.y, w)
   if not p.noGun then drawPistol(p, A) end
   limbColor(p.color, A)
-  love.graphics.circle("fill", b.gun.x, b.gun.y, w * (p.noGun and 1.9 or 1.2))
+  Assets.center("dot", v.gun.x, v.gun.y, (w * (p.noGun and 1.9 or 1.2)) * 2, (w * (p.noGun and 1.9 or 1.2)) * 2)
 
   -- The block circle: white when ready, grey and refilling on cooldown, flashing as you block.
   local cr = r * 0.42
   local cd = p.blockCd or 0
   local total = (p.stats and p.stats.blockCooldown) or 1
-  local cx, cy = b.off.x, b.off.y
+  local cx, cy = v.off.x, v.off.y
   if p.blockTimer and p.blockTimer > 0 then
     local pulse = 0.65 + 0.35 * math.sin(love.timer.getTime() * 40)
     love.graphics.setColor(1, 1, 1, 0.35 * A)
-    love.graphics.circle("fill", cx, cy, cr * 2.1)
+    Assets.center("dot", cx, cy, (cr * 2.1) * 2, (cr * 2.1) * 2)
     love.graphics.setColor(1, 1, 1, pulse * A)
-    love.graphics.circle("fill", cx, cy, cr * 1.45)
+    Assets.center("dot", cx, cy, (cr * 1.45) * 2, (cr * 1.45) * 2)
   elseif cd > 0 then
     love.graphics.setColor(0.42, 0.42, 0.46, A)
-    love.graphics.circle("fill", cx, cy, cr)
+    Assets.center("dot", cx, cy, (cr) * 2, (cr) * 2)
     local frac = 1 - math.min(1, cd / total)
     if frac > 0.01 then
       love.graphics.setColor(0.86, 0.86, 0.88, A)
@@ -265,7 +273,7 @@ function Body.drawArms(p, A)
     end
   else
     love.graphics.setColor(1, 1, 1, A)
-    love.graphics.circle("fill", cx, cy, cr)
+    Assets.center("dot", cx, cy, (cr) * 2, (cr) * 2)
   end
 end
 
@@ -280,12 +288,44 @@ function Body.drawFigure(f, dt)
   local behind = f.noGun or (f.gunTarget and f.body.gun.x < f.x)
   if behind then Body.drawArms(f, 1) end
   love.graphics.setColor(f.color)
-  love.graphics.circle("fill", f.x, f.y, f.r)
+  Assets.center("dot", f.x, f.y, (f.r) * 2, (f.r) * 2)
   local blink = (love.timer.getTime() * 0.31 + (f.slot or 1) * 0.37) % 1 < 0.045
   Cosmetics.drawFace(f.x + (f.facing or 1) * f.r * 0.14, f.y - f.r * 0.22, f.r, { f.aimX or 1, f.aimY or 0 },
     { blink = blink, expr = Body.expression(f) }, 1, f.eyes, f.mouth, f.detail)
   Cosmetics.drawHat(f.x, f.y - f.r * 0.92, f.r, f.hat, f.color)
   if not behind then Body.drawArms(f, 1) end
 end
+
+-- Draw the ragdolls of the recently dead.
+function Body.drawCorpses()
+  for _, c in ipairs(Limbs.corpses) do
+    local A = math.min(1, c.t / 0.8)
+    local rig = c.rig
+    local w = math.max(2.5, c.r * 0.17)
+    limbColor(c.color, A)
+    local function limb(l)
+      local ax, ay = l.upper:getWorldPoint(-l.upperLen / 2, 0)
+      local ex, ey = l.upper:getWorldPoint(l.upperLen / 2, 0)
+      local hx, hy = l.lower:getWorldPoint(l.lowerLen / 2, 0)
+      noodle(ax, ay, ex, ey, hx, hy, w)
+    end
+    limb(rig.gun)
+    limb(rig.off)
+    for _, l in ipairs(rig.legs) do limb(l) end
+    local x, y = rig.torso:getPosition()
+    love.graphics.setColor(c.color[1], c.color[2], c.color[3], A)
+    Assets.center("dot", x, y, (c.r) * 2, (c.r) * 2)
+    love.graphics.setColor(0.1, 0.1, 0.12, A)
+    love.graphics.setLineWidth(2)
+    local e = c.r * 0.3
+    for s = -1, 1, 2 do
+      local ex, ey = x + s * e, y - e * 0.4
+      love.graphics.line(ex - 3, ey - 3, ex + 3, ey + 3)
+      love.graphics.line(ex - 3, ey + 3, ex + 3, ey - 3)
+    end
+  end
+end
+
+Body.Limbs = Limbs
 
 return Body

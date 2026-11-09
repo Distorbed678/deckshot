@@ -1,22 +1,16 @@
-deckshot-map 2
+deckshot-map 4
 name Windmill
-theme foundry
-spawn 216 696
-spawn 1320 696
-spawn 192 360
-spawn 1344 360
-rect 96 744 336 120
-rect 1104 744 336 120
-rect 96 408 168 24
-rect 1272 408 168 24
-oneway 696 672 144 17
-oneway 432 240 120 14
-oneway 984 240 120 14
-obj fan dir=up force=3200 h=360 w=100 x=480 y=456
-obj fan dir=up force=3200 h=360 w=100 x=936 y=456
-obj platform h=16 speed=90 w=120 x=600 y=507 path=660,514;660,312
-obj platform h=16 speed=90 w=120 x=816 y=507 path=876,514;876,312
-obj crumble back=4 delay=0.5 h=18 w=144 x=120 y=120
-obj crumble back=4 delay=0.5 h=18 w=144 x=1272 y=120
-obj gas h=42 w=28 x=306 y=702
-obj gas h=42 w=28 x=1202 y=702
+theme desert
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+oneway 216 540 168 14
+oneway 1152 540 168 14
+obj arm force=1 id=1 length=210 spin=1.1 x=768 y=420
+obj block h=18 id=2 material=metal parent=1 w=132 x=492 y=411
+obj block h=18 id=3 material=metal parent=1 w=132 x=912 y=411
+obj block h=324 id=4 material=stone w=56 x=740 y=420
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=648 y=696
+obj block drop=0.08 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=840 y=696

@@ -33,8 +33,8 @@ Settings.BARRIER_CLOSE_NAMES = { "Slow (40s)", "Normal (20s)", "Fast (10s)" }
 Settings.BARRIER_BOX_NAMES = { "Small", "Medium", "Large" }
 Settings.BARRIER_DAMAGE_NAMES = { "Low", "Normal", "High" }
 Settings.MAP_VOTE_COUNT = { min = 2, max = 6 }
-Settings.MODES = { "elim", "koth" }
-Settings.MODE_NAMES = { elim = "Elimination", koth = "King of the Hill" }
+Settings.MODES = { "elim", "koth", "jugg" }
+Settings.MODE_NAMES = { elim = "Elimination", koth = "King of the Hill", jugg = "Juggernaut" }
 
 -- Key bindings. Values are LÖVE key constants or "mouse1".."mouse5".
 Settings.BIND_SCHEMES = {
@@ -67,6 +67,7 @@ local defaults = {
   vsyncMode = 1,
   maxFps = 0,
   bloom = true,
+  lighting = love._os ~= "Web", -- dynamic lighting (the browser build starts with it off)
   bloomLevel = 2,
   shake = 3,
   particles = 2,
@@ -83,7 +84,7 @@ local defaults = {
   barrierClose = 2,      -- Settings.BARRIER_CLOSE_NAMES
   barrierBox = 2,        -- Settings.BARRIER_BOX_NAMES
   barrierDamage = 2,     -- Settings.BARRIER_DAMAGE_NAMES
-  matchMode = "elim",    -- elim / koth
+  matchMode = "elim",    -- elim / koth / jugg
   mapVote = true,        -- players vote for the next map
   mapVoteCount = 3,      -- maps on the ballot
   cardBans = false,      -- everyone bans a card before the match

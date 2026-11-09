@@ -1,12 +1,15 @@
 -- Particles, explosion rings and screen shake.
 -- When fx.recorder is a table (online host), every effect is also recorded so it
 -- can be replayed on clients.
+local Assets = require "core.assets"
 local fx = {
   particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, puffs = {}, shake = 0, kickX = 0, kickY = 0,
   showNumbers = true, -- damage numbers (a per-player setting)
   shakeScale = 1, particleScale = 1,
   recorder = nil,
 }
+
+require("game.events").handle("fx", fx)
 
 local MAX_RECORDED = 300
 
@@ -192,10 +195,45 @@ function fx.offset()
   return sx, sy
 end
 
+function fx.setLosWorld(world)
+  fx.losWorld = world
+end
+
+-- How far a circle at (x, y) reaches each way around walls, or nil if there's nothing to ask.
+function fx.fan(x, y, radius, n)
+  local w = fx.losWorld
+  if not w or not w.physics or radius < 40 then return nil end
+  return require("game.physics").fan(w, x, y, radius, n)
+end
+
+-- Draw a circle bent around walls. reaches: from fx.fan; plain circle without one.
+function fx.drawReach(mode, x, y, radius, reaches)
+  if not reaches then
+    require("core.assets").center(mode == "fill" and "dot" or "ring", x, y, radius * 2, radius * 2)
+    return
+  end
+  local n = #reaches
+  local pts = {}
+  for i = 1, n do
+    local a = (i - 1) / n * math.pi * 2
+    local d = math.min(radius, reaches[i])
+    pts[i * 2 - 1], pts[i * 2] = x + math.cos(a) * d, y + math.sin(a) * d
+  end
+  if mode == "line" then
+    pts[n * 2 + 1], pts[n * 2 + 2] = pts[1], pts[2]
+    love.graphics.line(pts)
+  else
+    for i = 1, n do
+      local j = i % n + 1
+      love.graphics.polygon("fill", x, y, pts[i * 2 - 1], pts[i * 2], pts[j * 2 - 1], pts[j * 2])
+    end
+  end
+end
+
 function fx.ring(x, y, radius, color)
   if fx.mute then return end
   record({ 2, x, y, radius, color })
-  table.insert(fx.rings, { x = x, y = y, r = radius, life = 0.25, max = 0.25, color = color })
+  table.insert(fx.rings, { x = x, y = y, r = radius, life = 0.25, max = 0.25, color = color, reaches = fx.fan(x, y, radius) })
 end
 
 function fx.addShake(amount)
@@ -288,11 +326,15 @@ function fx.update(dt)
   fx.kickX, fx.kickY = fx.kickX * k, fx.kickY * k
 end
 
+local function dot(x, y, r)
+  require("core.assets").center("dot", x, y, r * 2, r * 2)
+end
+
 function fx.draw()
   for _, g in ipairs(fx.ghosts) do
     local c = g.color
     love.graphics.setColor(c[1], c[2], c[3], 0.45 * g.life / g.max)
-    love.graphics.circle("fill", g.x, g.y, g.r)
+    dot(g.x, g.y, g.r)
   end
   for _, p in ipairs(fx.puffs) do
     if not p.fire and not fx.glowPass then -- smoke would glow grey in the bloom pass
@@ -302,9 +344,9 @@ function fx.draw()
       local a = math.min(1, t * 2.2) * 0.85
       local c = p.color
       love.graphics.setColor(c[1], c[2], c[3], a)
-      love.graphics.circle("fill", p.x, p.y, r)
+      dot(p.x, p.y, r)
       love.graphics.setColor(c[1] + 0.09, c[2] + 0.09, c[3] + 0.09, a)
-      love.graphics.circle("fill", p.x - r * 0.22, p.y - r * 0.26, r * 0.62)
+      dot(p.x - r * 0.22, p.y - r * 0.26, r * 0.62)
     end
   end
   for _, p in ipairs(fx.puffs) do
@@ -312,7 +354,7 @@ function fx.draw()
       local t = p.life / p.max
       local r = p.r0 + (p.r1 - p.r0) * (1 - t)
       if p.hot then love.graphics.setColor(1, 0.95, 0.65, t) else love.graphics.setColor(1, 0.55, 0.15, t) end
-      love.graphics.circle("fill", p.x, p.y, r)
+      dot(p.x, p.y, r)
     end
   end
   for _, f in ipairs(fx.flashes) do
@@ -321,12 +363,8 @@ function fx.draw()
     love.graphics.translate(f.x, f.y)
     love.graphics.rotate(f.a)
     love.graphics.scale(f.k * (0.75 + 0.45 * t))
-    love.graphics.setColor(1, 0.72, 0.25, t)
-    love.graphics.polygon("fill", -4, -6, 30, 0, -4, 6)
-    love.graphics.polygon("fill", 0, -13, 8, 0, 0, 13)
-    love.graphics.setColor(1, 1, 0.85, t)
-    love.graphics.polygon("fill", -2, -3, 18, 0, -2, 3)
-    love.graphics.circle("fill", 0, 0, 5)
+    love.graphics.setColor(1, 1, 1, t)
+    require("core.assets").rect("muzzle", -14, -26, 76, 52)
     love.graphics.pop()
   end
   for _, d in ipairs(fx.chunks) do
@@ -335,13 +373,9 @@ function fx.draw()
       love.graphics.translate(d.x, d.y)
       love.graphics.rotate(d.rot)
       love.graphics.setColor(d.color[1], d.color[2], d.color[3], math.min(1, d.life * 2))
-      love.graphics.circle("fill", 0, 0, d.face)
-      love.graphics.setColor(0.1, 0.1, 0.12, math.min(1, d.life * 2))
-      love.graphics.setLineWidth(2)
-      for _, s in ipairs({ -1, 1 }) do
-        love.graphics.line(s * 4 - 2, -2, s * 4 + 2, 2)
-        love.graphics.line(s * 4 + 2, -2, s * 4 - 2, 2)
-      end
+      dot(0, 0, d.face)
+      love.graphics.setColor(1, 1, 1, math.min(1, d.life * 2))
+      require("core.assets").center("x_eyes", 0, 0, 20, 10)
       love.graphics.pop()
     end
     local c = d.color
@@ -349,22 +383,22 @@ function fx.draw()
     love.graphics.push()
     love.graphics.translate(d.x, d.y)
     love.graphics.rotate(d.rot)
-    love.graphics.rectangle("fill", -d.w / 2, -d.h / 2, d.w, d.h)
+    Assets.rect("tile_white", -d.w / 2, -d.h / 2, d.w, d.h)
     love.graphics.pop()
   end
   for _, p in ipairs(fx.particles) do
     local c = p.color
     love.graphics.setColor(c[1], c[2], c[3], p.life / p.max)
-    love.graphics.circle("fill", p.x, p.y, p.size * (0.4 + 0.6 * p.life / p.max))
+    dot(p.x, p.y, p.size * (0.4 + 0.6 * p.life / p.max))
   end
   for _, r in ipairs(fx.rings) do
     local t = 1 - r.life / r.max
     local c = r.color
     love.graphics.setColor(c[1], c[2], c[3], 0.35 * (1 - t))
-    love.graphics.circle("fill", r.x, r.y, r.r * (0.4 + 0.6 * t))
+    fx.drawReach("fill", r.x, r.y, r.r * (0.4 + 0.6 * t), r.reaches)
     love.graphics.setColor(1, 1, 1, 0.8 * (1 - t))
     love.graphics.setLineWidth(3)
-    love.graphics.circle("line", r.x, r.y, r.r * (0.4 + 0.6 * t))
+    fx.drawReach("line", r.x, r.y, r.r * (0.4 + 0.6 * t), r.reaches)
   end
 end
 

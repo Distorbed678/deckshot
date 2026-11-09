@@ -9,7 +9,10 @@ local Player = require "game.player"
 local Bullet = require "game.bullet"
 local Map = require "game.map"
 local Objects = require "game.objects"
+local Body = require "game.body"
 local Physics = require "game.physics"
+local Replay = require "online.replay"
+local platform = require "core.platform"
 local Cards = require "game.cards"
 local Input = require "core.input"
 local Bloom = require "gfx.bloom"
@@ -114,6 +117,7 @@ function Match.newLocal(winScore, opts)
   local setup = opts.setup or { { kind = "p1", color = 1, team = 1 }, { kind = opts.test and "dummy" or "p2", color = 2, team = 2 } }
   m.inputs = {}
   local defs, colors, keyCount, padCount = {}, {}, 0, 0
+  m.setupColors = colors
   for i, sl in ipairs(setup) do
     local inp, name, bot
     if sl.kind == "dummy" then
@@ -144,6 +148,10 @@ function Match.newLocal(winScore, opts)
     for _, c in ipairs(opts.giveCards) do table.insert(m.world.players[1].cards, c) end
     m.world.players[1]:recompute()
     m.world:startRound()
+  end
+  if not opts.practice and not opts.test and not opts.tutorial then
+    m:startRecording()
+    if m.recording then fx.recorder = {} end
   end
   return m
 end
@@ -181,6 +189,7 @@ function Match.newHost(slots, winScore, transport, opts)
   fx.recorder = {}
   m.loading = { t = 0 }
   m.world:beginMatch()
+  m:startRecording()
   return m
 end
 
@@ -237,7 +246,32 @@ function Match:showToast(text, code)
   if #self.toasts > 3 then table.remove(self.toasts, 1) end
 end
 
+-- Saved matches: the same messages a spectator would receive.
+function Match:recordMessage(data)
+  if self.recording then Replay.add(self.recording, data) end
+end
+
+function Match:startRecording()
+  if platform.web or self.recording then return end
+  self.recording = Replay.recorder()
+  local w = self.world
+  local slots = self.slots
+  if not slots then
+    slots = {}
+    for i, p in ipairs(w.players) do
+      slots[i] = { peer = "p" .. i, name = p.name or ("Player " .. i), color = self.setupColors and self.setupColors[i] or i,
+        team = p.team, hat = p.hat, eyes = p.eyes, mouth = p.mouth, detail = p.detail }
+    end
+  end
+  self:recordMessage(net.encodeStart(w.winScore, slots))
+  self:recordMessage(net.encodeMaps(Map.sessionEntries()))
+  self:recordMessage(net.encodeCards(Cards.sessionEntries()))
+  self:recordMessage(net.encodeRules(w.rules, Cards.list, Cards.RARITIES))
+  self:recordMessage(net.encodeRoster(w.players))
+end
+
 function Match:broadcast(data, reliable)
+  self:recordMessage(data)
   for peer, info in pairs(self.peers) do
     if not info.gone then self.transport:send(peer, data, reliable) end
   end
@@ -250,10 +284,12 @@ function Match:hookWorld()
     if self.role == "host" then self:broadcast(net.encodeToast(text, code), true) end
   end
   w.on.roster = function()
-    if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true) end
+    if self.role == "host" then self:broadcast(net.encodeRoster(w.players), true)
+    else self:recordMessage(net.encodeRoster(w.players)) end
   end
   w.on.kill = function(victim, killer, kind)
     self:addKill(victim.slot, killer and killer.slot, kind)
+    if self.role ~= "host" then self:recordMessage(net.encodeKill(victim.slot, killer and killer.slot, kind)) end
     if self.role == "host" then self:broadcast(net.encodeKill(victim.slot, killer and killer.slot, kind), true) end
   end
   w.on.matchOver = function(winner)
@@ -540,7 +576,7 @@ function Match:applySnapshot(v)
   end
   for i, ov in ipairs(v.objects or {}) do
     local o = self.objViews[i]
-    if o then
+    if o and not ov.same then
       o.alive, o.s, o.anchored = ov.alive, ov.s, ov.anchored or nil
       if ov.rot then
         -- Loose objects ease towards each snapshot, unless they've jumped (a new round).
@@ -557,6 +593,7 @@ function Match:applySnapshot(v)
   view.effects = v.effects
   view.history = v.history
   view.barrier = v.barrier
+  for i, p in ipairs(self.proxies) do p.isJugg = i == v.juggSlot or nil end
 
   for _, e in ipairs(v.fx) do
     if e[1] == 1 then
@@ -622,6 +659,7 @@ function Match:predictionWorld()
     w.physics.map = map
   end
   Physics.syncOthers(w.physics, self.proxies, self.mySlot)
+  fx.setLosWorld(w)
   return w
 end
 
@@ -669,6 +707,7 @@ function Match:predictStep(dt, frozen)
   local pr = self:predicted()
   if not pr then return end
   pr.game = self:predictionWorld()
+  pr.prevX, pr.prevY = pr.x, pr.y
   copyInput(self.predInput, self.myInput)
   local sample = {}
   copyInput(sample, self.myInput)
@@ -686,7 +725,8 @@ function Match:reconcile(pv)
   if not pr or pv.dead then return end
   local oldX, oldY = pr.x + (self.predErrX or 0), pr.y + (self.predErrY or 0)
   pr.x, pr.y, pr.vx, pr.vy = pv.x, pv.y, pv.vx, pv.vy
-  pr.jumpsLeft, pr.dashesLeft = pv.jumpsLeft, pv.dashesLeft
+  pr.jumpsLeft, pr.dashesLeft = pv.jumpsLeft % 128, pv.dashesLeft
+  pr.fallJump = pv.jumpsLeft >= 128
   pr.onGround, pr.jumping, pr.groundOneway = pv.onGround, pv.jumping, pv.groundOneway
   pr.dashTimer, pr.dashCd = pv.dashT, pv.dashCd2
   if pr.dashTimer > 0 then pr.dashX, pr.dashY = pv.vx, pv.vy end
@@ -726,7 +766,12 @@ function Match:clientInterpolate(dt)
       -- Our own player: the prediction, with the last correction fading out.
       local k = math.exp(-dt * 12)
       self.predErrX, self.predErrY = (self.predErrX or 0) * k, (self.predErrY or 0) * k
-      p.x, p.y = self.pred.x + self.predErrX, self.pred.y + self.predErrY
+      local pr, f = self.pred, (self.simClock or 0) / World.STEP
+      local bx, by = pr.x, pr.y
+      if pr.prevX and (bx - pr.prevX) ^ 2 + (by - pr.prevY) ^ 2 < 40000 then
+        bx, by = pr.prevX + (bx - pr.prevX) * f, pr.prevY + (by - pr.prevY) * f
+      end
+      p.x, p.y = bx + self.predErrX, by + self.predErrY
       p.vy = self.pred.vy
       if self.myInput.aim then p.aimX, p.aimY = math.cos(self.myInput.aim), math.sin(self.myInput.aim) end
     elseif h and #h > 0 then
@@ -1132,7 +1177,24 @@ function Match:drawCardChooser()
   end
 end
 
+-- Video export: frames are made at a steady 30 per second, however long each takes to render.
+function Match:afterCanvas()
+  local v = self.videoOut
+  if not v then return end
+  local img = app.canvas:newImageData()
+  v.pipe:write(img:getString())
+  img:release()
+  if self.replayView:finished() then
+    v.pipe:close()
+    self.videoOut = nil
+    local list = require("screens.replays").new()
+    list.message = "Video saved to " .. v.path
+    app.switch(list)
+  end
+end
+
 function Match:update(dt, isTop)
+  if self.videoOut then dt = 1 / 30 end
   if self.recapOpen then
     Recap.update(self)
     if self:status().state ~= "matchOver" then self.recapOpen, self.recapShot = false, nil end
@@ -1175,23 +1237,34 @@ function Match:update(dt, isTop)
     end
     if not self.paused and not self.loading then self.world:update(dt) end
     self:syncPick(dt)
+    if self.recording and not self.loading then
+      self.recording.clock = self.recording.clock + dt
+      self.snapTimer = (self.snapTimer or 0) - dt
+      if self.snapTimer <= 0 then
+        self.snapTimer = SNAPSHOT_INTERVAL
+        Replay.add(self.recording, Snap.encode(self.world, fx.recorder or {}))
+        fx.recorder = {}
+      end
+    end
   elseif self.role == "host" then
     local me = self.world.players[1]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
     if not self.loading then self.world:update(dt) end
     self:syncPick(dt)
+    if self.recording then self.recording.clock = self.recording.clock + dt end
     self:hostNetwork(dt)
   else
+    if self.replayView then self.replayView:advance(dt) end
     self:clientNetwork()
     if self.closed then return end -- switched to the lobby/menu
     if self.mySlot == 0 then -- spectating: no input of our own
+      if self.view and self.view.mapIndex then self:predictionWorld() end
       self:clientInterpolate(dt)
       return
     end
     local me = self.proxies[self.mySlot]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
     self:syncPick(dt)
-    self.inputSeq = self.inputSeq + 1
     -- Round-trip time, measured with PING / PONG and reported to the host in INPUT.
     self.pingTimer = (self.pingTimer or 0) - dt
     if self.pingTimer <= 0 then
@@ -1199,9 +1272,15 @@ function Match:update(dt, isTop)
       self.transport:send(self.hostPeer, net.encodePing(net.MSG.PING, love.timer.getTime()), false)
     end
     self.myInput.ping = self.rtt or 0
-    self.transport:send(self.hostPeer, net.encodeInput(self.myInput, self.inputSeq), false)
+    -- Inputs and prediction advance in the same equal steps as the host's simulation.
+    self.simClock = math.min((self.simClock or 0) + dt, World.STEP * 5)
+    while self.simClock >= World.STEP - 1e-9 do
+      self.simClock = self.simClock - World.STEP
+      self.inputSeq = self.inputSeq + 1
+      self.transport:send(self.hostPeer, net.encodeInput(self.myInput, self.inputSeq), false)
+      self:predictStep(World.STEP, self.view.state == "countdown")
+    end
     Objects.smooth(self.objViews or {}, dt)
-    self:predictStep(dt, self.view.state == "countdown")
     self:clientInterpolate(dt)
   end
 
@@ -1404,12 +1483,17 @@ local TUTORIAL = {
   { id = "move", text = "Move left and right", key = function(n, b) return n(b.left) .. " / " .. n(b.right) end, pad = "{ls} Left stick", touch = "Drag on the left side" },
   { id = "aim", text = "Aim all around you", only = { mouse = true, pad = true }, key = function() return "Move the mouse" end, pad = "{rs} Right stick", touch = "" },
   { id = "jump", text = "Jump", key = function(n, b) return n(b.up) end, pad = "{a}", touch = "Jump button" },
-  { id = "double", text = "Jump again in the air", key = function(n, b) return n(b.up) .. " twice" end, pad = "{a} twice", touch = "Jump button twice" },
+  { id = "fall", text = "Walk off the ledge, then jump in mid-air. It only works if you didn't jump first", key = function(n, b) return n(b.up) end, pad = "{a}", touch = "Jump button" },
   { id = "fire", text = "Shoot", key = function(n, b) return n(b.fire) end, pad = "{rt}", touch = "Drag on the right side" },
   { id = "block", text = "Block: it reflects bullets", key = function(n, b) return n(b.block) end, pad = "{lt}", touch = "Block button" },
   { id = "dash", text = "Dash", key = function(n, b) return n(b.dash) end, pad = "{b}", touch = "Dash button" },
   { id = "melee", text = "Melee: tap, or hold for a heavy hit", key = function(n, b) return n(b.melee) end, pad = "{x}", touch = "Melee button" },
   { id = "hit", text = "Land a shot on the dummy", key = function() return "" end, pad = "", touch = "" },
+  { id = "shove", text = "Walk into the crate and shove it. Most things in the arena are physical", key = function() return "Bullets and blasts move things too" end, pad = "Bullets and blasts move things too", touch = "Bullets and blasts move things too" },
+  { id = "rope", text = "Shoot the rope until it snaps. Ropes take a few hits", key = function() return "The crate hanging from it will drop" end, pad = "The crate hanging from it will drop", touch = "The crate hanging from it will drop" },
+  { id = "wall", text = "Break the brick wall", key = function() return "Look for cracks: damaged things are close to breaking" end, pad = "Look for cracks: damaged things are close to breaking", touch = "Look for cracks: damaged things are close to breaking" },
+  { id = "cover", info = true, text = "Walls block blasts and presence effects", key = function() return "Their circles bend around cover, so stay behind something solid" end, pad = "Their circles bend around cover, so stay behind something solid", touch = "Their circles bend around cover, so stay behind something solid" },
+  { id = "cards", info = true, text = "Lose a round and you pick a card", key = function() return "Cards stack. The more you lose, the stronger you get" end, pad = "Cards stack. The more you lose, the stronger you get", touch = "Cards stack. The more you lose, the stronger you get" },
 }
 
 -- The mouse scheme names jump and movement a little differently from the keyboard ones.
@@ -1451,14 +1535,23 @@ function Match:updateTutorial()
     ok = tu.aimTravel > 3
   elseif step.id == "move" then ok = math.abs(me.x - b.x) > 120
   elseif step.id == "jump" then ok = (inp.jumpCount or 0) > b.jump
-  elseif step.id == "double" then ok = (tu.airJumps or 0) >= 1
+  elseif step.id == "fall" then
+    if not me.onGround and me.fallJump then tu.fellOff = true end
+    ok = tu.fellOff and not me.fallJump and not me.onGround and me.vy < 0
+  elseif step.id == "shove" then
+    local c = w.objects[1]
+    b.crateX = b.crateX or c.x
+    ok = c.alive and math.abs(c.x - b.crateX) > 40
+  elseif step.id == "rope" then ok = w.objects[2].rope == nil
+  elseif step.id == "wall" then ok = not w.objects[4].alive
+  elseif step.info then ok = tu.nextPressed
   elseif step.id == "fire" then ok = (me.st.shots or 0) > b.shots
   elseif step.id == "block" then ok = (inp.blockCount or 0) > b.block
   elseif step.id == "dash" then ok = (inp.dashCount or 0) > b.dash
   elseif step.id == "melee" then ok = (inp.meleeCount or 0) > b.melee
   elseif step.id == "hit" then ok = (me.st.dmg or 0) > b.dmg end
   if ok then
-    tu.step, tu.base = tu.step + 1, nil
+    tu.step, tu.base, tu.nextPressed = tu.step + 1, nil, nil
     sfx.ui("uiClick")
     if not tu.steps[tu.step] then tu.done = true end
   end
@@ -1498,7 +1591,8 @@ function Match:drawTutorial()
   else
     ui.printFit(hint, app.fonts.med, x + 20, y + 68, w - 160, "left")
   end
-  if ui.button("Skip", x + w - 120, y + 32, 100, 40, { font = app.fonts.small, back = true }) then
+  if step.info and ui.button("Next", x + w - 120, y + 12, 100, 36, { font = app.fonts.small, color = ui.GOOD }) then tu.nextPressed = true end
+  if ui.button("Skip", x + w - 120, y + (step.info and 54 or 32), 100, 40, { font = app.fonts.small, back = true }) then
     app.switch(tu.returnTo and tu.returnTo() or require("screens.menu").new())
   end
 end
@@ -1594,6 +1688,13 @@ function Match:openChat()
 end
 
 function Match:keypressed(key)
+  if self.replayView then
+    local T = self.replayView
+    if key == "escape" then app.switch(require("screens.replays").new())
+    elseif key == "space" then T.paused = not T.paused
+    elseif key == "f" then T.speed = T.speed >= 4 and 0.5 or T.speed * 2 end
+    return
+  end
   if self.chatOpen then
     if key == "escape" then self.chatOpen = false end
     return
@@ -2600,6 +2701,12 @@ function Match:drawMatchOver(st)
   end
   if ui.button("Scoreboard", x + third + 10, 494, third, h) then self.showScores = not self.showScores end
   if ui.button("Match Recap", x + (third + 10) * 2, 494, third, h, { color = ui.ACCENT }) then self:openRecap() end
+  if self.recording and not platform.web then
+    local label = self.replaySaved and "Replay saved" or "Save Replay"
+    if ui.button(label, x, 548, w, 40, { font = app.fonts.med, disabled = self.replaySaved }) then
+      self.replaySaved = Replay.save(self.recording, "Match") ~= nil
+    end
+  end
   if self.role == "host" then self:drawVotes(568) end
 end
 
@@ -2660,6 +2767,38 @@ function Match:drawPause()
 end
 
 function Match:draw()
+  if self.world then self.world:beginDraw() end
+  self:drawFrame()
+  if self.world then self.world:endDraw() end
+end
+
+-- Ragdolls: anyone who has just died leaves their limbs behind.
+function Match:updateRagdolls(players, st)
+  local Limbs = require "gfx.limbs"
+  Limbs.map = (self.world and self.world.map) or Map.list[self.view and self.view.mapIndex or 1]
+  if st == "countdown" and (self.ragdollState ~= st) then Limbs.clear() end
+  self.ragdollState = st
+  for _, p in ipairs(players) do
+    if p.dead and p.body and p.body.rig then Limbs.ragdoll(p, p.body) end
+  end
+  Limbs.updateCorpses(love.timer.getDelta())
+end
+
+function Match:drawReplayBar()
+  local T = self.replayView
+  if not T then return end
+  local mins = math.floor(T.clock / 60)
+  local text = string.format("REPLAY   %d:%02d / %d:%02d   %sx%s   Space: pause   F: speed   Esc: exit", mins, math.floor(T.clock % 60),
+    math.floor(T.duration / 60), math.floor(T.duration % 60), T.speed, T.paused and "  (paused)" or "")
+  if T:finished() then text = "End of replay   Esc: exit" end
+  love.graphics.setColor(0, 0, 0, 0.55)
+  love.graphics.rectangle("fill", 0, 0, app.W, 28)
+  love.graphics.setFont(app.fonts.small)
+  love.graphics.setColor(1, 1, 1, 0.9)
+  love.graphics.printf(text, 0, 4, app.W, "center")
+end
+
+function Match:drawFrame()
   if self.loading then
     love.graphics.setColor(0.09, 0.09, 0.12)
     love.graphics.rectangle("fill", 0, 0, app.W, app.H)
@@ -2690,12 +2829,17 @@ function Match:draw()
   Objects.draw(objs, effects)
   hud.drawWells(wells)
   for _, b in ipairs(bullets) do b:draw() end
+  self:updateRagdolls(players, st.state)
+  Body.drawCorpses()
   for _, p in ipairs(players) do p:draw() end
   fx.draw()
   self:drawOffscreen(players)
   fx.drawNumbers()
   if barrier then hud.drawBarrier(barrier) end
   love.graphics.pop()
+  if Settings.values.lighting and not self.mapHidden then
+    require("gfx.lighting").draw(self.world or self.predWorld, app.canvas, players, objs, effects, sx + slideX, sy, Map.VIEW)
+  end
 
   Bloom.draw(function()
     love.graphics.translate(sx + slideX, sy)
@@ -2731,6 +2875,7 @@ function Match:draw()
 
   self:drawVignette(players)
   self:drawKillFeed()
+  self:drawReplayBar()
   -- While paused only the pause menu's buttons can be used.
   local widgetsLive = ui.active
   if self.paused then ui.active = false end

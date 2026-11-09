@@ -1,8 +1,8 @@
 -- Card trigger rules: "when <event>, do <effect>". Each copy of a card adds its rules again,
 -- so they stack. Effects caused by a trigger can't fire more triggers (Player.inTrigger, and
 -- bullets they spawn are marked fromTrigger), so chains can't loop.
-local fx = require "gfx.fx"
-local sfx = require "gfx.sfx"
+local fx = require("game.events").fx
+local sfx = require("game.events").sfx
 local Stats = require "game.stats"
 
 local Triggers = {}
@@ -96,7 +96,7 @@ local function enemiesNear(p, x, y, radius)
   local out = {}
   for _, e in ipairs(p.game:enemiesOf(p)) do
     local dx, dy = e.x - x, e.y - y
-    if dx * dx + dy * dy < (radius + e.r) ^ 2 then out[#out + 1] = e end
+    if dx * dx + dy * dy < (radius + e.r) ^ 2 and require("game.physics").canReach(p.game, x, y, e.x, e.y) then out[#out + 1] = e end
   end
   return out
 end

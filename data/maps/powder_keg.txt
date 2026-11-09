@@ -1,31 +1,21 @@
-deckshot-map 2
+deckshot-map 4
 name Powder Keg
-theme desert
-spawn 192 696
-spawn 1344 696
-spawn 384 456
-spawn 1152 456
-rect 96 744 672 120
-rect 768 744 672 120
-oneway 312 504 192 17
-oneway 1032 504 192 17
-oneway 624 360 144 17
-oneway 768 360 144 17
-oneway 312 192 144 14
-oneway 1080 192 144 14
-oneway 48 360 120 14
-oneway 1368 360 120 14
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=504 y=696
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=989 y=696
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=552 y=696
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=941 y=696
-obj crate drop=0.08 h=50 hp=60 w=50 x=456 y=694
-obj crate drop=0.08 h=50 hp=60 w=50 x=1020 y=694
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=456 y=456
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=1037 y=456
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=720 y=696
-obj barrel damage=55 h=48 hp=30 radius=110 w=36 x=773 y=696
-obj crate h=50 w=50 x=354 y=694
-obj crate h=50 w=50 x=1132 y=694
-obj pad h=14 power=1350 w=70 x=618 y=730
-obj pad h=14 power=1350 w=70 x=848 y=730
+theme void
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+oneway 240 540 180 14
+oneway 1116 540 180 14
+oneway 660 420 216 14
+obj block damage=55 h=48 hp=30 id=1 material=barrel onBreak=explode physics=true radius=110 w=36 x=576 y=696
+obj block damage=55 h=48 hp=30 id=2 material=barrel onBreak=explode physics=true radius=110 w=36 x=612 y=696
+obj block damage=55 h=48 hp=30 id=3 material=barrel onBreak=explode physics=true radius=110 w=36 x=648 y=696
+obj block damage=55 h=48 hp=30 id=4 material=barrel onBreak=explode physics=true radius=110 w=36 x=852 y=696
+obj block damage=55 h=48 hp=30 id=5 material=barrel onBreak=explode physics=true radius=110 w=36 x=888 y=696
+obj block damage=55 h=48 hp=30 id=6 material=barrel onBreak=explode physics=true radius=110 w=36 x=924 y=696
+obj block damage=55 h=48 hp=30 id=7 material=barrel onBreak=explode physics=true radius=110 w=36 x=612 y=648
+obj block damage=55 h=48 hp=30 id=8 material=barrel onBreak=explode physics=true radius=110 w=36 x=888 y=648
+obj block damage=55 h=48 hp=30 id=9 material=barrel onBreak=explode physics=true radius=110 w=36 x=708 y=372
+obj block damage=55 h=48 hp=30 id=10 material=barrel onBreak=explode physics=true radius=110 w=36 x=792 y=372

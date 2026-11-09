@@ -53,7 +53,7 @@ build_love() {
   log "Packing $NAME.love"
   rm -f "$out"
   (cd "$ROOT" && zip -9 -q -r "$out" . \
-    -x '.git/*' '.github/*' '.claude/*' 'build/*' 'dist/*' 'docs/*' 'lib/*' 'web/*' 'site/*' '*.md' '*.sh' '.gitignore' 'steam_appid.txt')
+    -x '.git/*' '.github/*' '.claude/*' 'build/*' 'dist/*' 'docs/*' 'lib/*' 'web/*' 'site/*' '*.md' '*.sh' 'tools/*' 'tests/*' 'community/*' 'assets/art/*' '.gitignore' 'steam_appid.txt')
   local files
   files="$(unzip -Z1 "$out")"
   grep -qx 'main.lua' <<<"$files" || die "$NAME.love has no main.lua"

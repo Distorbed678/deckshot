@@ -1,0 +1,15 @@
+deckshot-map 4
+name Swing Doors
+theme foundry
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+rect 120 300 1296 36
+oneway 216 540 168 14
+oneway 1152 540 168 14
+oneway 672 540 192 14
+obj block anchorType=hinge anchored=true h=300 hinge=top hp=0 id=1 material=wood physics=true w=18 x=424 y=336
+obj block anchorType=hinge anchored=true h=300 hinge=top hp=0 id=2 material=wood physics=true w=18 x=736 y=336
+obj block anchorType=hinge anchored=true h=300 hinge=top hp=0 id=3 material=wood physics=true w=18 x=1048 y=336

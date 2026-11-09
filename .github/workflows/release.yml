@@ -30,6 +30,11 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update -q && sudo apt-get install -y -q zip unzip
 
+      - name: Run tests
+        run: |
+          sudo apt-get install -y -q love xvfb libgl1-mesa-dri
+          xvfb-run -a tests/run.sh
+
       - name: Build packages
         run: ./build.sh all
 

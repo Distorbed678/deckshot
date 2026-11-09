@@ -1,7 +1,7 @@
 local Map = require "game.map"
 local Physics = require "game.physics"
-local fx = require "gfx.fx"
-local sfx = require "gfx.sfx"
+local fx = require("game.events").fx
+local sfx = require("game.events").sfx
 
 local Bullet = {}
 Bullet.__index = Bullet
@@ -138,7 +138,7 @@ function Bullet:update(dt, game)
     if p ~= self.owner and not p.dead and p.stats.stasis > 0 then
       local dx, dy = self.x - p.x, self.y - p.y
       local sr = Bullet.stasisRadius(p.stats.stasis)
-      if dx * dx + dy * dy < sr * sr then
+      if dx * dx + dy * dy < sr * sr and Physics.canReach(game, p.x, p.y, self.x, self.y) then
         dt = dt * STASIS_SLOW
         break
       end
@@ -189,7 +189,7 @@ function Bullet:update(dt, game)
     if p ~= self.owner and not p.dead and p.stats.repel > 0 then
       local dx, dy = self.x - p.x, self.y - p.y
       local d = math.sqrt(dx * dx + dy * dy)
-      if d > 1 and d < REPEL_RADIUS then
+      if d > 1 and d < REPEL_RADIUS and Physics.canReach(game, p.x, p.y, self.x, self.y) then
         local f = REPEL_FORCE * p.stats.repel * (1 - d / REPEL_RADIUS) * dt
         self.vx = self.vx + dx / d * f
         self.vy = self.vy + dy / d * f
@@ -416,7 +416,8 @@ function Bullet:smallBlast(game)
   sfx.play("explosionSmall", self.x, 0.5)
   local dmg = self:currentDamage() * 0.3
   for _, p in ipairs(game.players) do
-    if not p.dead and hurts(game, self.owner, p) and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
+    if not p.dead and hurts(game, self.owner, p) and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2
+        and Physics.canReach(game, self.x, self.y, p.x, p.y) then
       if p:hit(dmg, p.x - self.x, p.y - self.y, 300, self.owner, "explosion") ~= false then self:applyEffects(p, dmg) end
     end
   end
@@ -542,7 +543,7 @@ function Bullet:explode(game, mult)
     if not p.dead and hurts(game, self.owner, p) then
       local dx, dy = p.x - self.x, p.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
-      if d < self.explosion + p.r then
+      if d < self.explosion + p.r and Physics.canReach(game, self.x, self.y, p.x, p.y) then
         if p:hit(dmg, dx, dy, self.knockback * 1.5, self.owner) ~= false then self:applyEffects(p, dmg) end
       end
     end
@@ -564,48 +565,7 @@ function Bullet:explode(game, mult)
   end
 end
 
-function Bullet:draw()
-  local c = self.color
-
-  if self.laser then
-    if not self.points then return end
-    local flat = {}
-    for _, pt in ipairs(self.points) do
-      flat[#flat + 1] = pt[1]
-      flat[#flat + 1] = pt[2]
-    end
-    if #flat < 4 then return end
-    local a = math.max(0, self.beam / LASER_FADE)
-    love.graphics.setLineJoin("bevel")
-    love.graphics.setColor(c[1], c[2], c[3], 0.85 * a)
-    love.graphics.setLineWidth(self.r * 1.4 + 3)
-    love.graphics.line(flat)
-    love.graphics.setColor(1, 1, 1, a)
-    love.graphics.setLineWidth(math.max(1.5, self.r * 0.5))
-    love.graphics.line(flat)
-    love.graphics.setLineJoin("miter")
-    return
-  end
-
-  if self.mine then
-    local pulse = 0.5 + 0.5 * math.sin(self.life * (self.armTime > 0 and 6 or 14))
-    love.graphics.setColor(c[1], c[2], c[3], 0.25 + 0.25 * pulse)
-    love.graphics.circle("line", self.x, self.y, (self.trigger or MINE_TRIGGER) * 0.35)
-    love.graphics.setColor(0.1, 0.1, 0.12)
-    love.graphics.circle("fill", self.x, self.y, self.r + 2)
-    love.graphics.setColor(c[1], c[2], c[3], 0.5 + 0.5 * pulse)
-    love.graphics.circle("fill", self.x, self.y, self.r * 0.6)
-    return
-  end
-
-  for i, t in ipairs(self.trail) do
-    love.graphics.setColor(c[1], c[2], c[3], 0.4 * (1 - i / 7))
-    love.graphics.circle("fill", t[1], t[2], self.r * (1 - i / 8))
-  end
-  love.graphics.setColor(1, 1, 1, self.ghost and 0.5 or 1)
-  love.graphics.circle("fill", self.x, self.y, self.r + 1.5)
-  love.graphics.setColor(c[1], c[2], c[3], self.ghost and 0.6 or 1)
-  love.graphics.circle("fill", self.x, self.y, self.r)
-end
+Bullet.LASER_FADE = LASER_FADE
+Bullet.MINE_TRIGGER = MINE_TRIGGER
 
 return Bullet

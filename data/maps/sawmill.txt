@@ -1,21 +1,21 @@
-deckshot-map 2
+deckshot-map 4
 name Sawmill
-theme foundry
-spawn 168 696
-spawn 1368 696
-spawn 108 480
-spawn 1428 480
-oneway 624 360 144 17
-oneway 768 360 144 17
-rect 48 528 120 24
-rect 1368 528 120 24
-oneway 312 192 144 14
-oneway 1080 192 144 14
-oneway 288 408 168 14
-oneway 1080 408 168 14
-rect 48 744 264 24
-rect 1224 744 264 24
-oneway 532 720 168 14
-oneway 836 720 168 14
-obj conveyor h=20 speed=140 w=240 x=288 y=508
-obj conveyor h=20 speed=-140 w=240 x=1008 y=508
+theme jungle
+spawn 216 696
+spawn 1320 696
+spawn 768 492
+spawn 600 640
+rect 144 744 1248 48
+oneway 672 540 192 14
+obj arm force=1 id=1 length=150 spin=1.8 x=444 y=420
+obj saw damage=25 id=2 parent=1 r=26 x=594 y=420
+obj saw damage=25 id=3 parent=1 r=26 x=294 y=420
+obj arm force=1 id=4 length=150 spin=-1.8 x=1092 y=420
+obj saw damage=25 id=5 parent=4 r=26 x=1242 y=420
+obj saw damage=25 id=6 parent=4 r=26 x=942 y=420
+obj rail force=1 id=7 path=600,250;936,250 speed=170 x=600 y=250
+obj saw damage=25 id=8 parent=7 r=26 x=600 y=250
+obj block h=324 id=9 material=stone w=24 x=432 y=420
+obj block h=324 id=10 material=stone w=24 x=1080 y=420
+obj block h=48 id=11 material=wood physics=true w=144 x=600 y=696
+obj block h=48 id=12 material=wood physics=true w=144 x=792 y=696

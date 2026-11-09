@@ -1,24 +1,16 @@
-deckshot-map 2
+deckshot-map 4
 name Bounce House
-theme void
-spawn 192 696
-spawn 1344 696
-spawn 144 312
-spawn 1392 312
-rect 72 744 312 120
-rect 1152 744 312 120
-oneway 480 480 144 17
-oneway 912 480 144 17
-rect 72 360 192 24
-rect 1272 360 192 24
-oneway 672 240 192 17
-oneway 384 120 120 14
-oneway 1032 120 120 14
-oneway 552 672 120 14
-oneway 864 672 120 14
-obj acid damage=20 h=60 w=384 x=384 y=804
-obj acid damage=20 h=60 w=384 x=768 y=804
-obj pad h=14 power=1350 w=70 x=288 y=730
-obj pad h=14 power=1350 w=70 x=1164 y=730
-obj pad h=14 power=1200 w=60 x=504 y=466
-obj pad h=14 power=1200 w=60 x=960 y=466
+theme desert
+spawn 288 696
+spawn 1248 696
+spawn 640 696
+spawn 896 696
+rect 144 744 1248 48
+oneway 216 396 168 14
+oneway 1152 396 168 14
+oneway 672 240 192 14
+obj pad h=14 id=1 power=1350 w=84 x=396 y=730
+obj pad h=14 id=2 power=1350 w=84 x=720 y=730
+obj pad h=14 id=3 power=1350 w=84 x=1044 y=730
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=552 y=696
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=936 y=696

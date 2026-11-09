@@ -1,0 +1,15 @@
+deckshot-map 4
+name Landslide
+theme foundry
+spawn 216 696
+spawn 1320 696
+spawn 700 696
+spawn 836 696
+rect 120 744 1296 48
+oneway 660 400 216 14
+obj block h=36 id=1 material=stone rot=0.32 w=420 x=180 y=520
+obj block h=36 id=2 material=stone rot=-0.32 w=420 x=936 y=520
+obj block drop=0.08 h=48 hp=60 id=3 material=crate onBreak=pickup physics=true w=48 x=400 y=360
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=1088 y=360
+obj block damage=55 h=48 hp=30 id=5 material=barrel onBreak=explode physics=true radius=110 w=36 x=330 y=340
+obj block damage=55 h=48 hp=30 id=6 material=barrel onBreak=explode physics=true radius=110 w=36 x=1170 y=340

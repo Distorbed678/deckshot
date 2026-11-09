@@ -6,8 +6,8 @@ local Cards = require "game.cards"
 local Objects = require "game.objects"
 local Physics = require "game.physics"
 local Bot = require "game.bot"
-local fx = require "gfx.fx"
-local sfx = require "gfx.sfx"
+local fx = require("game.events").fx
+local sfx = require("game.events").sfx
 
 local World = {}
 World.__index = World
@@ -123,13 +123,14 @@ function World:wellDamage(w, dt)
   w.tick = w.tick + WELL_TICK
   for _, p in ipairs(self.players) do
     local dx, dy = p.x - w.x, p.y - w.y
-    if not p.dead and dx * dx + dy * dy < WELL_CORE * WELL_CORE then
+    if not p.dead and dx * dx + dy * dy < WELL_CORE * WELL_CORE and Physics.canReach(self, w.x, w.y, p.x, p.y) then
       p:hit(WELL_DPS * WELL_TICK, 0, 0, 0, w.owner, "blackhole")
     end
   end
 end
 
 function World:isEnemy(a, b)
+  if self:isJuggernaut() and a ~= b then return (a and a.isJugg or b and b.isJugg) and true or false end
   if a == b then return false end
   if self.rules.teams and a.team and b.team and a.team == b.team then return self.rules.friendlyFire == true end
   return true
@@ -188,6 +189,7 @@ function World:loadMap()
   local sd = self.rules.suddenDeath
   self.suddenLeft = (sd and sd > 0) and sd or nil
   Physics.setup(self)
+  fx.setLosWorld(self)
   -- Everything players and bullets collide with: the map's rects plus solid objects.
   Objects.rebuildSolids(self)
 end
@@ -245,6 +247,7 @@ function World:beginRound(sameMap)
   self.pending = {}
   self.wells = {}
   fx.clear()
+  self:setupJuggernaut()
   for i, p in ipairs(self.players) do
     local s = self.map.spawns[i]
     p:spawn(s[1], s[2], s[1] < Map.W / 2 and 1 or -1, self)
@@ -412,6 +415,49 @@ end
 ---------------------------------------------------------------- king of the hill
 World.HILL = { w = 280, h = 200, target = 30, move = 20, respawn = 3 }
 
+function World:isJuggernaut()
+  return self.rules.mode == "jugg" and not self.rules.practice
+end
+
+-- One player is the Juggernaut each round: much tougher, harder hitting and with two bonus cards.
+-- Everyone else hunts them together. Whoever brings them down takes over next round.
+local JUGG_CARDS = { "uncommon", "rare" }
+
+function World:setupJuggernaut()
+  for _, p in ipairs(self.players) do
+    if p.isJugg then
+      for _, c in ipairs(p.juggCards or {}) do
+        for k = #p.cards, 1, -1 do
+          if p.cards[k] == c then table.remove(p.cards, k) break end
+        end
+      end
+      p.isJugg, p.juggCards, p.juggHp = nil, nil, nil
+      p:recompute()
+    end
+  end
+  self.jugg = nil
+  if not self:isJuggernaut() then return end
+  local pool = {}
+  for _, p in ipairs(self.players) do
+    if not p.disconnected then pool[#pool + 1] = p end
+  end
+  if #pool == 0 then return end
+  local j = self.nextJugg
+  if not j or j.disconnected then j = pool[love.math.random(#pool)] end
+  self.nextJugg, self.jugg = nil, j
+  j.isJugg, j.juggHp = true, 1.5 + 0.75 * (#pool - 1)
+  j.juggCards = {}
+  for _, rarity in ipairs(JUGG_CARDS) do
+    local c = Cards.randomOfRarity(rarity)
+    if c then
+      j.juggCards[#j.juggCards + 1] = c
+      j.cards[#j.cards + 1] = c
+    end
+  end
+  j:recompute()
+  self:toast((j.name or "Player") .. " is the Juggernaut!", j.slot)
+end
+
 function World:isKoth()
   return self.rules.mode == "koth" and not self.rules.practice
 end
@@ -510,7 +556,47 @@ function World:stepPhysics(dt)
   Physics.finish(self)
 end
 
+-- The simulation always advances in equal steps, whatever the frame rate is.
+World.STEP = 1 / 60
+local MAX_STEPS = 5
+
 function World:update(dt)
+  self.clock = math.min((self.clock or 0) + dt, World.STEP * MAX_STEPS)
+  while self.clock >= World.STEP - 1e-9 do
+    self.clock = self.clock - World.STEP
+    self:savePrevious()
+    self:tick(World.STEP)
+  end
+end
+
+-- Where things were before this step, for drawing smoothly between steps.
+function World:savePrevious()
+  for _, p in ipairs(self.players) do p.prevX, p.prevY = p.x, p.y end
+  for _, b in ipairs(self.bullets) do b.prevDrawX, b.prevDrawY = b.x, b.y end
+end
+
+-- Draw positions: everything moves back to where it was between the last two steps.
+function World:beginDraw()
+  local k = (self.clock or 0) / World.STEP
+  local function shift(o, px, py)
+    if not px then return end
+    o.simX, o.simY = o.x, o.y
+    local dx, dy = o.x - px, o.y - py
+    if dx * dx + dy * dy < 40000 then o.x, o.y = px + dx * k, py + dy * k end
+  end
+  for _, p in ipairs(self.players) do shift(p, p.prevX, p.prevY) end
+  for _, b in ipairs(self.bullets) do shift(b, b.prevDrawX, b.prevDrawY) end
+end
+
+function World:endDraw()
+  local function restore(o)
+    if o.simX then o.x, o.y, o.simX, o.simY = o.simX, o.simY, nil, nil end
+  end
+  for _, p in ipairs(self.players) do restore(p) end
+  for _, b in ipairs(self.bullets) do restore(b) end
+end
+
+function World:tick(dt)
   if self.state == "subRound" then
     self.timer = self.timer - dt
     if self.timer <= 0 then self:finishSubRound() end
@@ -637,6 +723,24 @@ end
 
 function World:checkRoundEnd()
   if self.rules.practice or self.state ~= "playing" then return end -- the practice range never ends a round
+  if self:isJuggernaut() then
+    local j = self.jugg
+    if not j or j.disconnected then return self:endRound(nil) end
+    if j.dead then
+      local killer = j.lastAttacker
+      if killer and killer.slot and killer ~= j and self.players[killer.slot] == killer then self.nextJugg = killer else killer = nil end
+      if not killer then
+        for _, p in ipairs(self.players) do
+          if p ~= j and not p.dead and not p.disconnected then killer = p break end
+        end
+      end
+      return self:endRound(killer)
+    end
+    for _, p in ipairs(self.players) do
+      if p ~= j and not p.dead and not p.disconnected then return end
+    end
+    return self:endRound(j)
+  end
   if self:isKoth() then
     -- Decided by holding the hill, unless everyone else has left.
     local connected, last = 0, nil

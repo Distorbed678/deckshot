@@ -1,0 +1,15 @@
+deckshot-map 4
+name Gondola
+theme ice
+spawn 180 552
+spawn 1356 552
+spawn 288 552
+spawn 1248 552
+rect 96 600 240 48
+rect 1200 600 240 48
+oneway 672 300 192 14
+obj rail force=1 id=1 path=420,480;1116,480 speed=130 x=420 y=480
+obj block h=20 id=2 material=metal parent=1 w=168 x=336 y=470
+obj rail force=1 id=3 path=1116,720;420,720 speed=130 x=1116 y=720
+obj block h=20 id=4 material=metal parent=3 w=168 x=1032 y=710
+obj spikes anchored=true damage=30 dir=up h=16 id=5 w=792 x=372 y=848

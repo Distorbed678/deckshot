@@ -551,24 +551,4 @@ end
 
 Map.loadAll()
 
--- plain: no background (map thumbnails).
-function Map.draw(map, plain)
-  local Atmosphere = require "gfx.atmosphere"
-  local t = plain and Atmosphere.themeOf(map) or Atmosphere.draw(map)
-  local c, e = t.block, t.edge
-  for _, b in ipairs(map.rects) do
-    if b.oneway then
-      love.graphics.setColor(c[1], c[2], c[3], 0.55)
-      love.graphics.rectangle("fill", b.x, b.y, b.w, math.min(b.h, 10))
-      love.graphics.setColor(e)
-      love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
-    else
-      love.graphics.setColor(c)
-      love.graphics.rectangle("fill", b.x, b.y, b.w, b.h)
-      love.graphics.setColor(e[1], e[2], e[3], 0.8)
-      love.graphics.rectangle("fill", b.x, b.y, b.w, 3)
-    end
-  end
-end
-
 return Map

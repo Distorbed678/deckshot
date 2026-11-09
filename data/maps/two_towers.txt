@@ -1,0 +1,17 @@
+deckshot-map 4
+name Two Towers
+theme neon
+spawn 288 696
+spawn 1248 696
+spawn 384 696
+spawn 1152 696
+rect 144 744 1248 48
+oneway 672 384 192 14
+oneway 216 480 168 14
+oneway 1152 480 168 14
+obj block h=120 hp=150 id=1 material=brick physics=true w=48 x=528 y=624
+obj block h=120 hp=120 id=2 material=brick physics=true w=48 x=528 y=504
+obj block h=120 hp=150 id=3 material=brick physics=true w=48 x=480 y=624
+obj block h=120 hp=150 id=4 material=brick physics=true w=48 x=960 y=624
+obj block h=120 hp=120 id=5 material=brick physics=true w=48 x=960 y=504
+obj block h=120 hp=150 id=6 material=brick physics=true w=48 x=912 y=624

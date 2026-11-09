@@ -1,0 +1,31 @@
+deckshot-map 4
+name Demolition Row
+theme neon
+spawn 288 696
+spawn 1248 696
+spawn 600 696
+spawn 936 696
+rect 144 744 1248 48
+oneway 216 540 120 14
+oneway 1200 540 120 14
+obj block h=120 hp=120 id=1 material=brick physics=true w=48 x=464 y=624
+obj block h=120 hp=120 id=2 material=brick physics=true w=48 x=384 y=624
+obj block h=120 hp=120 id=3 material=brick physics=true w=48 x=464 y=504
+obj block h=120 hp=120 id=4 material=brick physics=true w=48 x=384 y=504
+obj block h=120 hp=120 id=5 material=brick physics=true w=48 x=464 y=384
+obj block h=120 hp=120 id=6 material=brick physics=true w=48 x=384 y=384
+obj block h=16 id=7 material=wood physics=true w=128 x=384 y=384
+obj block h=120 hp=120 id=8 material=brick physics=true w=48 x=752 y=624
+obj block h=120 hp=120 id=9 material=brick physics=true w=48 x=672 y=624
+obj block h=120 hp=120 id=10 material=brick physics=true w=48 x=752 y=504
+obj block h=120 hp=120 id=11 material=brick physics=true w=48 x=672 y=504
+obj block h=120 hp=120 id=12 material=brick physics=true w=48 x=752 y=384
+obj block h=120 hp=120 id=13 material=brick physics=true w=48 x=672 y=384
+obj block h=16 id=14 material=wood physics=true w=128 x=672 y=384
+obj block h=120 hp=120 id=15 material=brick physics=true w=48 x=1040 y=624
+obj block h=120 hp=120 id=16 material=brick physics=true w=48 x=960 y=624
+obj block h=120 hp=120 id=17 material=brick physics=true w=48 x=1040 y=504
+obj block h=120 hp=120 id=18 material=brick physics=true w=48 x=960 y=504
+obj block h=120 hp=120 id=19 material=brick physics=true w=48 x=1040 y=384
+obj block h=120 hp=120 id=20 material=brick physics=true w=48 x=960 y=384
+obj block h=16 id=21 material=wood physics=true w=128 x=960 y=384

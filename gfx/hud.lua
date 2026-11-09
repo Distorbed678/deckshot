@@ -1,4 +1,5 @@
 -- Shared drawing helpers for the match: score panels, cards, black holes, crosshair.
+local Assets = require "core.assets"
 local app = require "core.app"
 local ui = require "core.ui"
 local Map = require "game.map"
@@ -56,14 +57,14 @@ function hud.drawTimer(left)
   if left <= 0 then
     local a = 0.65 + 0.35 * math.sin(love.timer.getTime() * 7)
     love.graphics.setColor(0.45, 0.05, 0.05, 0.85)
-    love.graphics.rectangle("fill", cx - 100, 8, 200, h, 8, 8)
+    Assets.round("fill", cx - 100, 8, 200, h)
     love.graphics.setColor(1, 0.35, 0.3, a)
     love.graphics.setFont(app.fonts.med)
     love.graphics.printf("SUDDEN DEATH", cx - 100, 8 + (h - app.fonts.med:getHeight()) / 2, 200, "center")
     return
   end
   love.graphics.setColor(0, 0, 0, 0.55)
-  love.graphics.rectangle("fill", cx - w / 2, 8, w, h, 8, 8)
+  Assets.round("fill", cx - w / 2, 8, w, h)
   local s = math.ceil(left)
   local text = string.format("%d:%02d", math.floor(s / 60), s % 60)
   love.graphics.setFont(app.fonts.title)
@@ -84,13 +85,13 @@ function hud.drawHill(hill, players, H)
   local x, y = hill.x - H.w / 2, hill.y - H.h / 2
   local a = 0.13 + 0.05 * math.sin(love.timer.getTime() * 5)
   love.graphics.setColor(c[1], c[2], c[3], a)
-  love.graphics.rectangle("fill", x, y, H.w, H.h, 14, 14)
+  Assets.round("fill", x, y, H.w, H.h)
   love.graphics.setColor(c[1], c[2], c[3], 0.85)
   love.graphics.setLineWidth(3)
-  love.graphics.rectangle("line", x, y, H.w, H.h, 14, 14)
+  Assets.round("line", x, y, H.w, H.h)
   if hill.t > 0 then
     love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.rectangle("fill", x + 10, y - 9, (H.w - 20) * math.min(1, hill.t / H.move), 4, 2, 2)
+    Assets.round("fill", x + 10, y - 9, (H.w - 20) * math.min(1, hill.t / H.move), 4)
   end
 end
 
@@ -104,10 +105,10 @@ function hud.drawHillScores(players, target, scoreOf)
       seen[key] = true
       local frac = math.max(0, math.min(1, scoreOf(i) / target))
       love.graphics.setColor(0, 0, 0, 0.55)
-      love.graphics.rectangle("fill", cx - w / 2, y, w, 9, 4, 4)
+      Assets.round("fill", cx - w / 2, y, w, 9)
       if w * frac > 2 then
         love.graphics.setColor(p.color)
-        love.graphics.rectangle("fill", cx - w / 2, y, w * frac, 9, 4, 4)
+        Assets.round("fill", cx - w / 2, y, w * frac, 9)
       end
       y = y + 13
     end
@@ -119,14 +120,14 @@ function hud.drawPie(x, y, r, n, filled, color, alpha, lastK)
   alpha = alpha or 1
   n = math.max(1, n)
   love.graphics.setColor(0, 0, 0, 0.45 * alpha)
-  love.graphics.circle("fill", x, y, r)
+  Assets.center("dot", x, y, (r) * 2, (r) * 2)
   for i = 1, math.min(filled, n) do
     local a0 = -math.pi / 2 + (i - 1) * 2 * math.pi / n
     local a1 = a0 + 2 * math.pi / n
     local rr = r
     if lastK and i == filled then rr = r * lastK end
     love.graphics.setColor(color[1], color[2], color[3], alpha)
-    if n == 1 then love.graphics.circle("fill", x, y, rr) else love.graphics.arc("fill", x, y, rr, a0, a1) end
+    if n == 1 then Assets.center("dot", x, y, (rr) * 2, (rr) * 2) else love.graphics.arc("fill", x, y, rr, a0, a1) end
   end
   love.graphics.setColor(color[1], color[2], color[3], alpha)
   love.graphics.setLineWidth(math.max(1.5, r * 0.08))
@@ -158,12 +159,12 @@ function hud.drawScores(players, winScore, rightInset)
         local x = 18 + (k - 1) * gap
         if k <= p.score then
           love.graphics.setColor(c[1], c[2], c[3], a)
-          love.graphics.circle("fill", x, y, dotR)
+          Assets.center("dot", x, y, (dotR) * 2, (dotR) * 2)
         elseif k == p.score + 1 then
           hud.drawPie(x, y, dotR, need, p.subWins or 0, c, a)
         else
           love.graphics.setColor(c[1], c[2], c[3], 0.55 * a)
-          love.graphics.circle("fill", x, y, dotR * 0.42)
+          Assets.center("dot", x, y, (dotR * 0.42) * 2, (dotR * 0.42) * 2)
         end
       end
       y = y + dotR * 2 + 8
@@ -182,10 +183,10 @@ function hud.drawScores(players, winScore, rightInset)
       local row = math.floor((k - 1) / perRow)
       local x, by = app.W - 14 - (rightInset or 0) - size - col * (size + sp), rowY + row * (size + sp)
       love.graphics.setColor(0.06, 0.06, 0.09, 0.72 * a)
-      love.graphics.rectangle("fill", x, by, size, size, 5, 5)
+      Assets.round("fill", x, by, size, size)
       love.graphics.setColor(c[1], c[2], c[3], 0.85 * a)
       love.graphics.setLineWidth(1.5)
-      love.graphics.rectangle("line", x, by, size, size, 5, 5)
+      Assets.round("line", x, by, size, size)
       local rc = Cards.rarity[card.rarity] and Cards.rarity[card.rarity].color or { 1, 1, 1 }
       love.graphics.setColor(rc[1], rc[2], rc[3], a)
       ui.printFit(card.name:sub(1, 2), app.fonts.small, x + 3, by + (size - app.fonts.small:getHeight()) / 2, size - 6, "center")
@@ -223,10 +224,10 @@ function hud.drawCardTooltip(item)
   local x = math.max(10, math.min(app.W - w - 10, item.x - 20))
   local y = math.min(app.H - h - 10, item.bottom + 8)
   love.graphics.setColor(0.09, 0.09, 0.12, 0.97)
-  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+  Assets.round("fill", x, y, w, h)
   love.graphics.setColor(rc)
   love.graphics.setLineWidth(2)
-  love.graphics.rectangle("line", x, y, w, h, 10, 10)
+  Assets.round("line", x, y, w, h)
 
   local ty = y + pad
   love.graphics.setFont(title)
@@ -277,28 +278,13 @@ end
 -- A small wrench: marks custom and edited cards (and maps).
 function hud.drawWrench(x, y, size, color)
   love.graphics.setColor(color or { 1, 1, 1 })
-  love.graphics.push()
-  love.graphics.translate(x + size / 2, y + size / 2)
-  love.graphics.rotate(-math.pi / 4)
-  love.graphics.rectangle("fill", -size * 0.1, -size * 0.1, size * 0.2, size * 0.55)
-  love.graphics.circle("fill", 0, -size * 0.22, size * 0.24)
-  love.graphics.setColor(1, 1, 1, 0)
-  love.graphics.pop()
-  love.graphics.setColor(color or { 1, 1, 1 })
+  Assets.center("wrench", x + size / 2, y + size / 2, size, size)
 end
 
 -- The back of a face-down card (rarity hidden until it is turned over).
 function hud.drawCardBack(x, y, w, h, selected, ownerColor)
-  love.graphics.setColor(0.16, 0.16, 0.22)
-  love.graphics.rectangle("fill", x, y, w, h, 14, 14)
-  love.graphics.setColor(1, 1, 1, 0.05)
-  for i = 0, math.floor((w + h) / 18) do
-    local o = i * 18
-    love.graphics.setLineWidth(6)
-    love.graphics.line(x + math.max(0, o - h), y + math.min(h, o), x + math.min(w, o), y + math.max(0, o - w))
-  end
-  love.graphics.setColor(0.24, 0.24, 0.32)
-  love.graphics.rectangle("fill", x + w / 2 - 34, y + h / 2 - 44, 68, 88, 10, 10)
+  love.graphics.setColor(1, 1, 1)
+  Assets.rect("card_back", x, y, w, h)
   love.graphics.setFont(app.fonts.big)
   love.graphics.setColor(1, 1, 1, 0.5)
   love.graphics.printf("?", x, y + h / 2 - app.fonts.big:getHeight() / 2, w, "center")
@@ -309,7 +295,7 @@ function hud.drawCardBack(x, y, w, h, selected, ownerColor)
     love.graphics.setColor(1, 1, 1, 0.18)
     love.graphics.setLineWidth(2)
   end
-  love.graphics.rectangle("line", x, y, w, h, 14, 14)
+  Assets.round("line", x, y, w, h)
 end
 
 -- rarityId: optional override (the card pool editor shows the configured rarity).
@@ -322,10 +308,10 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
   CardArt.glow(x, y, w, h, rarityId, rc, t)
 
   love.graphics.setColor(0.12, 0.12, 0.16)
-  love.graphics.rectangle("fill", x, y, w, h, 14, 14)
+  Assets.round("fill", x, y, w, h)
   love.graphics.setColor(rc)
-  love.graphics.rectangle("fill", x, y, w, 80, 14, 14)
-  love.graphics.rectangle("fill", x, y + 50, w, 30)
+  Assets.round("fill", x, y, w, 80)
+  Assets.rect("tile_white", x, y + 50, w, 30)
 
   if selected then
     love.graphics.setColor(ownerColor)
@@ -334,7 +320,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     love.graphics.setColor(rc[1], rc[2], rc[3], 0.5)
     love.graphics.setLineWidth(2)
   end
-  love.graphics.rectangle("line", x, y, w, h, 14, 14)
+  Assets.round("line", x, y, w, h)
 
   -- Narrow cards (5-6 on screen) use a smaller title font so long names fit. The name sits above
   -- the art medallion, which straddles the edge of the coloured band.
@@ -426,10 +412,10 @@ function hud.drawBarrier(b, glowOnly)
     local L, T, R, B = -60, -60, Map.W + 60, Map.H + 60
     local top = math.max(T, y0)
     love.graphics.setColor(0.35, 0, 0, 0.35)
-    love.graphics.rectangle("fill", L, T, R - L, top - T)
-    love.graphics.rectangle("fill", L, y1, R - L, B - y1)
-    love.graphics.rectangle("fill", L, top, x0 - L, y1 - top)
-    love.graphics.rectangle("fill", x1, top, R - x1, y1 - top)
+    Assets.rect("tile_white", L, T, R - L, top - T)
+    Assets.rect("tile_white", L, y1, R - L, B - y1)
+    Assets.rect("tile_white", L, top, x0 - L, y1 - top)
+    Assets.rect("tile_white", x1, top, R - x1, y1 - top)
   end
   love.graphics.setColor(1, 0.15, 0.12, a)
   love.graphics.setLineWidth(glowOnly and 8 or 4)
@@ -442,7 +428,11 @@ function hud.drawWells(wells)
     local k = math.max(0, math.min(1, w.t / 0.3, (w.max - w.t) / 0.15 + 0.2))
     local c = w.owner.color
     love.graphics.setColor(c[1], c[2], c[3], 0.08 * k)
-    love.graphics.circle("fill", w.x, w.y, w.radius or 280)
+    local reaches = require("gfx.fx").fan(w.x, w.y, w.radius or 280)
+    require("gfx.fx").drawReach("fill", w.x, w.y, w.radius or 280, reaches)
+    love.graphics.setColor(c[1], c[2], c[3], 0.25 * k)
+    love.graphics.setLineWidth(2)
+    require("gfx.fx").drawReach("line", w.x, w.y, w.radius or 280, reaches)
     love.graphics.setLineWidth(2)
     for i = 0, 2 do
       local rr = (22 + ((t * 60 + i * 20) % 60)) * k
@@ -450,20 +440,13 @@ function hud.drawWells(wells)
       love.graphics.circle("line", w.x, w.y, rr)
     end
     love.graphics.setColor(0.02, 0.02, 0.04, 0.95)
-    love.graphics.circle("fill", w.x, w.y, 18 * k)
+    Assets.center("dot", w.x, w.y, (18 * k) * 2, (18 * k) * 2)
   end
 end
 
 function hud.drawCrosshair(x, y, color)
-  love.graphics.setLineWidth(2)
-  love.graphics.setColor(0, 0, 0, 0.6)
-  love.graphics.circle("line", x, y, 11)
   love.graphics.setColor(color)
-  love.graphics.circle("line", x, y, 9)
-  love.graphics.line(x - 15, y, x - 5, y)
-  love.graphics.line(x + 5, y, x + 15, y)
-  love.graphics.line(x, y - 15, x, y - 5)
-  love.graphics.line(x, y + 5, x, y + 15)
+  Assets.center("crosshair", x, y, 40, 40)
 end
 
 return hud

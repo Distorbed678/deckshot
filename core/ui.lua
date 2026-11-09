@@ -1,6 +1,7 @@
 -- Tiny immediate-mode UI: widgets are declared while drawing and return what happened.
 -- Mouse: hover + click. Keyboard: Up/Down (or Tab) to move, Enter to activate,
 -- Left/Right to change option values.
+local Assets = require "core.assets"
 local utf8 = require "utf8"
 
 local ui = {
@@ -132,10 +133,10 @@ end
 
 function ui.panel(x, y, w, h, alpha)
   love.graphics.setColor(ui.PANEL[1], ui.PANEL[2], ui.PANEL[3], alpha or 0.95)
-  love.graphics.rectangle("fill", x, y, w, h, 12, 12)
+  Assets.round("fill", x, y, w, h)
   love.graphics.setColor(1, 1, 1, 0.08)
   love.graphics.setLineWidth(2)
-  love.graphics.rectangle("line", x, y, w, h, 12, 12)
+  Assets.round("line", x, y, w, h)
 end
 
 -- Prints text in `font`, shrunk horizontally and vertically if it wouldn't fit in `w`.
@@ -208,10 +209,10 @@ function ui.button(label, x, y, w, h, opts)
   -- A button with no label has its text drawn by the screen, so it must not fade in after that text.
   local a = animate(id, x, y, w, h, focused and not disabled, label == "")
   tint(bg, a)
-  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+  Assets.round("fill", x, y, w, h)
   tint(border, a)
   love.graphics.setLineWidth(focused and 3 or 2)
-  love.graphics.rectangle("line", x, y, w, h, 10, 10)
+  Assets.round("line", x, y, w, h)
   local font = opts.font or app().fonts.button
   tint(fg, a)
   if label ~= "" then ui.printFit(label, font, x + 8, y + (h - font:getHeight()) / 2, w - 16, "center") end
@@ -250,10 +251,10 @@ function ui.cycler(label, value, x, y, w, h, opts)
   if locked then fg = { 1, 1, 1, 0.6 } end
   local a = animate(id, x, y, w, h, focused and not locked, opts and opts.noEnter)
   tint(bg, a)
-  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+  Assets.round("fill", x, y, w, h)
   tint(border, a)
   love.graphics.setLineWidth(focused and not locked and 3 or 2)
-  love.graphics.rectangle("line", x, y, w, h, 10, 10)
+  Assets.round("line", x, y, w, h)
   local font = app().fonts.med
   local ty = y + (h - font:getHeight()) / 2
   tint(fg, a)
@@ -324,10 +325,10 @@ function ui.textField(text, x, y, w, h, opts)
   end
   local bg, border = panelColors(focused, false)
   love.graphics.setColor(bg)
-  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+  Assets.round("fill", x, y, w, h)
   love.graphics.setColor(border)
   love.graphics.setLineWidth(focused and 3 or 2)
-  love.graphics.rectangle("line", x, y, w, h, 10, 10)
+  Assets.round("line", x, y, w, h)
   local font = opts.font or app().fonts.title
   local ty = y + (h - font:getHeight()) / 2
   if text == "" and not focused then
@@ -384,10 +385,10 @@ function ui.endScroll(state)
     end
   end
   love.graphics.setColor(1, 1, 1, 0.08)
-  love.graphics.rectangle("fill", barX, c.y, barW, c.h, 6, 6)
+  Assets.round("fill", barX, c.y, barW, c.h)
   local over = mx >= barX and mx <= barX + barW and my >= thumbY and my <= thumbY + thumbH
   love.graphics.setColor(1, 1, 1, (state.drag or over) and 0.55 or 0.3)
-  love.graphics.rectangle("fill", barX, thumbY, barW, thumbH, 6, 6)
+  Assets.round("fill", barX, thumbY, barW, thumbH)
 end
 
 return ui

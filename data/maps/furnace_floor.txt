@@ -1,0 +1,16 @@
+deckshot-map 4
+name Furnace Floor
+theme foundry
+spawn 288 696
+spawn 1248 696
+spawn 200 696
+spawn 1336 696
+rect 144 744 1248 48
+oneway 264 540 192 14
+oneway 1080 540 192 14
+oneway 648 400 240 14
+obj flame damage=12 dir=up id=1 length=240 off=2.5 on=1.2 phase=0.0 warn=0.5 x=576 y=744
+obj flame damage=12 dir=up id=2 length=240 off=2.5 on=1.2 phase=0.8 warn=0.5 x=768 y=744
+obj flame damage=12 dir=up id=3 length=240 off=2.5 on=1.2 phase=1.6 warn=0.5 x=960 y=744
+obj block h=14 id=4 material=wood physics=true w=144 x=504 y=560
+obj block h=14 id=5 material=wood physics=true w=144 x=888 y=560

@@ -1,0 +1,17 @@
+deckshot-map 4
+name Assembly Line
+theme foundry
+spawn 288 676
+spawn 1248 676
+spawn 636 676
+spawn 900 676
+rect 144 744 1248 48
+oneway 216 516 168 14
+oneway 1152 516 168 14
+oneway 672 420 192 14
+obj block conveyor=true h=20 id=1 material=metal speed=140 w=624 x=144 y=724
+obj block conveyor=true h=20 id=2 material=metal speed=-140 w=624 x=768 y=724
+obj block drop=0.08 h=48 hp=60 id=3 material=crate onBreak=pickup physics=true w=48 x=384 y=676
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=504 y=676
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=1008 y=676
+obj block drop=0.08 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=1128 y=676

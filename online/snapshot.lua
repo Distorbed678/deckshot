@@ -113,7 +113,7 @@ function Snap.encode(world, events)
         (p.dashTimer or 0) > 0 and 8 or 0),
       u8((p.meleeCharge or 0) * 100), u8((p.swingTimer or 0) * 800), u8((p.swingPower or 0) * 255),
       u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy),
-      p.ack or 0, i16(p.vx), u8(p.jumpsLeft), u8(p.dashesLeft),
+      p.ack or 0, i16(p.vx), u8(p.jumpsLeft + (p.fallJump and 128 or 0)), u8(p.dashesLeft),
       bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0),
       u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping),
       u16(p.st.kills), u16(p.st.deaths), u16(p.st.dmg), u16(p.st.shots), u16(p.st.hits), u16(p.st.blocks), u16(p.st.melee))
@@ -152,8 +152,22 @@ function Snap.encode(world, events)
   -- Map objects (same order as the map's list), spawned effects, the barrier.
   local objs = world.objects or {}
   add("<B", math.min(#objs, 255))
+  -- Most objects sit still, so only ones that changed are sent. Every second a full set goes out
+  -- in case an earlier packet was lost.
+  world.snapCount = (world.snapCount or 0) + 1
+  local keyframe = world.snapCount % 30 == 1 or world.snapObjects ~= objs
+  world.snapObjects = objs
   for i = 1, math.min(#objs, 255) do
     local o = objs[i]
+    local last = o.pts and o.pts[#o.pts]
+    local sig = table.concat({ o.alive and 1 or 0, o.anchored and 1 or 0, o.burning and 1 or 0, math.floor(o.x + 0.5), math.floor(o.y + 0.5),
+      math.floor((o.rot or 0) * 500), o.s or 0, o.ANIMATED and 0 or math.floor((o.a or 0) * 100), math.floor(o.hp or 0),
+      last and math.floor(last[1]) or 0, last and math.floor(last[2]) or 0, o.pts and #o.pts or 0 }, ",")
+    local same = not keyframe and o.snapSig == sig
+    o.snapSig = sig
+    if same then
+      add("<B", 32)
+    else
     local pts = o.type == "rope" and o.pts
     local flags = (o.alive and 1 or 0) + (o.rot and 2 or 0) + (o.anchored and 4 or 0) + (pts and 8 or 0)
       + (o.burning and 16 or 0)
@@ -176,6 +190,7 @@ function Snap.encode(world, events)
         lx, ly = px, py
       end
     end
+    end
   end
   local effects = world.effects or {}
   add("<B", math.min(#effects, 255))
@@ -184,6 +199,9 @@ function Snap.encode(world, events)
     local code = e.type == "pickup" and 1 or e.type == "cloud" and 2 or 3
     add("<BhhBBB", code, i16(e.x), i16(e.y), e.kind or 0, u8(math.max(0, e.life) * 20), u8((e.radius or 0) / 2))
   end
+  local juggSlot = 0
+  for i, p in ipairs(world.players) do if p.isJugg then juggSlot = i end end
+  add("<B", juggSlot)
   local b = world.barrier
   if b then
     add("<Bhhhh", 1, i16(b[1]), i16(b[2]), i16(b[3]), i16(b[4]))
@@ -392,7 +410,9 @@ function Snap.decode(data)
   v.objects = {}
   for i = 1, no2 do
     local flags, x, y, a, s, hp
-    flags, x, y, a, s, hp, pos = unpack("<BhhfBB", raw, pos)
+    flags, pos = unpack("<B", raw, pos)
+    if flags ~= 32 then
+    x, y, a, s, hp, pos = unpack("<hhfBB", raw, pos)
     local rot
     if math.floor(flags / 2) % 2 == 1 then
       rot, pos = unpack("<h", raw, pos)
@@ -419,6 +439,9 @@ function Snap.decode(data)
     end
     v.objects[i] = { alive = flags % 2 == 1, anchored = math.floor(flags / 4) % 2 == 1, x = x, y = y, a = a, s = s,
       hp = hp / 255, rot = rot, pts = pts, burning = math.floor(flags / 16) % 2 == 1 }
+    else
+      v.objects[i] = { same = true }
+    end
   end
   local nfx
   nfx, pos = unpack("<B", raw, pos)
@@ -429,6 +452,7 @@ function Snap.decode(data)
     v.effects[i] = { type = kind == 1 and "pickup" or kind == 2 and "cloud" or "strike", x = x, y = y, kind = k,
       life = life / 20, max = 0.75, radius = rad * 2 }
   end
+  v.juggSlot, pos = unpack("<B", raw, pos)
   local hasBarrier
   hasBarrier, pos = unpack("<B", raw, pos)
   if hasBarrier == 1 then

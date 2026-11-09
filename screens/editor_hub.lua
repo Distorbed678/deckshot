@@ -97,6 +97,7 @@ function Hub:drawMaps()
   local s = self.sel
   local acts = {
     { "New Map", true, function() app.switch(require("screens.editor_map").new()) end },
+    { "Community", not require("core.platform").web, function() app.switch(require("screens.community").new("maps")) end },
     { "Edit", s ~= nil, function() app.switch(require("screens.editor_map").new({ map = s })) end },
     { "Duplicate", s ~= nil, function()
       local copy = Map.parse(Map.serialize(s))

@@ -9,6 +9,11 @@ local Practice = {}
 local function start(kind, opts)
   local Map = require "game.map"
   local map = Map.byId.open_field or Map.list[1]
+  if opts.tutorial then
+    -- The tutorial has its own small arena with something to shove, cut down and break.
+    map = Map.parse(love.filesystem.read("data/maps/tutorial.txt")) or map
+    map.index = 0
+  end
   return require("screens.match").newLocal(99, {
     setup = { { kind = kind, color = 1, team = 1 }, { kind = "dummy", color = 2, team = 2 } },
     map = map, practice = true, tutorial = opts.tutorial, tutorialReturn = opts.tutorialReturn,

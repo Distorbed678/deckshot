@@ -1,0 +1,18 @@
+deckshot-map 4
+name Crate Yard
+theme foundry
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+oneway 264 564 216 14
+oneway 1056 564 216 14
+oneway 648 432 240 14
+obj block drop=0.08 h=48 hp=60 id=1 material=crate onBreak=pickup physics=true w=48 x=648 y=696
+obj block drop=0.08 h=48 hp=60 id=2 material=crate onBreak=pickup physics=true w=48 x=696 y=696
+obj block drop=0.08 h=48 hp=60 id=3 material=crate onBreak=pickup physics=true w=48 x=840 y=696
+obj block drop=0.08 h=48 hp=60 id=4 material=crate onBreak=pickup physics=true w=48 x=888 y=696
+obj block drop=0.08 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=672 y=648
+obj block drop=0.08 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=864 y=648
+obj block damage=55 h=48 hp=30 id=7 material=barrel onBreak=explode physics=true radius=110 w=36 x=762 y=696

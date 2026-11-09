@@ -6,6 +6,7 @@ function presence.set(text)
   presence.last = text
   local steam = require "online.steam"
   if steam.available then pcall(require("online.session").setPresence, text) end
+  pcall(require("online.discord").set, "Deckshot", text)
 end
 
 return presence

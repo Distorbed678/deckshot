@@ -1,0 +1,19 @@
+deckshot-map 4
+name Lava Rise
+theme foundry
+spawn 300 592
+spawn 1200 592
+spawn 960 592
+spawn 660 472
+rect 96 804 1344 60
+rect 216 640 240 18
+rect 1080 640 240 18
+rect 540 520 240 18
+rect 864 640 240 18
+oneway 660 300 216 14
+obj liquid buoyant=false burn=true color=#FF5A1A damage=30 density=2 h=60 id=1 w=1344 x=96 y=744
+obj block back=6 crumble=true delay=0.8 h=18 id=2 material=stone w=216 x=216 y=400
+obj block back=6 crumble=true delay=0.8 h=18 id=3 material=stone w=216 x=864 y=400
+obj block back=6 crumble=true delay=0.8 h=18 id=4 material=stone w=216 x=1080 y=400
+obj block back=6 crumble=true delay=0.8 h=18 id=5 material=stone w=216 x=540 y=640
+obj block back=6 crumble=true delay=0.8 h=18 id=6 material=stone w=216 x=540 y=400

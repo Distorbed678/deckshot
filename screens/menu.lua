@@ -103,7 +103,9 @@ function Menu:draw()
   y = y + 64
   if ui.button("Online Play", x, y, w, h) then app.switch(require("screens.online").new()) end
   y = y + 64
-  if ui.button("Customize", x, y, w, h) then app.switch(require("screens.customize").new()) end
+  local third = platform.web and w or (w * 0.6 - 5)
+  if ui.button("Customize", x, y, third, h) then app.switch(require("screens.customize").new()) end
+  if not platform.web and ui.button("Replays", x + third + 10, y, w - third - 10, h) then app.switch(require("screens.replays").new()) end
   y = y + 64
   if ui.button("How to Play", x, y, w, h) then app.switch(require("screens.howtoplay").new()) end
   y = y + 64
