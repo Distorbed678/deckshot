@@ -7,6 +7,7 @@ local Glyphs = { device = "keys", joystick = nil }
 
 function Glyphs.use(device, joystick)
   Glyphs.device = device
+  require("core.ui").hideFocus = device == "touch"
   if joystick then Glyphs.joystick = joystick end
 end
 

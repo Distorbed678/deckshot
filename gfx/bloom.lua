@@ -19,8 +19,9 @@ vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
 ]]
 
 function Bloom.load(w, h)
-  canvasA = love.graphics.newCanvas(w * SCALE, h * SCALE)
-  canvasB = love.graphics.newCanvas(w * SCALE, h * SCALE)
+  local format = require("core.platform").canvasFormat()
+  canvasA = love.graphics.newCanvas(w * SCALE, h * SCALE, { format = format })
+  canvasB = love.graphics.newCanvas(w * SCALE, h * SCALE, { format = format })
   shader = love.graphics.newShader(BLUR)
 end
 

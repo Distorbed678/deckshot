@@ -256,7 +256,19 @@ function Recap.update(m)
   if m.recapShot ~= 2 then return end
   m.recapShot = nil
   local ok, png = pcall(function()
-    local data = app.canvas:newImageData()
+    local source = app.canvas
+    if source:getFormat() == "rgba16f" then -- browsers can't read these back directly
+      local plain = love.graphics.newCanvas(source:getPixelWidth(), source:getPixelHeight(), { dpiscale = 1 })
+      love.graphics.push("all")
+      love.graphics.origin()
+      love.graphics.setCanvas(plain)
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.setBlendMode("alpha", "premultiplied")
+      love.graphics.draw(source, 0, 0, 0, source:getDPIScale(), source:getDPIScale())
+      love.graphics.pop()
+      source = plain
+    end
+    local data = source:newImageData()
     -- Browsers can give a 16-bit canvas, and encoding one as PNG hangs: copy it to 8-bit first.
     if data:getFormat() ~= "rgba8" then
       local src = data

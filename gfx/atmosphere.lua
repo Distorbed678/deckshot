@@ -64,7 +64,7 @@ local cache = {}
 local function bake(name, t)
   local c = cache[name]
   if c then return c end
-  c = { far = love.graphics.newCanvas(800, 450), near = (not platform.web) and love.graphics.newCanvas(800, 450) or nil }
+  c = { far = love.graphics.newCanvas(800, 450, { format = platform.canvasFormat() }), near = (not platform.web) and love.graphics.newCanvas(800, 450) or nil }
   love.graphics.push("all")
   love.graphics.origin()
   love.graphics.setScissor()

@@ -85,9 +85,10 @@
 
   <script>
     var stage = document.getElementById("stage");
-    // Sharp on high-density screens, but no more than 2x so phones keep their frame rate.
+    // Sharp on high-density screens: phones get up to 3x, and big desktop screens stop at 2x.
     // (SDL reads this value too, so capping it here keeps the page and the game in step.)
-    if (window.devicePixelRatio > 2) Object.defineProperty(window, "devicePixelRatio", { get: function () { return 2; } });
+    var dprCap = window.matchMedia("(pointer: coarse)").matches ? 3 : 2;
+    if (window.devicePixelRatio > dprCap) Object.defineProperty(window, "devicePixelRatio", { get: function () { return dprCap; } });
     var canvas = document.getElementById("canvas");
     var loading = document.getElementById("loading");
 
@@ -130,8 +131,12 @@
       }
       syncing = false;
     }
-    if (window.ResizeObserver) new ResizeObserver(syncCanvasSize).observe(canvas);
-    window.addEventListener("resize", syncCanvasSize);
+    // Phones finish moving things around a moment after they rotate or hide the address bar.
+    function syncSoon() { syncCanvasSize(); setTimeout(syncCanvasSize, 120); setTimeout(syncCanvasSize, 500); }
+    if (window.ResizeObserver) new ResizeObserver(syncSoon).observe(document.getElementById("stage"));
+    window.addEventListener("resize", syncSoon);
+    window.addEventListener("orientationchange", syncSoon);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", syncSoon);
     // Our Fullscreen button only enlarges the page's game area. SDL (inside love.js) would treat
     // any fullscreen change as its own and then stop following the canvas size, so the event is
     // stopped before it reaches SDL's listener on `document`; the resize handling above does the rest.

@@ -118,7 +118,7 @@ function Screen:draw()
 
   if self.tab < 5 then
     love.graphics.setColor(self.tip and ui.GOLD or { 1, 1, 1, 0.5 })
-    ui.printFit(self.tip or "Hover a locked item to see how to earn it", app.fonts.med, x, 626, w, "center")
+    ui.printFit(self.tip or "Hover over or tap a locked item to see how to earn it", app.fonts.med, x, 626, w, "center")
   end
   if ui.button("Back", app.W / 2 - 150, 660, 300, 46, { back = true }) then toMenu() end
   Achievements.draw()

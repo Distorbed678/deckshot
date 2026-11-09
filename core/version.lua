@@ -3,9 +3,11 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.3",
+  VERSION = "0.5.4",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Phones: sharper picture, full colour in the browser, and the pause button no longer covers the round timer.",
+    "Fixed: keyboard outlines showing on touch screens, and an empty tutorial panel during the countdown.",
     "The browser version is sharp on phones and scaled displays.",
     "Browser players can join your game from outside your network through a free https tunnel. See the README.",
     "Teams are picked by colour now: the same colour is the same team, and the host sets the max team size.",

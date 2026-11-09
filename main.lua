@@ -139,8 +139,8 @@ function love.wheelmoved(x, y)
   app.wheelmoved(x, y)
 end
 
-function love.mousemoved(x, y, dx, dy)
-  if math.abs(dx or 0) + math.abs(dy or 0) > 2 then Glyphs.use("keys") end
+function love.mousemoved(x, y, dx, dy, istouch)
+  if not istouch and math.abs(dx or 0) + math.abs(dy or 0) > 2 then Glyphs.use("keys") end
   app.mousemoved()
 end
 
@@ -154,6 +154,7 @@ end
 
 -- Touch: drives the touch controls; touches also arrive as mouse clicks for menus.
 function love.touchpressed(id, x, y)
+  Glyphs.use("touch")
   local Touch = require "core.touch"
   local first = not Touch.enabled
   Touch.pressed(id, x, y)

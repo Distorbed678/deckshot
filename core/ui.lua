@@ -109,7 +109,7 @@ local function widget(x, y, w, h)
   local mx, my = app().mouse()
   local over = mx >= x and mx <= x + w and my >= y and my <= y + h and inClip(mx, my)
   if over and ui.mouseMoved then ui.focus = id end
-  local focused = ui.focus == id
+  local focused = ui.focus == id and not ui.hideFocus -- no keyboard outline for fingers
   -- Keyboard / gamepad navigation brings the focused widget into view.
   local c = ui.clip
   if focused and keyMoved and c then

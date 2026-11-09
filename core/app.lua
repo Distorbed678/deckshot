@@ -2,6 +2,7 @@
 -- Everything is laid out in 1280x720 units but rendered at the window's real resolution:
 -- the canvas and fonts use a DPI scale equal to the window / virtual scale, so text and
 -- shapes stay sharp at any window size instead of being stretched up from 1280x720.
+local platform = require "core.platform"
 local ui = require "core.ui"
 
 local app = {
@@ -35,10 +36,11 @@ local function buildTargets(s)
     app.fonts[name] = newFont(name, math.floor(size * app.textScale + 0.5), s)
   end
   if app.canvas then app.canvas:release() end
-  local ok, canvas = pcall(love.graphics.newCanvas, app.W, app.H, { msaa = 4, dpiscale = s })
-  app.canvas = ok and canvas or love.graphics.newCanvas(app.W, app.H, { dpiscale = s })
+  local format = platform.canvasFormat()
+  local ok, canvas = pcall(love.graphics.newCanvas, app.W, app.H, { msaa = 4, dpiscale = s, format = format })
+  app.canvas = ok and canvas or love.graphics.newCanvas(app.W, app.H, { dpiscale = s, format = format })
   if app.transCanvas then app.transCanvas:release() end
-  app.transCanvas = love.graphics.newCanvas(app.W, app.H, { dpiscale = s })
+  app.transCanvas = love.graphics.newCanvas(app.W, app.H, { dpiscale = s, format = format })
   app.trans = nil
 end
 

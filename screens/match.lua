@@ -1442,6 +1442,7 @@ end
 function Match:drawTutorial()
   local tu = self.tutorial
   if not tu or self.paused or self.cardChooser then return end
+  if not tu.done and not (tu.steps and tu.steps[tu.step]) then return end -- still counting down
   local x, y, w, h = app.W / 2 - 300, 170, 600, 104
   ui.panel(x, y, w, h, 0.92)
   if tu.done then
