@@ -3,9 +3,10 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.5",
+  VERSION = "0.5.6",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Fixed: spaces can be typed in chat and other text boxes in the browser version.",
     "Touch: pushing the move stick up no longer jumps, so use the Jump button.",
     "Touch: the pause button is now in the top right corner.",
     "Phones: sharper picture, full colour in the browser, and the pause button no longer covers the round timer.",
