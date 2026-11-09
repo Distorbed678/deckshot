@@ -3,9 +3,11 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.2",
+  VERSION = "0.5.3",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "The browser version is sharp on phones and scaled displays.",
+    "Browser players can join your game from outside your network through a free https tunnel. See the README.",
     "Teams are picked by colour now: the same colour is the same team, and the host sets the max team size.",
     "Friendly fire works in every mode and lets your own bullets and blasts hurt you.",
     "Voice chat for Steam and LAN. It's off until you turn it on in Settings > Audio.",

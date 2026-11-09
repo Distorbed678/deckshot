@@ -127,7 +127,7 @@ Steam invites also work, but only if the friend already has the game open. The g
 
 1. The host presses **Host LAN Game**. The lobby shows the host's address (e.g. `192.168.1.20`), a browser link (e.g. `http://192.168.1.20:27960`) and a QR code of that link for phones.
 2. Desktop players open **Online Play → LAN**. Games on the network appear in the list; press **Join**, or type the host's address.
-3. Browser players open the host's browser link in any browser on the network, then choose **Online Play → LAN → Join Game**. The desktop host serves the browser version itself, so this works without internet access. (The GitHub Pages site can't join LAN games: browsers don't let a page from the internet connect to computers on your network.)
+3. Browser players open the host's browser link in any browser on the network, then choose **Online Play → LAN → Join Game**. The desktop host serves the browser version itself, so this works without internet access. (The GitHub Pages site can't join these games, because it has no host behind it.)
 4. The host presses **Start Match** once at least 2 players are in. People can join at any time (during a match they watch until the next one), and a player who loses the connection is reconnected automatically within a minute.
 
 Notes:
@@ -135,6 +135,19 @@ Notes:
 - The first time you host, Windows may ask whether to let the game through the firewall. Allow it on **private networks**. Only hosting needs this: joining never triggers the prompt.
 - Everyone needs the **same game version** as the host.
 - Only desktop players can host. Browsers can only join.
+
+</details>
+
+<details>
+<summary><b>Over the internet without Steam (phones and browsers)</b></summary>
+
+Friends on other networks can join from any browser, with no port forwarding and nothing for them to install. Everyone needs the same version as the host.
+
+1. The host installs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and presses **Online Play → LAN → Host LAN Game**.
+2. The host runs `cloudflared tunnel --url http://localhost:27960` (use the port the lobby shows) and sends friends the `https://….trycloudflare.com` link it prints. The link changes every time.
+3. Friends open the link and choose **Online Play → LAN → Join Game**.
+
+Traffic goes through Cloudflare, so expect more delay than on a real LAN. Browser players can't use voice chat.
 
 </details>
 

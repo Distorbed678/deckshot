@@ -85,6 +85,9 @@
 
   <script>
     var stage = document.getElementById("stage");
+    // Sharp on high-density screens, but no more than 2x so phones keep their frame rate.
+    // (SDL reads this value too, so capping it here keeps the page and the game in step.)
+    if (window.devicePixelRatio > 2) Object.defineProperty(window, "devicePixelRatio", { get: function () { return 2; } });
     var canvas = document.getElementById("canvas");
     var loading = document.getElementById("loading");
 
@@ -100,15 +103,32 @@
     var started = false, syncing = false;
     function syncCanvasSize() {
       if (!started || syncing) return;
+      syncing = true;
+      // Measure what the stylesheet wants, then snap to a whole number of screen pixels with an
+      // exact 16:9 shape, so the browser never has to stretch the picture.
+      canvas.style.width = canvas.style.height = "";
       var r = canvas.getBoundingClientRect();
-      var w = Math.round(r.width), h = Math.round(r.height);
-      if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
-        canvas.width = w;
-        canvas.height = h;
-        syncing = true;
-        window.dispatchEvent(new Event("resize"));
-        syncing = false;
+      var dpr = window.devicePixelRatio || 1;
+      // SDL works in whole CSS pixels too, which matters on 125% or 150% displays.
+      var css = Math.floor(r.width), w = 0, h = 0;
+      for (var c = css; c > css - 80 && c > 0; c--) {
+        var bw = c * dpr, bh = bw * 9 / 16;
+        if (Math.abs(bw - Math.round(bw)) < 1e-6 && Math.round(bw) % 16 === 0 && Math.abs(bh / dpr - Math.round(bh / dpr)) < 1e-6) {
+          w = Math.round(bw); h = Math.round(bh);
+          break;
+        }
       }
+      if (!w) { w = Math.floor(r.width * dpr / 16) * 16; h = w * 9 / 16; } // an unusual zoom level: get as close as we can
+      if (w > 0 && h > 0) {
+        canvas.style.width = (w / dpr) + "px";
+        canvas.style.height = (h / dpr) + "px";
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+          window.dispatchEvent(new Event("resize"));
+        }
+      }
+      syncing = false;
     }
     if (window.ResizeObserver) new ResizeObserver(syncCanvasSize).observe(canvas);
     window.addEventListener("resize", syncCanvasSize);
@@ -135,10 +155,10 @@
     // command rewrites /tmp/rclan.bin in the game's in-memory filesystem with the connection state
     // and every message not yet acknowledged: [u8 state][u32 first seq][u16 detail length][detail]
     // then [u32 length][bytes] per message. States: 0 idle, 1 connecting, 2 open, 3 closed,
-    // 4 unavailable. LAN games are joined on the desktop host that served this page, which only
-    // works over http:// (browsers block ws:// from an https:// page).
+    // 4 unavailable. LAN games are joined on the desktop host that served this page, directly or
+    // through an https tunnel (which needs wss://). GitHub Pages has no host behind it.
     var lan = { ws: null, state: 0, detail: "", queue: [], firstSeq: 1, ping: null };
-    var lanAvailable = location.protocol === "http:";
+    var lanAvailable = !/\.github\.io$/.test(location.hostname);
     var LAN_PING = 204; // keeps the host from timing us out while this tab is in the background
 
     function lanReset(state, detail) {
@@ -152,7 +172,7 @@
       lanReset(1, "");
       lan.firstSeq = 1;
       if (!lanAvailable) { lan.state = 4; lan.detail = "This page can't join LAN games"; return; }
-      var ws = new WebSocket("ws://" + location.host + "/lan");
+      var ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/lan");
       ws.binaryType = "arraybuffer";
       ws.onopen = function () {
         lan.state = 2;

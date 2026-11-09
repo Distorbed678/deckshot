@@ -8,6 +8,7 @@ function love.conf(t)
   t.window.minwidth = 640
   t.window.minheight = 360
   t.window.vsync = 1
+  if love._os == "Web" then t.window.highdpi = true end -- draw at the screen's real pixel density
 
   -- Start Steam before the window exists so the Steam overlay (invite dialog) can hook in.
   -- Any failure just leaves online play unavailable.

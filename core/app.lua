@@ -106,10 +106,15 @@ end
 ---------------------------------------------------------------- coordinates
 function app.updateViewport()
   local ww, wh = love.graphics.getDimensions()
-  app.scale = math.min(ww / app.W, wh / app.H)
-  app.ox = math.floor((ww - app.W * app.scale) / 2)
-  app.oy = math.floor((wh - app.H * app.scale) / 2)
-  local s = math.max(0.5, app.scale)
+  local dpi = love.graphics.getDPIScale()
+  -- Whole pixels only (16:9 needs a multiple of 16 across), so the frame lands on the screen
+  -- pixel for pixel. Anything in between gets resampled, and that's what looks blurry.
+  local best = math.min(ww * dpi / app.W, wh * dpi / app.H)
+  local pixelW = math.max(16, math.floor(app.W * best / 16) * 16)
+  app.scale = pixelW / app.W / dpi
+  app.ox = math.floor((ww * dpi - pixelW) / 2) / dpi
+  app.oy = math.floor((wh * dpi - pixelW * app.H / app.W) / 2) / dpi
+  local s = math.max(0.5, app.scale * dpi)
   if not app.renderScale or math.abs(s - app.renderScale) > 0.001 then buildTargets(s) end
 end
 
