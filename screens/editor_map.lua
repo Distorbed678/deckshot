@@ -1275,6 +1275,7 @@ local function thumb(item)
     o.physics = nil
     list = Objects.build({ name = "t", rects = {}, objects = { o } })
     list[1].s = (o.type == "flame" or o.type == "laser") and 2 or list[1].s
+    if o.type == "crusher" then list[1].top = list[1].y + 380 end -- only a stub of its long shaft
   end
   thumbs[item] = list or false
   return thumbs[item]
