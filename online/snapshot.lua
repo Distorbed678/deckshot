@@ -154,9 +154,28 @@ function Snap.encode(world, events)
   add("<B", math.min(#objs, 255))
   for i = 1, math.min(#objs, 255) do
     local o = objs[i]
-    local flags = (o.alive and 1 or 0) + (o.falling and 2 or 0)
+    local pts = o.type == "rope" and o.pts
+    local flags = (o.alive and 1 or 0) + (o.rot and 2 or 0) + (o.anchored and 4 or 0) + (pts and 8 or 0)
+      + (o.burning and 16 or 0)
     local hpFrac = o.maxHp and o.maxHp > 0 and u8(255 * math.max(0, o.hp or 0) / o.maxHp) or 255
     add("<BhhfBB", flags, i16(o.x), i16(o.y), o.angle or o.a or 0, u8(o.s), hpFrac)
+    if o.rot then add("<h", i16(((o.rot + math.pi) % (math.pi * 2) - math.pi) * 10000)) end
+    if pts then
+      -- Rope points as small steps from the last one; -128 marks a fresh position (a break, or a long stretch).
+      add("<B", math.min(#pts, 255))
+      local lx, ly = 0, 0
+      for k = 1, math.min(#pts, 255) do
+        local p = pts[k]
+        local px, py = math.floor(p[1] + 0.5), math.floor(p[2] + 0.5)
+        local dx, dy = px - lx, py - ly
+        if k == 1 or p[3] or math.abs(dx) > 120 or math.abs(dy) > 120 then
+          add("<bbhh", -128, p[3] and 1 or 0, i16(px), i16(py))
+        else
+          add("<bb", dx, dy)
+        end
+        lx, ly = px, py
+      end
+    end
   end
   local effects = world.effects or {}
   add("<B", math.min(#effects, 255))
@@ -374,7 +393,32 @@ function Snap.decode(data)
   for i = 1, no2 do
     local flags, x, y, a, s, hp
     flags, x, y, a, s, hp, pos = unpack("<BhhfBB", raw, pos)
-    v.objects[i] = { alive = flags % 2 == 1, falling = flags >= 2, x = x, y = y, a = a, s = s, hp = hp / 255 }
+    local rot
+    if math.floor(flags / 2) % 2 == 1 then
+      rot, pos = unpack("<h", raw, pos)
+      rot = rot / 10000
+    end
+    local pts
+    if math.floor(flags / 8) % 2 == 1 then
+      local np
+      np, pos = unpack("<B", raw, pos)
+      pts = {}
+      local lx, ly = 0, 0
+      for k = 1, np do
+        local dx, dy
+        dx, dy, pos = unpack("<bb", raw, pos)
+        local gap
+        if dx == -128 then
+          gap = dy == 1 or nil
+          lx, ly, pos = unpack("<hh", raw, pos)
+        else
+          lx, ly = lx + dx, ly + dy
+        end
+        pts[k] = { lx, ly, gap }
+      end
+    end
+    v.objects[i] = { alive = flags % 2 == 1, anchored = math.floor(flags / 4) % 2 == 1, x = x, y = y, a = a, s = s,
+      hp = hp / 255, rot = rot, pts = pts, burning = math.floor(flags / 16) % 2 == 1 }
   end
   local nfx
   nfx, pos = unpack("<B", raw, pos)

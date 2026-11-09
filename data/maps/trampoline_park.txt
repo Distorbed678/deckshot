@@ -20,6 +20,6 @@ obj spikes damage=30 dir=down h=18 w=192 x=672 y=240
 obj platform h=18 speed=90 w=120 x=72 y=240 path=72,240;72,144
 obj platform h=18 speed=90 w=120 x=1344 y=240 path=1344,240;1344,144
 obj gas h=42 w=28 x=474 y=702
-obj gas h=42 w=28 x=1034 y=702
+obj gas h=42 w=28 x=1016 y=702
 obj saw damage=25 r=24 speed=0 x=704 y=738
 obj saw damage=25 r=24 speed=0 x=832 y=738

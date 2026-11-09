@@ -5,7 +5,7 @@ local Map = {}
 -- by Map.VIEW so it fits the 1280x720 screen (menus and the HUD are not scaled).
 Map.W, Map.H = 1536, 864
 Map.VIEW = 1280 / Map.W
-Map.FORMAT = 2
+Map.FORMAT = 4
 local OLD_SCALE = 1.2 -- format 1 maps were made for a 1280x720 arena
 
 -- Used if no map files are found (shouldn't happen in a release build).
@@ -18,7 +18,8 @@ Map.FALLBACK = {
 
 ---------------------------------------------------------------- map files
 -- Every map is a small text file in the editor's format:
---   deckshot-map 2           (format 1 = the old 1280x720 arena, spread out when loaded)
+--   deckshot-map 3           (format 1 = the old 1280x720 arena, spread out when loaded;
+--                             before format 3, floating objects are anchored when loaded)
 --   name <name>
 --   theme <name>             (optional background: see gfx/atmosphere.lua)
 --   spawn <x> <y>            (4 lines, spawns 1-4 in order)
@@ -95,6 +96,177 @@ function Map.upgrade(map)
   end
 end
 
+-- Before format 3 only crates, barrels and gas cans fell. Everything else stayed where it was
+-- put, so whatever a map left floating or sunk into terrain gets an anchor to keep the layout.
+local BOXES = { wall = { 40, 120 }, plank = { 100, 14 }, glass = { 16, 120 }, spikes = { 80, 16 }, crate = { 50, 50 },
+  barrel = { 36, 48 }, gas = { 28, 42 }, crumble = { 120, 18 }, platform = { 120, 18 }, conveyor = { 200, 20 },
+  crusher = { 120, 60 } }
+local ROUND = { saw = 28, weight = 26, turret = 18 }
+local NEWLY_LOOSE = { wall = true, plank = true, glass = true, spikes = true, saw = true, weight = true, turret = true }
+
+local function objectBox(o)
+  local size = BOXES[o.type]
+  if size then return o.x, o.y, o.w or size[1], o.h or size[2] end
+  local r = o.r or ROUND[o.type]
+  if r then return o.x - r, o.y - r, r * 2, r * 2 end
+end
+
+function Map.anchorFloating(map)
+  local held = {}
+  for _, o in ipairs(map.objects) do
+    if o.type == "rope" and o.target then held[o.target] = true end
+  end
+  local supports = {}
+  for _, r in ipairs(map.rects) do supports[#supports + 1] = { x = r.x, y = r.y, w = r.w, h = r.h, terrain = true } end
+  for _, o in ipairs(map.objects) do
+    local x, y, w, h = objectBox(o)
+    if x and BOXES[o.type] and o.type ~= "spikes" then supports[#supports + 1] = { x = x, y = y, w = w, h = h, ref = o } end
+  end
+  for i, o in ipairs(map.objects) do
+    if NEWLY_LOOSE[o.type] and not held[i] and not (o.path and #o.path >= 2) then
+      local x, y, w, h = objectBox(o)
+      local resting, sunk = false, false
+      for _, b in ipairs(supports) do
+        if b.ref ~= o then
+          if Map.overlaps(x + 2, y + h - 1, w - 4, 8, b) then resting = true end
+          if b.terrain and Map.overlaps(x + 8, y + 8, math.max(1, w - 16), math.max(1, h - 16), b) then sunk = true end
+        end
+      end
+      if not resting or sunk or (o.type == "spikes" and (o.dir or "up") ~= "up") then o.anchored = true end
+    end
+  end
+end
+
+-- Format 4 has one Block object with a material and toggles instead of separate crates, walls,
+-- glass, planks, barrels, gas cans, crumbling platforms and conveyors. Blade arms and moving
+-- platforms became plain arms and rails with objects attached, and acid became a liquid.
+-- Objects are referred to by `id` (ropes' `target`, attachments' `parent`) instead of position.
+local BLOCKS = {
+  crate = { material = "crate", hp = 60, drop = 0.08, onBreak = "pickup", physics = true },
+  wall = { material = "brick", hp = 150, physics = true },
+  glass = { material = "glass", hp = 1, physics = true },
+  plank = { material = "wood", hp = 0, physics = true },
+  barrel = { material = "barrel", hp = 30, onBreak = "explode", radius = 110, damage = 55, physics = true },
+  gas = { material = "gas", hp = 20, onBreak = "gas", radius = 110, physics = true },
+  crumble = { material = "stone", crumble = true, delay = 0.5, back = 4 },
+  conveyor = { material = "metal", conveyor = true, speed = 160 },
+}
+local OLD_PHYSICS = { saw = true, weight = true, turret = true, spikes = true }
+
+function Map.convertObjects(map)
+  local list = map.objects
+  local held, nextId = {}, #list + 1
+  for i, o in ipairs(list) do
+    o.id = i
+    if o.type == "rope" and o.target then held[o.target] = true end
+  end
+  local function add(o)
+    o.id = nextId
+    nextId = nextId + 1
+    list[#list + 1] = o
+    return o
+  end
+  local count = #list
+  for i = 1, count do
+    local o = list[i]
+    local b = BLOCKS[o.type]
+    if b then
+      local size = BOXES[o.type]
+      o.w, o.h = o.w or size[1], o.h or size[2]
+      for k, v in pairs(b) do
+        if o[k] == nil then o[k] = v end
+      end
+      o.type = "block"
+    elseif o.type == "acid" then
+      o.type = "liquid"
+      o.color = "#59D934"
+      o.w, o.h = o.w or 200, o.h or 40
+      o.damage = o.damage or 20
+    elseif o.type == "platform" then
+      o.w, o.h = o.w or 120, o.h or 18
+      local path = o.path
+      o.type, o.material, o.path = "block", "metal", nil
+      if path and #path >= 2 then
+        local rail = add({ type = "rail", x = path[1][1], y = path[1][2], path = path, speed = o.speed or 120, loop = o.loop })
+        o.x, o.y = path[1][1] - o.w / 2, path[1][2] - o.h / 2
+        o.parent = rail.id
+      elseif held[i] then
+        o.physics = true
+      end
+      o.speed, o.loop = nil, nil
+    elseif o.type == "arm" then
+      local arm = o
+      local length, count2, r, damage = o.length or 110, o.count or 2, o.r or 22, o.damage or 25
+      for k = 1, count2 do
+        local a = (o.phase or 0) + (k - 1) * math.pi
+        add({ type = "saw", x = o.x + math.cos(a) * length, y = o.y + math.sin(a) * length, r = r, damage = damage, parent = arm.id })
+      end
+      arm.length, arm.r, arm.damage, arm.count = length, nil, nil, count2 == 1 and 1 or nil
+    elseif o.type == "saw" and o.path and #o.path >= 2 then
+      local rail = add({ type = "rail", x = o.path[1][1], y = o.path[1][2], path = o.path, speed = o.speed or 160 })
+      o.x, o.y, o.path, o.speed = rail.x, rail.y, nil, nil
+      o.parent = rail.id
+    elseif OLD_PHYSICS[o.type] and not o.anchored then
+      o.physics = true
+    elseif o.type == "rope" then
+      o.level = true -- old rope bridges stay walkable
+    end
+  end
+end
+
+-- Plain blocks are stored as map rects; everything with a setting stays an object.
+function Map.plainBlock(o)
+  return o.type == "block" and (o.material or "stone") == "stone" and not o.physics and (o.hp or 0) <= 0 and not o.rot
+    and not o.crumble and not o.conveyor and not o.anchored and not o.parent and not o.color
+    and (o.onBreak or "none") == "none"
+end
+
+-- The editor treats every block as an object; rects come back when the map is saved.
+function Map.expandBlocks(map)
+  local nextId = 1
+  for _, o in ipairs(map.objects) do nextId = math.max(nextId, (o.id or 0) + 1) end
+  for _, r in ipairs(map.rects) do
+    map.objects[#map.objects + 1] = { type = "block", material = "stone", id = nextId, x = r.x, y = r.y, w = r.w, h = r.h,
+      oneway = r.oneway }
+    nextId = nextId + 1
+  end
+  map.rects = {}
+end
+
+function Map.compactBlocks(map)
+  local used = {}
+  for _, o in ipairs(map.objects) do
+    if o.target then used[o.target] = true end
+    if o.from then used[o.from] = true end
+    if o.parent then used[o.parent] = true end
+  end
+  local keep = {}
+  for _, o in ipairs(map.objects) do
+    if Map.plainBlock(o) and not used[o.id or -1] then
+      map.rects[#map.rects + 1] = { x = o.x, y = o.y, w = o.w or 48, h = o.h or 48, oneway = o.oneway or nil }
+    else
+      keep[#keep + 1] = o
+    end
+  end
+  map.objects = keep
+  -- Tiles painted side by side become one long block.
+  table.sort(map.rects, function(a, b)
+    if a.y ~= b.y then return a.y < b.y end
+    if a.h ~= b.h then return a.h < b.h end
+    return a.x < b.x
+  end)
+  local merged = {}
+  for _, r in ipairs(map.rects) do
+    local last = merged[#merged]
+    if last and last.y == r.y and last.h == r.h and last.oneway == r.oneway and last.x + last.w == r.x then
+      last.w = last.w + r.w
+    else
+      merged[#merged + 1] = r
+    end
+  end
+  map.rects = merged
+end
+
 -- Text -> map table (or nil, error).
 function Map.parse(text)
   if type(text) ~= "string" then return nil, "no map data" end
@@ -111,6 +283,12 @@ function Map.parse(text)
       map.name = rest ~= "" and rest:sub(1, 40) or "Untitled"
     elseif word == "theme" then
       map.theme = rest ~= "" and rest or nil
+    elseif word == "channel" then
+      local n, c = rest:match("^(%d+)%s+(#%x%x%x%x%x%x)")
+      if n then
+        map.channels = map.channels or {}
+        map.channels[tonumber(n)] = c
+      end
     elseif word == "spawn" then
       local x, y = rest:match("^(%S+)%s+(%S+)")
       if tonumber(x) and tonumber(y) then map.spawns[#map.spawns + 1] = { tonumber(x), tonumber(y) } end
@@ -140,7 +318,9 @@ function Map.parse(text)
     end
   end
   if first then return nil, "empty map" end
-  if format < Map.FORMAT then Map.upgrade(map) end
+  if format < 2 then Map.upgrade(map) end
+  if format < 3 then Map.anchorFloating(map) end
+  if format < 4 then Map.convertObjects(map) end
   while #map.spawns < 4 do map.spawns[#map.spawns + 1] = { Map.W / 2, 360 } end
   map.id = Map.idOf(map.name)
   return map
@@ -150,6 +330,10 @@ end
 function Map.serialize(map)
   local out = { "deckshot-map " .. Map.FORMAT, "name " .. (map.name or "Untitled") }
   if map.theme then out[#out + 1] = "theme " .. map.theme end
+  local channels = {}
+  for n in pairs(map.channels or {}) do channels[#channels + 1] = n end
+  table.sort(channels)
+  for _, n in ipairs(channels) do out[#out + 1] = "channel " .. n .. " " .. map.channels[n] end
   for i = 1, 4 do
     local s = map.spawns[i] or { Map.W / 2, 360 }
     out[#out + 1] = "spawn " .. fmt(s[1]) .. " " .. fmt(s[2])
@@ -363,15 +547,6 @@ end
 
 function Map.overlaps(ax, ay, aw, ah, b)
   return ax < b.x + b.w and ax + aw > b.x and ay < b.y + b.h and ay + ah > b.y
-end
-
--- Returns the first solid rect overlapping the given box, or nil. One-way platforms
--- (rect.oneway) are skipped: only players land on them, from above.
-function Map.hit(rects, x, y, w, h)
-  for _, b in ipairs(rects) do
-    if not b.oneway and Map.overlaps(x, y, w, h, b) then return b end
-  end
-  return nil
 end
 
 Map.loadAll()

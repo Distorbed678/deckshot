@@ -1,4 +1,5 @@
 local Map = require "game.map"
+local Physics = require "game.physics"
 local fx = require "gfx.fx"
 local sfx = require "gfx.sfx"
 
@@ -7,7 +8,6 @@ Bullet.__index = Bullet
 
 local function objects() return require "game.objects" end
 
-local GRAVITY = 1800
 local MAX_SPEED = 3200
 local LASER_SPEED = 2000
 local LASER_RANGE = 2600
@@ -197,19 +197,8 @@ function Bullet:update(dt, game)
     end
   end
 
-  self.vy = self.vy + GRAVITY * self.gravity * dt
-
-  -- Sub-step so fast bullets don't tunnel through thin platforms.
-  local dist = math.sqrt(self.vx * self.vx + self.vy * self.vy) * dt
-  local steps = math.max(1, math.ceil(dist / 6))
-  local sdt = dt / steps
-  for _ = 1, steps do
-    self:step(sdt, game)
-    if self.dead or self.mine then return end
-  end
-
-  table.insert(self.trail, 1, { self.x, self.y })
-  if #self.trail > 6 then table.remove(self.trail) end
+  -- Box2D moves it from here (world gravity, continuous collision); see Bullet:afterStep.
+  self.stepDt = dt
 end
 
 -- Lasers trace their whole path on the first frame, then linger briefly as a beam.
@@ -228,7 +217,7 @@ function Bullet:updateLaser(dt, game)
   local sdt = 5 / LASER_SPEED
   local n = 0
   while not self.dead and self.travel < LASER_RANGE and n < 2000 do
-    self:step(sdt, game)
+    self:traceStep(sdt, game)
     n = n + 1
   end
   table.insert(self.points, { self.x, self.y })
@@ -256,73 +245,98 @@ function Bullet:updateMine(dt, game)
   end
 end
 
-function Bullet:step(dt, game)
-  local r = self.r
-  local rects = game.solids or game.map.rects
-  local mx, my = self.vx * dt, self.vy * dt
-  self.travel = self.travel + math.sqrt(mx * mx + my * my)
+-- Can this bullet hit p right now?
+function Bullet:canHit(p, game)
+  -- A bullet can only hit its own shooter after it has bounced, or with friendly fire once it's clear of the gun.
+  return not p.dead and not (self.hitSet and self.hitSet[p])
+    and (p ~= self.owner or ((self.bounced or (game.rules and game.rules.friendlyFire)) and self.age > 0.15))
+    and (p == self.owner or not game.isEnemy or game:isEnemy(self.owner, p))
+end
 
-  self.x = self.x + mx
-  local hx = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
-  if hx then
-    self.lastSolid = hx
-    if hx.isObject and not self.ghost then objects().bulletHitSolid(game, hx, self) end
-    if self.ghost then
-      self.phased = true -- passed through a wall (Ghost Bullets bonus)
-    else
-      self.x = self.x - mx
-      self.vx = -self.vx
-      if not self:bounce(game, mx > 0 and math.pi or 0) then return end
-    end
-  end
+-- Box2D found this bullet touching something solid (it has already bounced).
+function Bullet:onSolid(game, solid, nx, ny)
+  self.lastSolid = solid
+  if solid.isObject then objects().bulletHitSolid(game, solid, self) end
+  self:bounce(game, math.atan2(ny, nx))
+end
 
-  self.y = self.y + my
-  local hy = Map.hit(rects, self.x - r, self.y - r, r * 2, r * 2)
-  if hy then
-    self.lastSolid = hy
-    if hy.isObject and not self.ghost then objects().bulletHitSolid(game, hy, self) end
-    if self.ghost then
-      self.phased = true
-    else
-      self.y = self.y - my
-      self.vy = -self.vy
-      if not self:bounce(game, my > 0 and -math.pi / 2 or math.pi / 2) then return end
-    end
-  end
+-- Box2D found this bullet touching a player.
+function Bullet:onPlayer(game, p)
+  if self:canHit(p, game) then self:hitPlayer(p, game) end
+end
 
+-- After a physics step: things Box2D doesn't simulate (ropes, turrets, pads, bounds) and the trail.
+function Bullet:afterStep(game)
+  local dx, dy = self.x - (self.prevX or self.x), self.y - (self.prevY or self.y)
+  local dist = math.sqrt(dx * dx + dy * dy)
+  self.travel = self.travel + dist
   if self.x < -200 or self.x > Map.W + 200 or self.y > Map.H + 180 or self.y < -600 then
     self.dead = true
     return
   end
-
-  if game.objects and objects().bulletTouch(game, self) then
-    self.dead = true
-    self:impact(game)
-    return
-  end
-
-  for _, p in ipairs(game.players) do
-    -- A bullet can only hit its own shooter after it has bounced, or with friendly fire once it's clear of the gun.
-    if not p.dead and not (self.hitSet and self.hitSet[p])
-        and (p ~= self.owner or ((self.bounced or (game.rules and game.rules.friendlyFire)) and self.age > 0.15))
-        and (p == self.owner or not game.isEnemy or game:isEnemy(self.owner, p)) then
-      local dx, dy = p.x - self.x, p.y - self.y
-      local reach = p.r + r
-      if p:isBlocking() then reach = p.r + 14 + r end
-      if dx * dx + dy * dy < reach * reach then
-        self:hitPlayer(p, game)
+  if game.objects then
+    local x1, y1 = self.x, self.y
+    local steps = math.max(1, math.ceil(dist / 6))
+    for i = 1, steps do
+      self.x, self.y = x1 - dx * (steps - i) / steps, y1 - dy * (steps - i) / steps
+      if objects().bulletTouch(game, self) then
+        self.dead = true
+        self:impact(game)
         return
       end
     end
   end
+  Physics.ropeHits(game, self, self.prevX or self.x, self.prevY or self.y)
+  table.insert(self.trail, 1, { self.x, self.y })
+  if #self.trail > 6 then table.remove(self.trail) end
 end
 
-local IMPACT_SOUNDS = { crate = "impactWood", plank = "impactWood", barrel = "impactWood", wall = "impactWood",
-  glass = "impactGlass", platform = "impactMetal", conveyor = "impactMetal", crusher = "impactMetal", gas = "impactMetal" }
+-- One short stretch of a laser's path, traced with Box2D rays.
+function Bullet:traceStep(dt, game)
+  local mx, my = self.vx * dt, self.vy * dt
+  self.travel = self.travel + math.sqrt(mx * mx + my * my)
+  Physics.ropeHits(game, self, self.x, self.y, self.x + mx, self.y + my)
+  local hit, hx, hy, nx, ny = Physics.ray(game, self.x, self.y, self.x + mx, self.y + my, function(ud)
+    if not ud then return false end
+    if ud.kind == "hitbox" then return self:canHit(ud.p, game) end
+    if ud.kind or ud.oneway then return false end
+    return (ud.solid or not ud.type) and not self.ghost
+  end)
+  if hit and hit.kind == "hitbox" then
+    self.x, self.y = hx, hy
+    self:hitPlayer(hit.p, game)
+    return
+  end
+  if hit then
+    self.lastSolid = hit
+    if hit.isObject then objects().bulletHitSolid(game, hit, self) end
+    self.x, self.y = hx + nx * 0.5, hy + ny * 0.5
+    local vn = self.vx * nx + self.vy * ny
+    if vn < 0 then self.vx, self.vy = self.vx - 2 * vn * nx, self.vy - 2 * vn * ny end
+    if not self:bounce(game, math.atan2(ny, nx)) then return end
+  else
+    self.x, self.y = self.x + mx, self.y + my
+    if self.ghost and Physics.hit(game, self.x - 1, self.y - 1, 2, 2) then
+      self.phased = true -- passed through a wall (Ghost Bullets bonus)
+      self.lastSolid = Physics.hit(game, self.x - 1, self.y - 1, 2, 2)
+    end
+  end
+  if self.x < -200 or self.x > Map.W + 200 or self.y > Map.H + 180 or self.y < -600 then
+    self.dead = true
+    return
+  end
+  if game.objects and objects().bulletTouch(game, self) then
+    self.dead = true
+    self:impact(game)
+  end
+end
+
+local IMPACT_SOUNDS = { crate = "impactWood", wood = "impactWood", barrel = "impactWood", brick = "impactWood",
+  glass = "impactGlass", metal = "impactMetal", crusher = "impactMetal", gas = "impactMetal" }
 
 function Bullet:impactSound()
   local s = self.lastSolid
-  return s and s.type and IMPACT_SOUNDS[s.type] or "impact"
+  return s and (s.material and IMPACT_SOUNDS[s.material] or s.type and IMPACT_SOUNDS[s.type]) or "impact"
 end
 
 -- Returns false if the bullet stops (dies or turns into a mine).

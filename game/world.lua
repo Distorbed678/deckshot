@@ -4,6 +4,7 @@ local Player = require "game.player"
 local Map = require "game.map"
 local Cards = require "game.cards"
 local Objects = require "game.objects"
+local Physics = require "game.physics"
 local Bot = require "game.bot"
 local fx = require "gfx.fx"
 local sfx = require "gfx.sfx"
@@ -179,13 +180,14 @@ function World:loadMap()
   self.objects = Objects.build(self.map)
   if self.rules.hazards == false then
     for _, o in ipairs(self.objects) do
-      if Objects.HAZARD[o.type] or (o.type == "rope" and o.held and Objects.HAZARD[o.held.type]) then o.alive = false end
+      if Objects.isHazard(o) or (o.type == "rope" and o.held and Objects.isHazard(o.held)) then o.alive = false end
     end
   end
   self.effects, self.pendingBlasts = {}, {}
   self.barrier, self.barrierT, self.barrierStart = nil, 0, nil
   local sd = self.rules.suddenDeath
   self.suddenLeft = (sd and sd > 0) and sd or nil
+  Physics.setup(self)
   -- Everything players and bullets collide with: the map's rects plus solid objects.
   Objects.rebuildSolids(self)
 end
@@ -501,6 +503,13 @@ function World:updateHill(dt)
   end
 end
 
+-- One Box2D step, after everyone has decided what they're doing this frame.
+function World:stepPhysics(dt)
+  Physics.step(self, dt)
+  for _, p in ipairs(self.players) do p:afterStep(dt) end
+  Physics.finish(self)
+end
+
 function World:update(dt)
   if self.state == "subRound" then
     self.timer = self.timer - dt
@@ -513,6 +522,7 @@ function World:update(dt)
     local before = math.ceil(self.timer / 0.8)
     self.timer = self.timer - dt
     for _, p in ipairs(self.players) do p:update(dt, true) end
+    self:stepPhysics(dt)
     local now = math.ceil(self.timer / 0.8)
     if self.timer <= 0 then
       self.state = "playing"
@@ -547,6 +557,10 @@ function World:update(dt)
       local b = self.bullets[i]
       if not b.dead then b:update(sdt, self) end
       if b.dead then table.remove(self.bullets, i) end
+    end
+    self:stepPhysics(sdt)
+    for i = #self.bullets, 1, -1 do
+      if self.bullets[i].dead then table.remove(self.bullets, i) end
     end
     for _, b in ipairs(self.pending) do table.insert(self.bullets, b) end
     self.pending = {}

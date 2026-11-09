@@ -9,6 +9,7 @@ local Player = require "game.player"
 local Bullet = require "game.bullet"
 local Map = require "game.map"
 local Objects = require "game.objects"
+local Physics = require "game.physics"
 local Cards = require "game.cards"
 local Input = require "core.input"
 local Bloom = require "gfx.bloom"
@@ -540,8 +541,16 @@ function Match:applySnapshot(v)
   for i, ov in ipairs(v.objects or {}) do
     local o = self.objViews[i]
     if o then
-      o.alive, o.falling, o.x, o.y, o.s = ov.alive, ov.falling, ov.x, ov.y, ov.s
-      if o.type == "rope" then o.angle = ov.a else o.a = ov.a end
+      o.alive, o.s, o.anchored = ov.alive, ov.s, ov.anchored or nil
+      if ov.rot then
+        -- Loose objects ease towards each snapshot, unless they've jumped (a new round).
+        if not o.rot or (ov.x - o.x) ^ 2 + (ov.y - o.y) ^ 2 > 22500 then o.x, o.y, o.rot = ov.x, ov.y, ov.rot end
+        o.tx, o.ty, o.trot = ov.x, ov.y, ov.rot
+      else
+        o.x, o.y, o.rot, o.tx = ov.x, ov.y, nil, nil
+      end
+      if o.type == "rope" then o.pts = ov.pts else o.a = ov.a end
+      o.burning = ov.burning or nil
       if o.maxHp then o.hp = ov.hp * o.maxHp end
     end
   end
@@ -595,7 +604,7 @@ function Match:predictionWorld()
   local solids = {}
   for i, r in ipairs(map.rects) do solids[i] = r end
   for _, o in ipairs(self.objViews or {}) do
-    if o.alive and o.solid and not (o.type == "crumble" and o.s == 2) then solids[#solids + 1] = o end
+    if o.alive and o.solid and not (o.crumble and o.s == 2) then solids[#solids + 1] = o end
   end
   local w = self.predWorld
   if not w then
@@ -605,7 +614,14 @@ function Match:predictionWorld()
     self.predWorld = w
   end
   w.map, w.solids, w.rules = map, solids, Cards.rules
-  w.bodies = self.proxies -- other players are solid on your screen too
+  -- Your own player is predicted through a small Box2D world of its own.
+  local objViews = self.objViews or {}
+  if not w.physics or w.physics.objects ~= objViews or w.physics.map ~= map then
+    if w.physics then w.physics.b2:destroy() end
+    w.physics = Physics.newClient(map, objViews)
+    w.physics.map = map
+  end
+  Physics.syncOthers(w.physics, self.proxies, self.mySlot)
   return w
 end
 
@@ -641,6 +657,14 @@ local function copyInput(dst, src)
   dst.blockCount = dst.blockCount or 0
 end
 
+function Match:predictFrame(pr, dt, frozen)
+  local w = pr.game
+  w.physics.actors[1] = pr
+  pr:update(dt, frozen)
+  Physics.step(w, dt)
+  pr:afterStep(dt)
+end
+
 function Match:predictStep(dt, frozen)
   local pr = self:predicted()
   if not pr then return end
@@ -652,7 +676,7 @@ function Match:predictStep(dt, frozen)
   if #self.predHistory > 240 then table.remove(self.predHistory, 1) end
   fx.mute, sfx.silent = true, true
   pr.invuln = 999
-  pr:update(dt, frozen)
+  self:predictFrame(pr, dt, frozen)
   fx.mute, sfx.silent = false, false
 end
 
@@ -683,7 +707,7 @@ function Match:reconcile(pv)
   fx.mute, sfx.silent = true, true
   for _, e in ipairs(keep) do
     copyInput(self.predInput, e.input)
-    pr:update(e.dt, e.frozen)
+    self:predictFrame(pr, e.dt, e.frozen)
   end
   fx.mute, sfx.silent = false, false
   copyInput(self.predInput, self.myInput)
@@ -1176,6 +1200,7 @@ function Match:update(dt, isTop)
     end
     self.myInput.ping = self.rtt or 0
     self.transport:send(self.hostPeer, net.encodeInput(self.myInput, self.inputSeq), false)
+    Objects.smooth(self.objViews or {}, dt)
     self:predictStep(dt, self.view.state == "countdown")
     self:clientInterpolate(dt)
   end

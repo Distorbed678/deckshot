@@ -1,4 +1,5 @@
 local Map = require "game.map"
+local Physics = require "game.physics"
 local fx = require "gfx.fx"
 local Bullet = require "game.bullet"
 local sfx = require "gfx.sfx"
@@ -127,10 +128,9 @@ end
 function Player:spawn(x, y, facing, game)
   self.game = game
   -- Maps made before characters stood on legs can have spawns too close to the ground.
-  local rects = game and (game.solids or (game.map and game.map.rects))
-  if rects then
+  if game and game.physics then
     for _ = 1, 10 do
-      if self:freeAt(x, y, rects) then break end
+      if self:freeAt(x, y) then break end
       y = y - 6
     end
   end
@@ -368,6 +368,7 @@ function Player:update(dt, frozen)
   if self.charging and self.meleeCharge > MELEE.lightThreshold then speed = speed * MELEE.chargeSpeedMul end
   if (self.boostSpeedTimer or 0) > 0 then speed = speed * (1 + self.boostSpeed) end
 
+  self.forceX, self.gravScale, self.groundMu = 0, 0, 0
   if self.dashTimer > 0 or self.lungeTimer > 0 then
     -- Dashing / lunging: fixed velocity, no gravity.
     if self.dashTimer > 0 then
@@ -403,13 +404,19 @@ function Player:update(dt, frozen)
     end
   end
 
-  local rects = game.solids or game.map.rects
-  local wasGround = self.onGround
-  local fallSpeed = self.vy
-  local solid = self:withBodies(rects, dt)
-  self:moveX(self.vx * dt, solid)
-  self:moveY(self.vy * dt, solid)
-  self:senseWalls(rects)
+  -- Box2D moves the body now; Player:afterStep picks up from where it ended up.
+  self.stepState = { acting = acting, frozen = frozen, wasGround = self.onGround, fallSpeed = self.vy }
+  Physics.pushPlayer(self)
+end
+
+-- The second half of a frame, after the physics step.
+function Player:afterStep(dt)
+  local st = self.stepState
+  self.stepState = nil
+  if self.dead or not st then return end
+  local s, game, inp = self.stats, self.game, self.input
+  local acting, frozen, wasGround, fallSpeed = st.acting, st.frozen, st.wasGround, st.fallSpeed
+  Physics.pullPlayer(self)
   self:checkEdges()
   if self.dead then return end
 
@@ -497,20 +504,24 @@ end
 -- Running, gravity and wall sliding (not while dashing).
 function Player:runPhysics(dt, dir, speed, acting)
   local s, inp = self.stats, self.input
-  local target = dir * speed
+  local belt = self.beltVx or 0 -- standing on a conveyor
+  self.beltVx = nil
+  local target = dir * speed + belt
   local accel
   if self.controlLock > 0 then
     accel = MOVE.lockAccel
-  elseif math.abs(self.vx) > speed and (dir == 0 or (self.vx > 0) == (dir > 0)) then
+  elseif math.abs(self.vx - belt) > speed and (dir == 0 or (self.vx > 0) == (dir > 0)) then
     accel = self.onGround and MOVE.overDecelGround or MOVE.overDecelAir -- keep momentum from launches
-    target = dir == 0 and 0 or (self.vx > 0 and speed or -speed)
+    target = belt + (dir == 0 and 0 or (self.vx > 0 and speed or -speed))
   elseif dir == 0 then
     accel = self.onGround and MOVE.groundDecel or MOVE.airDecel
   else
     accel = self.onGround and MOVE.groundAccel or MOVE.airAccel
     if self.vx ~= 0 and (self.vx > 0) ~= (dir > 0) then accel = accel * MOVE.turnMul end
   end
-  self.vx = approach(self.vx, target, accel * dt)
+  -- Shoving something heavy takes more of your effort.
+  local effort = accel
+  if self.pushing and self.pushing.mass then effort = accel / (1 + self.pushing.mass * 1.2) end
 
   -- Gravity: light near the apex while jump is held, heavier when falling.
   local g = MOVE.gravity * s.gravityMul
@@ -525,15 +536,27 @@ function Player:runPhysics(dt, dir, speed, acting)
     g = g * MOVE.fastFallMul
     maxFall = MOVE.fastFallMax
   end
+  -- Gravity comes from the body's gravity scale; capping the fall speed just lowers the scale.
+  local nextVy
   if self.vy < maxFall then
-    self.vy = math.min(self.vy + g * dt, maxFall)
+    nextVy = math.min(self.vy + g * dt, maxFall)
   else
-    self.vy = approach(self.vy, maxFall, g * dt) -- launched faster than the clamp: ease back
+    nextVy = approach(self.vy, maxFall, g * dt) -- launched faster than the clamp: ease back
   end
   if self.vy > 0 then self.jumping = false end
+  if not self.onGround and self.wallDir ~= 0 and dir == self.wallDir and nextVy > MOVE.wallSlide then
+    nextVy = MOVE.wallSlide
+  end
+  local gEffective = (nextVy - self.vy) / dt
+  self.gravScale = gEffective / Physics.GRAVITY
 
-  if not self.onGround and self.wallDir ~= 0 and dir == self.wallDir and self.vy > MOVE.wallSlide then
-    self.vy = MOVE.wallSlide
+  -- Walking is a force; letting go on the ground is friction against what you stand on.
+  if self.onGround and dir == 0 and belt == 0 then
+    self.forceX = 0
+    self.groundMu = accel / math.max(200, g)
+  else
+    self.forceX = Physics.PLAYER_MASS * (approach(self.vx, target, effort * dt) - self.vx) / dt
+    self.groundMu = 0
   end
 end
 
@@ -696,110 +719,10 @@ function Player:reloaded()
 end
 
 -- Is the player's box at (x, y) free of solid rects? One-way platforms don't count.
-function Player:freeAt(x, y, rects)
+-- Would the player's body fit at (x, y)? exclude: an object to ignore.
+function Player:freeAt(x, y, exclude)
   local r, leg = self.r, self.leg
-  for _, b in ipairs(rects) do
-    if not b.oneway and Map.overlaps(x - r, y - r, r * 2, r * 2 + leg, b) then return false end
-  end
-  return true
-end
-
-function Player:moveX(dx, rects)
-  local r, leg = self.r, self.leg
-  self.x = self.x + dx
-  for _, b in ipairs(rects) do
-    if not b.oneway and Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
-      -- Ledge correction: clipping the top corner of a block steps up onto it.
-      local lift = (self.y + r + leg) - b.y
-      if dx ~= 0 and self.vy >= 0 and lift > 0 and lift <= MOVE.cornerLedge
-          and self:freeAt(self.x, b.y - r - leg, rects) then
-        self.y = b.y - r - leg
-      else
-        if dx > 0 then self.x = b.x - r elseif dx < 0 then self.x = b.x + b.w + r end
-        self.vx = 0
-      end
-    end
-  end
-end
-
-function Player:moveY(dy, rects)
-  local r, leg = self.r, self.leg
-  local prevBottom = self.y + r + leg
-  self.onGround = false
-  self.groundOneway = false
-  self.groundRect = nil
-  self.y = self.y + dy
-  for _, b in ipairs(rects) do
-    if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
-      if b.oneway then
-        -- Only lands from above, and not while dropping through.
-        if dy >= 0 and prevBottom <= b.y + 0.5 and self.dropTimer <= 0 then
-          self.y = b.y - r - leg
-          self.vy = 0
-          self.onGround = true
-          self.groundOneway = true
-          self.groundRect = b
-        end
-      elseif dy > 0 then
-        self.y = b.y - r - leg
-        self.vy = 0
-        self.onGround = true
-        self.groundRect = b
-      elseif dy < 0 then
-        -- Corner correction: bumping a ceiling's edge slides around it.
-        local fromLeft = (self.x + r) - b.x
-        local fromRight = (b.x + b.w) - (self.x - r)
-        if fromLeft <= MOVE.cornerCeiling and self:freeAt(b.x - r, self.y, rects) then
-          self.x = b.x - r
-        elseif fromRight <= MOVE.cornerCeiling and self:freeAt(b.x + b.w + r, self.y, rects) then
-          self.x = b.x + b.w + r
-        else
-          self.y = b.y + b.h + r
-          self.vy = 0
-          self.jumping = false
-        end
-      end
-    end
-  end
-end
-
--- Terrain plus the other players, who are solid (you can stand on them). Bullets don't use this.
--- Anyone already overlapping you is skipped and eased apart, so nobody gets stuck or flung.
-function Player:withBodies(rects, dt)
-  local game = self.game
-  local list = game.bodies or game.players
-  if not list or #list < 2 then return rects end
-  local out = self.solidBuf or {}
-  self.solidBuf = out
-  local n = #rects
-  for i = 1, n do out[i] = rects[i] end
-  local r, leg = self.r, self.leg
-  for _, o in ipairs(list) do
-    if o ~= self and not o.dead and not o.disconnected and o.slot ~= self.slot then
-      local b = o.bodyBox or {}
-      o.bodyBox = b
-      b.x, b.y, b.w, b.h = o.x - o.r, o.y - o.r, o.r * 2, o.r * 2 + (o.leg or 0)
-      if Map.overlaps(self.x - r, self.y - r, r * 2, r * 2 + leg, b) then
-        self.x = self.x + (self.x >= o.x and 1 or -1) * 120 * dt
-      else
-        n = n + 1
-        out[n] = b
-      end
-    end
-  end
-  for i = #out, n + 1, -1 do out[i] = nil end
-  return out
-end
-
-function Player:senseWalls(rects)
-  local r = self.r
-  self.wallDir = 0
-  if self.onGround then return end
-  if Map.hit(rects, self.x - r - 2, self.y - r + 4, 2, r * 2 - 8) then
-    self.wallDir = -1
-  elseif Map.hit(rects, self.x + r, self.y - r + 4, 2, r * 2 - 8) then
-    self.wallDir = 1
-  end
+  return Physics.hit(self.game, x - r, y - r, r * 2, r * 2 + leg, exclude) == nil
 end
 
 -- fromBuffer: a buffered press retried on landing / touching a wall.
@@ -1045,12 +968,9 @@ end
 
 -- Teleport along the aim direction, as far as possible up to `dist`.
 function Player:blink(dist)
-  local rects = self.game.solids or self.game.map.rects
-  local r = self.r
   for d = dist, 30, -15 do
     local nx, ny = self.x + self.aimX * d, self.y + self.aimY * d
-    if nx > 20 and nx < Map.W - 20 and ny > 20 and ny < Map.H - 20
-        and not Map.hit(rects, nx - r, ny - r, r * 2, r * 2 + self.leg) then
+    if nx > 20 and nx < Map.W - 20 and ny > 20 and ny < Map.H - 20 and self:freeAt(nx, ny) then
       fx.burst(self.x, self.y, self.color, 14, 220, 3)
       self.x, self.y = nx, ny
       self.vy = math.min(self.vy, 0)
@@ -1160,7 +1080,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
   local bx = self.x + math.cos(ang) * (self.r + 8)
   local by = self.y + math.sin(ang) * (self.r + 8)
   -- If the muzzle is inside a wall, spawn from the body instead.
-  if Map.hit(game.solids or game.map.rects, bx - s.bulletSize, by - s.bulletSize, s.bulletSize * 2, s.bulletSize * 2) then
+  if Physics.hit(game, bx - s.bulletSize, by - s.bulletSize, s.bulletSize * 2, s.bulletSize * 2) then
     bx, by = self.x, self.y
   end
 
@@ -1202,7 +1122,7 @@ function Player:mirrorBullet(b)
     local c = b:clone()
     if MIRRORS[i][1] then c.x, c.vx = ARENA_W - c.x, -c.vx end
     if MIRRORS[i][2] then c.y, c.vy = ARENA_H - c.y, -c.vy end
-    if not Map.hit(game.solids or game.map.rects, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2) then game:addBullet(c) end
+    if not Physics.hit(game, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2) then game:addBullet(c) end
   end
 end
 

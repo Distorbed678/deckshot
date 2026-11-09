@@ -3,6 +3,7 @@
 -- Difficulty 1 easy, 2 normal, 3 hard.
 local Map = require "game.map"
 local Objects = require "game.objects"
+local Physics = require "game.physics"
 local Cards = require "game.cards"
 
 local Bot = {}
@@ -15,7 +16,7 @@ local LEVEL = {
 }
 
 local function solidAt(w, x, y, ww, hh)
-  return Map.hit(w.solids, x, y, ww, hh) ~= nil
+  return Physics.hit(w, x, y, ww, hh) ~= nil
 end
 
 -- Any ground (solid or one-way) within `depth` px below (x, y)? Upward fans count: they carry you.
@@ -37,7 +38,7 @@ end
 
 local function hazardNear(w, x, y, radius)
   for _, o in ipairs(w.objects or {}) do
-    if o.alive and Objects.HAZARD[o.type] and o.type ~= "turret" then
+    if o.alive and Objects.isHazard(o) and o.type ~= "turret" then
       local bx, by, bw, bh
       if o.w then bx, by, bw, bh = o.x, o.y, o.w, o.h else bx, by, bw, bh = o.x - (o.r or 20), o.y - (o.r or 20), (o.r or 20) * 2, (o.r or 20) * 2 end
       local cx = math.max(bx, math.min(x, bx + bw))
@@ -78,7 +79,7 @@ local function buildGraph(w)
     if r.w >= 30 then surf[#surf + 1] = { x0 = r.x, x1 = r.x + r.w, y = r.y, rect = r, edges = {} } end
   end
   for _, o in ipairs(w.objects or {}) do
-    if o.solid and o.w and o.w >= 30 and (o.type == "wall" or o.type == "plank" or o.type == "conveyor" or o.type == "crumble") then
+    if o.solid and o.w and o.w >= 30 and o.type == "block" then
       surf[#surf + 1] = { x0 = o.x, x1 = o.x + o.w, y = o.y, rect = o, edges = {} }
     end
   end

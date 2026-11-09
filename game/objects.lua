@@ -6,6 +6,9 @@
 -- Rect-shaped objects use x, y (top-left), w, h. Round ones (saw, blade arm pivot, rope anchor,
 -- laser emitter, turret, weight, pickup) use x, y as their centre.
 --
+-- Loose objects are simulated in game/physics.lua and carry `rot`, their angle in radians, and
+-- anchored ones stay put until their anchor (anchorHp > 0) is shot off.
+--
 -- Solid objects (crates, platforms, walls...) are added to world.solids, so players and
 -- bullets collide with them like map rects. They carry `isObject = true` and their own `type`.
 -- On clients, objects are rebuilt from the same map list and updated from snapshots; draw()
@@ -13,10 +16,10 @@
 local Map = require "game.map"
 local fx = require "gfx.fx"
 local sfx = require "gfx.sfx"
+local Physics = require "game.physics"
 
 local Objects = {}
 
-local GRAVITY = 1800
 local SHOVE = 750        -- speed hazards push you away with
 local SHOVE_UP = 380
 local BURN = { 0.4, 0.9, 0.2 }
@@ -25,13 +28,19 @@ local BURN = { 0.4, 0.9, 0.2 }
 Objects.CODES = {
   "saw", "spikes", "laser", "crusher", "flame", "acid", "turret", "conveyor", "pad", "fan",
   "crumble", "arm", "platform", "crate", "glass", "rope", "barrel", "gas", "wall", "plank", "weight",
+  "block", "rail", "liquid",
 }
 Objects.CODE = {}
 for i, n in ipairs(Objects.CODES) do Objects.CODE[n] = i end
 Objects.EFFECTS = { "pickup", "cloud" }
 -- Types removed by the "Map hazards: off" rule (breakables stay).
-Objects.HAZARD = { saw = true, spikes = true, laser = true, crusher = true, flame = true, acid = true,
-  turret = true, arm = true }
+Objects.HAZARD = { saw = true, spikes = true, laser = true, crusher = true, flame = true, liquid = true, turret = true }
+
+-- Is this one a hazard? A liquid only counts if it hurts or harms.
+function Objects.isHazard(o)
+  if o.type == "liquid" then return (o.damage or 0) > 0 or o.poison or o.burn or o.frost or false end
+  return Objects.HAZARD[o.type] or false
+end
 
 Objects.T = {}
 local T = Objects.T
@@ -77,13 +86,8 @@ local function rectOf(o)
   return o.x, o.y, o.w, o.h
 end
 
-local function playerBox(p)
-  return p.x - p.r, p.y - p.r, p.r * 2, p.r * 2 + (p.leg or 0) -- feet touch floor hazards and pads
-end
-
 local function overlapsPlayer(o, p)
-  local x, y, w, h = playerBox(p)
-  return Map.overlaps(x, y, w, h, o)
+  return Physics.boxHitsPlayer(o.x, o.y, o.w, o.h, o.rot, p)
 end
 
 local function circleHitsPlayer(cx, cy, r, p)
@@ -130,28 +134,40 @@ end
 ---------------------------------------------------------------- building
 -- Default sizes / props per type (the editor uses these too).
 Objects.DEFAULTS = {
-  saw = { r = 28, speed = 160, damage = 25 },
-  spikes = { w = 80, h = 16, dir = "up", damage = 30 },
+  block = { w = 48, h = 48, material = "stone", hp = 0 },
+  saw = { r = 28, damage = 25, physics = true },
+  spikes = { w = 80, h = 16, dir = "up", damage = 30, physics = true },
   laser = { dir = "down", off = 2.0, warn = 0.8, on = 1.0, damage = 40 },
   crusher = { w = 120, h = 60, travel = 200, wait = 1.8, damage = 60 },
-  flame = { length = 150, off = 2.5, warn = 0.5, on = 1.0, damage = 12 },
-  acid = { w = 200, h = 40, damage = 20 },
-  turret = { hp = 60, rate = 2, damage = 20 },
-  conveyor = { w = 200, h = 20, speed = 160 },
+  flame = { dir = "up", length = 150, off = 2.5, warn = 0.5, on = 1.0, damage = 12 },
+  liquid = { w = 200, h = 40, color = "#3A8BE0", damage = 0, buoyant = true },
+  turret = { hp = 60, rate = 2, damage = 20, physics = true },
   pad = { w = 70, h = 14, power = 1350 },
   fan = { w = 80, h = 260, dir = "up", force = 3000 },
-  crumble = { w = 120, h = 18, delay = 0.5, back = 4 },
-  arm = { length = 110, count = 2, spin = 1.6, r = 22, damage = 25 },
-  platform = { w = 120, h = 18, speed = 120 },
-  crate = { w = 50, h = 50, hp = 60, drop = 0.08 },
-  glass = { w = 16, h = 120, hp = 1 },
-  rope = {},
-  barrel = { w = 36, h = 48, hp = 30, radius = 110, damage = 55 },
-  gas = { w = 28, h = 42, hp = 20, radius = 110 },
-  wall = { w = 40, h = 120, hp = 150 },
-  plank = { w = 100, h = 14, hp = 0 },
-  weight = { r = 26, damage = 60 },
+  arm = { length = 110, spin = 1.6, force = 1 },
+  rail = { speed = 120, force = 1 },
+  rope = { segHp = 60, slack = 1 },
+  weight = { r = 26, damage = 60, physics = true },
 }
+
+-- Block materials: the HP a block gets when made breakable, and how it looks and breaks.
+Objects.MATERIALS = {
+  stone = { name = "Stone", hp = 100 }, crate = { name = "Crate", hp = 60 }, wood = { name = "Wood", hp = 40 },
+  brick = { name = "Brick", hp = 150 }, glass = { name = "Glass", hp = 1 }, metal = { name = "Metal", hp = 200 },
+  barrel = { name = "Barrel", hp = 30 }, gas = { name = "Gas can", hp = 20 },
+}
+Objects.MATERIAL_LIST = { "stone", "crate", "wood", "brick", "glass", "metal", "barrel", "gas" }
+
+-- "#RRGGBB" or "ch3" (a shared colour channel) to r, g, b; nil if unset.
+function Objects.colorOf(value, channels)
+  if type(value) ~= "string" then return nil end
+  local n = value:match("^ch(%d+)$")
+  if n then value = channels and channels[tonumber(n)] end
+  if type(value) ~= "string" then return nil end
+  local r, g, b = value:match("^#(%x%x)(%x%x)(%x%x)$")
+  if not r then return nil end
+  return tonumber(r, 16) / 255, tonumber(g, 16) / 255, tonumber(b, 16) / 255
+end
 
 local function copy(t)
   local c = {}
@@ -159,9 +175,16 @@ local function copy(t)
   return c
 end
 
+local function markLoose(o)
+  o.loose = true
+  o.rot = o.rot or 0
+  o.mass = Physics.massOf(o)
+end
+
 -- Fresh instances for a map. Works without a world (clients draw from the same list).
 function Objects.build(map)
-  local list = {}
+  local list, byId = {}, {}
+  local theme
   for i, def in ipairs(map.objects or {}) do
     local o = copy(Objects.DEFAULTS[def.type] or {})
     for k, v in pairs(def) do o[k] = v end
@@ -175,24 +198,36 @@ function Objects.build(map)
       for k, pt in ipairs(o.path) do pts[k] = { pt[1], pt[2] } end
       o.path = pts
     end
+    if o.id then byId[o.id] = o end
+    local r, g, b = Objects.colorOf(o.color, map.channels)
+    if r then
+      o.rgb = { r, g, b }
+    elseif o.type == "block" and o.material == "stone" then
+      if not theme then theme = require("gfx.atmosphere").themeOf(map) end
+      o.rgb, o.edgeRgb = theme.block, theme.edge
+    end
     local t = T[o.type]
     if t then
       o.solid = t.solid
       o.isObject = t.solid or nil
+      if t.solid then o.mass = Physics.massOf(o) end
       if t.init then t.init(o, list) end
     end
+    if Physics.isLoose(o) then markLoose(o) end
     list[i] = o
   end
-  -- Ropes find what they hold (by index) and measure their length.
+  list.byId = byId
   for _, o in ipairs(list) do
-    if o.type == "rope" and o.target and list[o.target] then
-      local tgt = list[o.target]
-      o.held = tgt
-      tgt.rope = o
-      local tx, ty = Objects.hangPoint(tgt)
-      o.length = math.max(10, math.sqrt((tx - o.x) ^ 2 + (ty - o.y) ^ 2))
-      o.angle = math.atan2(tx - o.x, ty - o.y) -- 0 = straight down
-      o.omega = 0
+    if o.type == "rope" then
+      local tgt = o.target and byId[o.target]
+      local from = o.from and byId[o.from]
+      o.held, o.heldFrom = tgt, from
+      if tgt and not o.x2 then o.x2, o.y2 = Objects.hangPoint(tgt) end
+      if not o.x2 then o.x2, o.y2 = o.x, o.y + 120 end
+      o.length = math.max(10, math.sqrt((o.x2 - o.x) ^ 2 + (o.y2 - o.y) ^ 2) * (o.slack or 1))
+      if tgt then tgt.rope = o end
+    elseif o.parent and byId[o.parent] then
+      o.parentObj = byId[o.parent]
     end
   end
   return list
@@ -204,108 +239,7 @@ function Objects.hangPoint(o)
   return o.x, o.y
 end
 
-local function setHang(o, x, y)
-  if o.w then
-    o.x, o.y = x - o.w / 2, y
-  else
-    o.x, o.y = x, y
-  end
-end
-
 ---------------------------------------------------------------- shared behaviours
--- Solid rects other than `self` (for falling objects).
-local function solidsExcept(world, self)
-  local out = {}
-  for _, r in ipairs(world.solids) do
-    if r ~= self then out[#out + 1] = r end
-  end
-  return out
-end
-
-local function hitExcept(rects, self, x, y, w, h)
-  for _, b in ipairs(rects) do
-    if b ~= self and not b.oneway and Map.overlaps(x, y, w, h, b) then return b end
-  end
-end
-
--- Falling objects: gravity, landing, hurting whoever they land on.
-local function fall(o, world, dt)
-  o.vy = math.min((o.vy or 0) + GRAVITY * dt, 1400)
-  o.vx = (o.vx or 0) * (1 - 1.5 * dt)
-  local rects = solidsExcept(world, o)
-  local w, h = o.w or o.r * 2, o.h or o.r * 2
-  local left = o.w and o.x or o.x - o.r
-  local top = o.w and o.y or o.y - o.r
-  local nx, ny = left + o.vx * dt, top + o.vy * dt
-  if Map.hit(rects, nx, top, w, h) then o.vx = 0 nx = left end
-  local hitRect = Map.hit(rects, nx, ny, w, h)
-  local landed = false
-  if hitRect then
-    if o.vy > 0 then ny = hitRect.y - h end
-    if o.vy > 350 then sfx.play("thud", nx + w / 2, math.min(1, o.vy / 1000)) end
-    o.vy = 0
-    landed = true
-  end
-  -- Hurt players it falls on.
-  if (o.vy or 0) > 250 or (landed and not o.landedOnce) then
-    for _, p in ipairs(world.players) do
-      if not p.dead and Map.overlaps(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2, { x = nx, y = ny, w = w, h = h }) then
-        local dmg = o.fallDamage or (o.type == "weight" and o.damage) or 30
-        Objects.hazardHit(world, o, p, dmg, p.x - (nx + w / 2), 0.3, "falling", 1, o.breaker)
-      end
-    end
-  end
-  if o.w then o.x, o.y = nx, ny else o.x, o.y = nx + o.r, ny + o.r end
-  if landed then
-    o.falling = false
-    o.landedOnce = true
-  end
-  if o.y > Map.H + 180 then o.alive = false end
-end
-
--- Physics objects (crates, barrels...) fall when nothing holds them up.
-local function supported(o, world)
-  if o.rope then return true end
-  return hitExcept(world.solids, o, o.x + 2, o.y + o.h, o.w - 4, 2) ~= nil
-end
-
--- Move along a path of waypoints (ping-pong or loop). Returns dx, dy moved.
-local function followPath(o, dt)
-  local pts = o.path
-  if not pts or #pts < 2 then return 0, 0 end
-  o.seg = o.seg or 1
-  o.dirn = o.dirn or 1
-  local cx, cy = o.x, o.y
-  if o.w then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
-  local remaining = (o.speed or 120) * dt
-  local x, y = cx, cy
-  for _ = 1, 8 do
-    local nextIndex = o.seg + o.dirn
-    if nextIndex > #pts or nextIndex < 1 then
-      if o.loop then
-        nextIndex = nextIndex > #pts and 1 or #pts
-      else
-        o.dirn = -o.dirn
-        nextIndex = o.seg + o.dirn
-      end
-    end
-    local tx, ty = pts[nextIndex][1], pts[nextIndex][2]
-    local dx, dy = tx - x, ty - y
-    local d = math.sqrt(dx * dx + dy * dy)
-    if d <= remaining then
-      x, y = tx, ty
-      remaining = remaining - d
-      o.seg = nextIndex
-    else
-      x, y = x + dx / d * remaining, y + dy / d * remaining
-      break
-    end
-  end
-  local mx, my = x - cx, y - cy
-  o.x, o.y = o.x + mx, o.y + my
-  return mx, my
-end
-
 -- Riders (players standing on top) move with a platform.
 local function carryRiders(o, world, dx, dy)
   if dx == 0 and dy == 0 then return end
@@ -319,13 +253,28 @@ end
 
 -- An object took damage. Returns true if it broke.
 function Objects.damage(world, o, amount, source, x, y)
-  if not o.alive or not o.hp or o.hp <= 0 then return false end
+  if not o.alive then return false end
   if source and source.stats and source.stats.objectDamage then amount = amount * source.stats.objectDamage end
+  -- A breakable anchor (or attachment) takes the hits until it gives way.
+  if (o.anchored or o.parent) and (o.anchorHp or 0) > 0 then
+    o.anchorHp = o.anchorHp - amount
+    o.hitFlash = 0.1
+    if o.anchorHp <= 0 then
+      local cx, cy = o.x, o.y
+      if o.w then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
+      Physics.release(world, o)
+      o.breaker = source or o.breaker
+      sfx.play("ropeSnap", cx)
+      fx.spray(cx, cy, -math.pi / 2, 3, { 0.75, 0.75, 0.8 }, 8, 220, 2.5, 1)
+    end
+    return false
+  end
+  if not o.hp or o.hp <= 0 then return false end
   o.hp = o.hp - amount
   o.hitFlash = 0.1
   o.breaker = source or o.breaker
   if o.hp > 0 then
-    if o.type == "wall" then fx.spray(x or o.x + o.w / 2, y or o.y + o.h / 2, -math.pi / 2, 2, { 0.55, 0.55, 0.6 }, 3, 160, 3, 1) end
+    if o.material == "brick" then fx.spray(x or o.x + o.w / 2, y or o.y + o.h / 2, -math.pi / 2, 2, { 0.55, 0.55, 0.6 }, 3, 160, 3, 1) end
     return false
   end
   o.alive = false
@@ -334,27 +283,15 @@ function Objects.damage(world, o, amount, source, x, y)
   return true
 end
 
--- Cut a rope: whatever it held falls (keeping its swing velocity).
-function Objects.cut(world, rope, source)
-  if not rope.alive then return end
-  rope.alive = false
-  local h = rope.held
-  sfx.play("ropeSnap", rope.x)
-  fx.spray(rope.x, rope.y, math.pi / 2, 1, { 0.75, 0.6, 0.4 }, 6, 150, 2, 1)
-  if h and h.alive then
-    h.rope = nil
-    h.falling = true
-    h.breaker = source
-    local v = (rope.omega or 0) * rope.length
-    h.vx = math.cos(rope.angle) * v
-    h.vy = -math.sin(rope.angle) * v
-  end
+-- Shove a loose object. (ix, iy) is the speed in px/s it would give a crate; (x, y) is where it
+-- lands, source who gets the credit if it hurts someone.
+function Objects.push(o, ix, iy, x, y, source)
+  Physics.kick(o, ix, iy, x, y, source)
 end
 
--- Swing a hanging object (impulse in px/s, horizontal).
-function Objects.push(o, impulse)
-  local rope = o.rope
-  if rope and rope.alive then rope.omega = (rope.omega or 0) + impulse / math.max(20, rope.length) end
+-- Can damage do anything to this object?
+local function damageable(o)
+  return (o.hp and o.hp > 0) or ((o.anchored or o.parent) and (o.anchorHp or 0) > 0)
 end
 
 ---------------------------------------------------------------- hazards
@@ -362,11 +299,6 @@ T.saw = {
   init = function(o) o.a = 0 end,
   update = function(o, world, dt)
     o.a = (o.a + dt * 12) % (math.pi * 2)
-    if o.falling then
-      fall(o, world, dt)
-    elseif not o.rope then
-      followPath(o, dt)
-    end
     for _, p in ipairs(world.players) do
       if not p.dead and circleHitsPlayer(o.x, o.y, o.r - 3, p) then
         if not (o.cd and (o.cd[p] or -1) > world.time) then sfx.play("saw", o.x) end
@@ -420,6 +352,10 @@ T.spikes = {
     if not out then return end
     local nx, ny = 0, -1
     if o.dir == "down" then nx, ny = 0, 1 elseif o.dir == "left" then nx, ny = -1, 0 elseif o.dir == "right" then nx, ny = 1, 0 end
+    if o.rot then
+      local c, s = math.cos(o.rot), math.sin(o.rot)
+      nx, ny = nx * c - ny * s, nx * s + ny * c
+    end
     for _, p in ipairs(world.players) do
       if not p.dead and overlapsPlayer(o, p) then
         if not (o.cd and (o.cd[p] or -1) > world.time) then sfx.play("spike", p.x) end
@@ -461,6 +397,12 @@ T.spikes = {
 
 local DIRS = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
 
+-- Which way a flame points, turning with whatever it's attached to.
+local function flameAngle(o)
+  local d = DIRS[o.dir or "up"] or DIRS.up
+  return math.atan2(d[2], d[1]) + (o.rot or 0)
+end
+
 -- Laser emitter: charge line, then a beam that stops at the first solid (crates are cover).
 T.laser = {
   update = function(o, world, dt)
@@ -475,7 +417,7 @@ T.laser = {
     local rects = world.solids
     while len < 1500 do
       local px, py = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
-      if px < -10 or px > Map.W + 10 or py < -10 or py > Map.H + 10 or Map.hit(rects, px - 2, py - 2, 4, 4) then break end
+      if px < -10 or px > Map.W + 10 or py < -10 or py > Map.H + 10 or Physics.hit(world, px - 2, py - 2, 4, 4) then break end
       len = len + 6
     end
     o.a = len
@@ -531,13 +473,27 @@ T.crusher = {
     if o.state == "wait" and o.timer >= o.wait then
       o.state, o.timer = "down", 0
     elseif o.state == "down" then
-      o.y = math.min(o.top + o.travel, o.y + 1300 * dt)
-      if o.y >= o.top + o.travel then
+      local ny = math.min(o.top + o.travel, o.y + 1300 * dt)
+      local bottom = o.y + o.h
+      -- Anything under the head stops it, at the first thing it would touch.
+      local blocker, stopY
+      for _, f in ipairs({ 0.08, 0.5, 0.92 }) do
+        local hit, _, hy = Physics.ray(world, o.x + o.w * f, bottom - 1, o.x + o.w * f, ny + o.h + 1, nil, o)
+        if hit and (not stopY or hy < stopY) then blocker, stopY = hit, hy end
+      end
+      if not blocker then blocker = Physics.hit(world, o.x + 2, bottom, o.w - 4, math.max(1, ny - o.y), o) end
+      if blocker then ny = stopY and math.max(o.y, stopY - o.h) or o.y end
+      o.y = ny
+      if blocker or o.y >= o.top + o.travel then
         o.state, o.timer = "bottom", 0
         sfx.play("crusher", o.x + o.w / 2)
-        fx.addShake(5)
+        fx.addShake(blocker and 7 or 5)
         fx.spray(o.x, o.y + o.h, math.pi, 0.6, { 0.7, 0.7, 0.75 }, 6, 220, 3, 0.3)
         fx.spray(o.x + o.w, o.y + o.h, 0, 0.6, { 0.7, 0.7, 0.75 }, 6, 220, 3, 0.3)
+        if blocker then
+          fx.spray(o.x + o.w / 2, o.y + o.h, -math.pi / 2, 2.6, { 1, 0.8, 0.35 }, 14, 420, 2.5, 1)
+          if blocker.isObject then Objects.damage(world, blocker, o.damage, nil, o.x + o.w / 2, o.y + o.h) end
+        end
       end
     elseif o.state == "bottom" and o.timer >= 0.5 then
       o.state, o.timer = "up", 0
@@ -553,11 +509,10 @@ T.crusher = {
       for _, p in ipairs(world.players) do
         if not p.dead and overlapsPlayer(o, p) then
           p.y = o.y + o.h + p.r
-          local others = solidsExcept(world, o)
-          if not p:freeAt(p.x, p.y, others) then
+          if not p:freeAt(p.x, p.y, o) then
             local side = p.x < o.x + o.w / 2 and -1 or 1
             p.x = side < 0 and o.x - p.r - 1 or o.x + o.w + p.r + 1
-            if p:freeAt(p.x, p.y, others) == false then p.y = o.y - p.r - p.leg end
+            if p:freeAt(p.x, p.y, o) == false then p.y = o.y - p.r - p.leg end
             Objects.hazardHit(world, o, p, o.damage, side, -0.3, "crusher", 1)
           end
         end
@@ -583,75 +538,149 @@ T.flame = {
     local ph = cyclePhase(world.time, o.off, o.warn, o.on, o.phase)
     local prev = o.s
     o.s = ph == "on" and 2 or ph == "warn" and 1 or 0
+    local a = flameAngle(o)
+    local dx, dy = math.cos(a), math.sin(a)
+    local nx, ny = o.x + dx * 8, o.y + dy * 8
     if o.s == 2 and prev ~= 2 then sfx.play("flame", o.x) end
     if o.s == 1 and love.math.random() < dt * 20 then
-      fx.spray(o.x, o.y - 4, -math.pi / 2, 0.4, { 1, 0.5, 0.15 }, 1, 120, 2, -0.2)
+      fx.spray(nx, ny, a, 0.4, { 1, 0.5, 0.15 }, 1, 120, 2, -0.2)
     end
+    -- The flame reaches the first solid thing; ropes in the way burn but don't stop it.
+    local hit, hx, hy = Physics.ray(world, nx, ny, nx + dx * o.length, ny + dy * o.length, nil, o)
+    local reach = hit and math.sqrt((hx - nx) ^ 2 + (hy - ny) ^ 2) or o.length
+    o.a = reach
     if o.s ~= 2 then return end
-    if love.math.random() < dt * 40 then
-      fx.spray(o.x, o.y - 4, -math.pi / 2, 0.25, { 1, 0.55 + love.math.random() * 0.3, 0.1 }, 2, o.length * 2.2, 5, -0.3)
+    Physics.burnRopes(world, nx, ny, nx + dx * reach, ny + dy * reach, 40 * dt)
+    if hit and hit.isObject then
+      local m = hit.material
+      if m == "crate" or m == "wood" or hit.onBreak == "explode" or hit.onBreak == "gas" then
+        hit.burning = true
+        if (hit.hp or 0) > 0 then Objects.damage(world, hit, 45 * dt, nil, hx, hy) end
+      end
     end
-    local zone = { x = o.x - 18, y = o.y - o.length, w = 36, h = o.length }
+    if hit and love.math.random() < dt * 40 then
+      fx.spray(hx, hy, a + math.pi, 1.6, { 1, 0.55, 0.12 }, 2, 200, 3.5, -0.2)
+    end
+    local ex, ey = nx + dx * reach, ny + dy * reach
     for _, p in ipairs(world.players) do
-      if not p.dead and overlapsPlayer(zone, p) then
+      if not p.dead and segDist(p.x, p.y, nx, ny, ex, ey) < p.r + 12 then
         local before = o.cd and o.cd[p]
-        Objects.hazardHit(world, o, p, o.damage, (p.x - o.x) / 30, -1, "fire", 0.5)
+        Objects.hazardHit(world, o, p, o.damage, (p.x - o.x) / 30 - dy * 0.1, dy < 0 and -1 or dy, "fire", 0.5)
         if o.cd[p] ~= before and not p:isBlocking() then p:poisonFor(16, 2) end
       end
     end
   end,
   draw = function(o)
+    love.graphics.push()
+    love.graphics.translate(o.x, o.y)
+    love.graphics.rotate(flameAngle(o) + math.pi / 2)
     love.graphics.setColor(0.3, 0.31, 0.36)
-    love.graphics.rectangle("fill", o.x - 20, o.y - 8, 40, 8, 2, 2)
-    love.graphics.setColor(o.s == 0 and 0.35 or 1, 0.4, 0.1)
-    love.graphics.rectangle("fill", o.x - 10, o.y - 10, 20, 4)
+    love.graphics.rectangle("fill", -20, -2, 40, 10, 2, 2)
+    love.graphics.setColor(0.42, 0.43, 0.5)
+    love.graphics.rectangle("fill", -12, -10, 24, 9, 2, 2)
+    love.graphics.setColor(o.s == 0 and 0.3 or 1, o.s == 0 and 0.28 or 0.45, 0.12)
+    love.graphics.rectangle("fill", -8, -12, 16, 3)
+    local reach = o.a > 0 and o.a or o.length
     if o.s == 2 then
       local t = love.timer.getTime()
-      for i = 0, 5 do
-        local f = i / 5
-        local w = 26 * (1 - f * 0.6) + math.sin(t * 25 + i) * 4
-        love.graphics.setColor(1, 0.45 + 0.4 * f, 0.1, 0.55 * (1 - f * 0.5))
-        love.graphics.ellipse("fill", o.x, o.y - o.length * f, w / 2, o.length / 8)
+      local blocked = reach < o.length - 2
+      -- Outer flame to white-hot core; each layer is a stack of flickering tongues.
+      for layer = 1, 3 do
+        local spread = ({ 24, 15, 7 })[layer]
+        local c = ({ { 0.95, 0.22, 0.05, 0.55 }, { 1, 0.55, 0.1, 0.8 }, { 1, 0.92, 0.55, 0.95 } })[layer]
+        love.graphics.setColor(c)
+        local n = 9
+        for i = 0, n do
+          local f = i / n
+          local w = spread * (0.55 + 0.75 * math.sin(f * math.pi * 0.85)) * (blocked and 1 or (1 - f * 0.55))
+          local wob = math.sin(t * 26 + i * 1.7 + layer) * (2 + f * 7)
+          local h = reach * (1 + layer * 0.08) / n * 1.1
+          love.graphics.ellipse("fill", wob, -12 - reach * f, math.max(1.5, w + math.sin(t * 31 + i) * 3), h)
+        end
       end
+      if blocked then
+        -- Licks sideways along whatever it hit.
+        for side = -1, 1, 2 do
+          for i = 1, 4 do
+            local f = i / 4
+            love.graphics.setColor(1, 0.45 + 0.35 * f, 0.1, 0.75 * (1 - f * 0.7))
+            love.graphics.ellipse("fill", side * (10 + 13 * i + math.sin(t * 20 + i) * 4), -12 - reach + f * 5, 12 * (1.2 - f), 7 * (1.2 - f))
+          end
+        end
+      end
+    elseif o.s == 1 then
+      love.graphics.setColor(1, 0.5, 0.15, 0.55)
+      love.graphics.ellipse("fill", 0, -16, 7, 6 + math.sin(love.timer.getTime() * 40) * 2)
     end
+    love.graphics.pop()
   end,
   glow = function(o)
     if o.s ~= 2 then return end
+    love.graphics.push()
+    love.graphics.translate(o.x, o.y)
+    love.graphics.rotate(flameAngle(o) + math.pi / 2)
     love.graphics.setColor(1, 0.5, 0.1, 0.5)
-    love.graphics.rectangle("fill", o.x - 14, o.y - o.length, 28, o.length)
+    love.graphics.rectangle("fill", -14, -12 - o.a, 28, o.a)
+    love.graphics.pop()
   end,
 }
 
 -- Acid pool: damage over time and a hop up out of it.
-T.acid = {
+-- Liquid: a coloured area with waves. Its properties are toggles.
+T.liquid = {
+  init = function(o)
+    local r, g, b = Objects.colorOf(o.color)
+    if not o.rgb then o.rgb = { r or 0.23, g or 0.55, b or 0.88 } end
+  end,
   update = function(o, world, dt)
     o.a = (o.a + dt) % 100
+    local c = o.rgb
     for _, p in ipairs(world.players) do
       if not p.dead and overlapsPlayer(o, p) then
-        if not (o.cd and (o.cd[p] or -1) > world.time) then
-          sfx.play("acid", p.x)
-          fx.spray(p.x, o.y, -math.pi / 2, 1, { 0.5, 1, 0.3 }, 6, 220, 3, 1)
+        local fresh = not (o.cd and (o.cd[p] or -1) > world.time)
+        if (o.damage or 0) > 0 then
+          if fresh then
+            sfx.play("acid", p.x)
+            fx.spray(p.x, o.y, -math.pi / 2, 1, c, 6, 220, 3, 1)
+          end
+          Objects.hazardHit(world, o, p, o.damage, 0, -1.6, "acid", 0.5)
+          if p.vy > -900 then p.vy = -900 end
+        elseif fresh then
+          o.cd = o.cd or {}
+          o.cd[p] = world.time + 0.5
+          fx.spray(p.x, o.y, -math.pi / 2, 0.8, c, 4, 140, 3, 1)
         end
-        Objects.hazardHit(world, o, p, o.damage, 0, -1.6, "acid", 0.5)
-        if p.vy > -900 then p.vy = -900 end
+        if fresh and not p:isBlocking() then
+          if o.poison then p:poisonFor(8, 1) end
+          if o.burn then p:poisonFor(16, 2) end
+          if o.frost then p.slowTimer = math.max(p.slowTimer, 1) end
+        end
       end
     end
   end,
+  bullet = function(o, b)
+    if b.vy > 0 and b.y - o.y < 14 then
+      b.vy = -math.abs(b.vy)
+      fx.spray(b.x, o.y, -math.pi / 2, 1, o.rgb, 3, 180, 2.5, 1)
+    end
+  end,
   draw = function(o)
-    love.graphics.setColor(0.35, 0.85, 0.2, 0.75)
+    local c = o.rgb
+    love.graphics.setColor(c[1], c[2], c[3], 0.72)
     love.graphics.rectangle("fill", o.x, o.y + 4, o.w, o.h - 4)
-    love.graphics.setColor(0.6, 1, 0.4)
+    love.graphics.setColor(math.min(1, c[1] + 0.25), math.min(1, c[2] + 0.25), math.min(1, c[3] + 0.25))
     local t = love.timer.getTime()
-    local pts = {}
-    for i = 0, 20 do
-      pts[#pts + 1] = o.x + o.w * i / 20
+    local pts, n = {}, math.max(4, math.floor(o.w / 12))
+    for i = 0, n do
+      pts[#pts + 1] = o.x + o.w * i / n
       pts[#pts + 1] = o.y + 4 + math.sin(t * 3 + i * 0.9) * 2.5
     end
     love.graphics.setLineWidth(3)
     love.graphics.line(pts)
   end,
   glow = function(o)
-    love.graphics.setColor(0.4, 1, 0.2, 0.35)
+    local c = o.rgb
+    love.graphics.setColor(c[1], c[2], c[3], 0.3)
     love.graphics.rectangle("fill", o.x, o.y + 4, o.w, o.h - 4)
   end,
 }
@@ -688,7 +717,15 @@ T.turret = {
       return
     end
     love.graphics.setColor(0.4, 0.41, 0.48)
-    love.graphics.rectangle("fill", o.x - 18, o.y + 4, 36, 14, 4, 4)
+    if o.rot then
+      love.graphics.push()
+      love.graphics.translate(o.x, o.y)
+      love.graphics.rotate(o.rot)
+      love.graphics.rectangle("fill", -18, 4, 36, 14, 4, 4)
+      love.graphics.pop()
+    else
+      love.graphics.rectangle("fill", o.x - 18, o.y + 4, 36, 14, 4, 4)
+    end
     love.graphics.setColor((o.hitFlash or 0) > 0 and 1 or 0.55, 0.56, 0.64)
     love.graphics.circle("fill", o.x, o.y, 16)
     love.graphics.setColor(0.8, 0.82, 0.88)
@@ -736,42 +773,10 @@ end
 
 -- Is the straight line between two points free of solids?
 function Objects.lineClear(world, x0, y0, x1, y1)
-  local dx, dy = x1 - x0, y1 - y0
-  local d = math.sqrt(dx * dx + dy * dy)
-  local steps = math.floor(d / 12)
-  for i = 1, steps - 1 do
-    local t = i / steps
-    if Map.hit(world.solids, x0 + dx * t - 1, y0 + dy * t - 1, 2, 2) then return false end
-  end
-  return true
+  return Physics.ray(world, x0, y0, x1, y1) == nil
 end
 
 -- Conveyor: solid; moves whatever stands on it.
-T.conveyor = {
-  solid = true,
-  update = function(o, world, dt)
-    o.a = (o.a + o.speed * dt) % 20
-    for _, p in ipairs(world.players) do
-      if not p.dead and p.groundRect == o then p:moveX(o.speed * dt, world.solids) end
-    end
-    for _, c in ipairs(world.objects) do
-      if c.alive and c.w and c ~= o and not c.rope and math.abs(c.y + c.h - o.y) < 2
-          and c.x + c.w > o.x and c.x < o.x + o.w and (c.type == "crate" or c.type == "barrel" or c.type == "gas") then
-        c.x = c.x + o.speed * dt
-      end
-    end
-  end,
-  draw = function(o)
-    love.graphics.setColor(0.24, 0.25, 0.3)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 8, 8)
-    love.graphics.setColor(0.55, 0.56, 0.62)
-    local off = o.a or 0
-    for i = 0, math.floor(o.w / 20) do
-      local x = o.x + ((i * 20 + off) % o.w)
-      love.graphics.polygon("fill", x, o.y + 4, x + 6 * (o.speed > 0 and 1 or -1), o.y + o.h / 2, x, o.y + o.h - 4)
-    end
-  end,
-}
 
 -- Bounce pad: launches players up; bullets that hit it come off faster.
 T.pad = {
@@ -850,113 +855,51 @@ T.fan = {
 }
 
 -- Crumbling platform: breaks shortly after someone stands on it, then comes back.
-T.crumble = {
-  solid = true,
-  init = function(o) o.timer = 0; o.state = "solid" end,
-  update = function(o, world, dt)
-    if o.state == "solid" then
-      for _, p in ipairs(world.players) do
-        if not p.dead and p.groundRect == o then
-          o.state, o.timer = "shaking", 0
-          sfx.play("crumble", o.x + o.w / 2, 0.6)
-          break
-        end
-      end
-    elseif o.state == "shaking" then
-      o.timer = o.timer + dt
-      if o.timer >= o.delay then
-        o.state, o.timer = "gone", 0
-        o.solid = false
-        fx.debris(o.x + o.w / 2, o.y + o.h / 2, { 0.55, 0.5, 0.45 }, 6, 10)
-        sfx.play("crateBreak", o.x + o.w / 2, 0.5)
-      end
-    elseif o.state == "gone" then
-      o.timer = o.timer + dt
-      if o.timer >= o.back then
-        local blocked = false
-        for _, p in ipairs(world.players) do
-          if not p.dead and overlapsPlayer(o, p) then blocked = true end
-        end
-        if not blocked then o.state, o.solid = "solid", true end
-      end
-    end
-    o.s = o.state == "solid" and 0 or o.state == "shaking" and 1 or 2
-  end,
+
+-- Rotating blade arm: `count` saws (1 or 2) on a bar spinning around (x, y).
+-- Arm: a beam on a motor. It does nothing by itself; attach objects to it.
+T.arm = {
   draw = function(o)
-    if o.s == 2 then
-      love.graphics.setColor(1, 1, 1, 0.06)
-      love.graphics.rectangle("line", o.x, o.y, o.w, o.h, 3, 3)
-      return
-    end
-    local jx = o.s == 1 and (love.math.random() - 0.5) * 3 or 0
-    love.graphics.setColor(0.5, 0.45, 0.4)
-    love.graphics.rectangle("fill", o.x + jx, o.y, o.w, o.h, 3, 3)
-    love.graphics.setColor(0.35, 0.3, 0.27)
-    love.graphics.setLineWidth(2)
-    for i = 1, math.floor(o.w / 30) do
-      love.graphics.line(o.x + jx + i * 30, o.y, o.x + jx + i * 30 - 6, o.y + o.h)
-    end
+    love.graphics.setColor(0.4, 0.41, 0.48)
+    love.graphics.rectangle("fill", (o.count == 1) and o.x or (o.x - o.length), o.y - 5, o.count == 1 and o.length or o.length * 2, 10, 4, 4)
+    love.graphics.setColor(0.3, 0.31, 0.36)
+    love.graphics.circle("fill", o.x, o.y, 12)
+    love.graphics.setColor(0.6, 0.62, 0.7)
+    love.graphics.circle("fill", o.x, o.y, 4)
   end,
 }
 
--- Rotating blade arm: `count` saws (1 or 2) on a bar spinning around (x, y).
-T.arm = {
-  init = function(o) o.a = o.phase or 0 end,
-  update = function(o, world, dt)
-    o.a = (o.a + o.spin * dt) % (math.pi * 2)
-    for k = 1, o.count do
-      local ang = o.a + (k - 1) * math.pi
-      local sx, sy = o.x + math.cos(ang) * o.length, o.y + math.sin(ang) * o.length
-      for _, p in ipairs(world.players) do
-        if not p.dead and circleHitsPlayer(sx, sy, o.r - 3, p) then
-          if not (o.cd and (o.cd[p] or -1) > world.time) then sfx.play("saw", sx) end
-          Objects.hazardHit(world, o, p, o.damage, p.x - sx, p.y - sy, "saw", 0.4)
-        end
-      end
-    end
-  end,
+-- Rail: a track. Attach objects to it and its carriage drives them along the path.
+T.rail = {
   draw = function(o)
-    love.graphics.setColor(0.4, 0.41, 0.48)
-    love.graphics.setLineWidth(8)
-    for k = 1, o.count do
-      local ang = o.a + (k - 1) * math.pi
-      love.graphics.line(o.x, o.y, o.x + math.cos(ang) * o.length, o.y + math.sin(ang) * o.length)
+    local path = o.path
+    if path and #path >= 2 then
+      local flat = {}
+      for _, p in ipairs(path) do
+        flat[#flat + 1] = p[1]
+        flat[#flat + 1] = p[2]
+      end
+      if o.loop then
+        flat[#flat + 1] = path[1][1]
+        flat[#flat + 1] = path[1][2]
+      end
+      love.graphics.setColor(0.3, 0.32, 0.4, 0.8)
+      love.graphics.setLineWidth(5)
+      love.graphics.line(flat)
+      love.graphics.setColor(0.55, 0.58, 0.68, 0.8)
+      love.graphics.setLineWidth(1.5)
+      love.graphics.line(flat)
     end
-    for k = 1, o.count do
-      local ang = o.a + (k - 1) * math.pi
-      T.saw.draw({ x = o.x + math.cos(ang) * o.length, y = o.y + math.sin(ang) * o.length, r = o.r, a = o.a * 6 })
-    end
-    love.graphics.setColor(0.3, 0.31, 0.36)
-    love.graphics.circle("fill", o.x, o.y, 12)
+    love.graphics.setColor(0.32, 0.34, 0.42)
+    love.graphics.circle("fill", o.x, o.y, 9)
+    love.graphics.setColor(0.75, 0.78, 0.88)
+    love.graphics.circle("fill", o.x, o.y, 4)
   end,
 }
 
 -- Moving platform: solid, follows its path, carries riders.
-T.platform = {
-  solid = true,
-  update = function(o, world, dt)
-    if o.rope or o.falling then return end
-    local dx, dy = followPath(o, dt)
-    carryRiders(o, world, dx, dy)
-  end,
-  draw = function(o)
-    love.graphics.setColor(0.36, 0.38, 0.48)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 4, 4)
-    love.graphics.setColor(0.6, 0.65, 0.85)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
-  end,
-}
 
 ---------------------------------------------------------------- breakables
-local function physicsUpdate(o, world, dt)
-  if o.rope then return end
-  if o.falling then
-    fall(o, world, dt)
-  elseif not supported(o, world) then
-    o.falling, o.vy = true, 0
-  end
-end
-
 local function dropPickup(world, o)
   if love.math.random() < (o.drop or 0) then
     local kind = love.math.random() < 0.5 and 1 or 2 -- 1 health, 2 ammo
@@ -964,52 +907,7 @@ local function dropPickup(world, o)
   end
 end
 
-T.crate = {
-  solid = true,
-  init = function(o) o.maxHp = o.hp end,
-  update = physicsUpdate,
-  draw = function(o)
-    if not o.alive then return end
-    local f = (o.hitFlash or 0) > 0
-    love.graphics.setColor(f and 1 or 0.62, f and 1 or 0.45, f and 1 or 0.26)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 3, 3)
-    love.graphics.setColor(0.42, 0.29, 0.16)
-    love.graphics.setLineWidth(4)
-    love.graphics.rectangle("line", o.x + 2, o.y + 2, o.w - 4, o.h - 4, 2, 2)
-    love.graphics.line(o.x + 4, o.y + 4, o.x + o.w - 4, o.y + o.h - 4)
-    local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
-    if dmg > 0.3 then
-      love.graphics.setColor(0.2, 0.13, 0.07)
-      love.graphics.setLineWidth(2)
-      love.graphics.line(o.x + o.w * 0.7, o.y, o.x + o.w * 0.55, o.y + o.h * 0.4, o.x + o.w * 0.75, o.y + o.h * 0.6)
-    end
-  end,
-  broken = function(o, world)
-    fx.debris(o.x + o.w / 2, o.y + o.h / 2, { 0.62, 0.45, 0.26 }, 10, 12)
-    sfx.play("crateBreak", o.x + o.w / 2)
-    dropPickup(world, o)
-  end,
-}
 
-T.glass = {
-  solid = true,
-  draw = function(o)
-    if not o.alive then return end
-    love.graphics.setColor(0.6, 0.85, 1, 0.25)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-    love.graphics.setColor(0.8, 0.95, 1, 0.7)
-    love.graphics.setLineWidth(2)
-    love.graphics.rectangle("line", o.x, o.y, o.w, o.h)
-    love.graphics.line(o.x + o.w * 0.2, o.y + 6, o.x + o.w * 0.2, o.y + o.h * 0.4)
-  end,
-  broken = function(o)
-    for _ = 1, 3 do
-      fx.spray(o.x + o.w / 2, o.y + love.math.random() * o.h, love.math.random() * math.pi * 2, 6.3,
-        { 0.75, 0.92, 1 }, 6, 260, 2.5, 1)
-    end
-    sfx.play("glassBreak", o.x)
-  end,
-}
 
 local function explodeAt(world, x, y, radius, damage, source, color)
   fx.explosion(x, y, radius, color)
@@ -1026,13 +924,84 @@ local function explodeAt(world, x, y, radius, damage, source, color)
 end
 Objects.explodeAt = explodeAt
 
-T.barrel = {
-  solid = true,
-  init = function(o) o.maxHp = o.hp end,
-  update = physicsUpdate,
-  draw = function(o)
-    if not o.alive then return end
-    local f = (o.hitFlash or 0) > 0
+
+
+
+-- A bridge plank (or any hanging platform): solid, held by a rope.
+
+-- How each block material looks; every other block property is a toggle.
+local function crateDraw(o, f)
+  love.graphics.setColor(f and 1 or 0.62, f and 1 or 0.45, f and 1 or 0.26)
+  love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 3, 3)
+  love.graphics.setColor(0.42, 0.29, 0.16)
+  love.graphics.setLineWidth(4)
+  love.graphics.rectangle("line", o.x + 2, o.y + 2, o.w - 4, o.h - 4, 2, 2)
+  love.graphics.line(o.x + 4, o.y + 4, o.x + o.w - 4, o.y + o.h - 4)
+  local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
+  if dmg > 0.3 then
+    love.graphics.setColor(0.2, 0.13, 0.07)
+    love.graphics.setLineWidth(2)
+    love.graphics.line(o.x + o.w * 0.7, o.y, o.x + o.w * 0.55, o.y + o.h * 0.4, o.x + o.w * 0.75, o.y + o.h * 0.6)
+  end
+end
+
+local function brickDraw(o, f)
+  love.graphics.setColor(f and 0.7 or 0.42, f and 0.7 or 0.38, f and 0.7 or 0.36)
+  love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
+  love.graphics.setColor(0.32, 0.29, 0.27)
+  love.graphics.setLineWidth(2)
+  for row = 0, math.floor(o.h / 20) do
+    local y = o.y + row * 20
+    love.graphics.line(o.x, y, o.x + o.w, y)
+    local off = (row % 2) * 15
+    for col = 0, math.floor(o.w / 30) do
+      local x = o.x + off + col * 30
+      if x < o.x + o.w then love.graphics.line(x, y, x, math.min(o.y + o.h, y + 20)) end
+    end
+  end
+  local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
+  if dmg > 0.25 then
+    love.graphics.setColor(0.12, 0.1, 0.1, 0.8)
+    love.graphics.setLineWidth(3)
+    love.graphics.line(o.x + o.w * 0.3, o.y + o.h * 0.1, o.x + o.w * 0.6, o.y + o.h * 0.35, o.x + o.w * 0.4, o.y + o.h * 0.55)
+    if dmg > 0.6 then
+      love.graphics.line(o.x + o.w * 0.7, o.y + o.h * 0.5, o.x + o.w * 0.35, o.y + o.h * 0.8, o.x + o.w * 0.6, o.y + o.h)
+    end
+  end
+end
+
+local MATERIAL_DRAW = {
+  stone = function(o, f)
+    local c, e = o.rgb or { 0.35, 0.33, 0.4 }, o.edgeRgb or o.rgb or { 0.6, 0.58, 0.68 }
+    if f then love.graphics.setColor(1, 1, 1) else love.graphics.setColor(c) end
+    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
+    love.graphics.setColor(e[1], e[2], e[3], 0.8)
+    love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
+  end,
+  crate = crateDraw,
+  brick = brickDraw,
+  wood = function(o, f)
+    love.graphics.setColor(f and 1 or 0.55, f and 1 or 0.4, f and 1 or 0.24)
+    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 2, 2)
+    love.graphics.setColor(0.4, 0.28, 0.15)
+    love.graphics.setLineWidth(2)
+    love.graphics.line(o.x + 4, o.y + o.h / 2, o.x + o.w - 4, o.y + o.h / 2)
+  end,
+  glass = function(o)
+    love.graphics.setColor(0.6, 0.85, 1, 0.25)
+    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
+    love.graphics.setColor(0.8, 0.95, 1, 0.7)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", o.x, o.y, o.w, o.h)
+    love.graphics.line(o.x + o.w * 0.2, o.y + 6, o.x + o.w * 0.2, o.y + o.h * 0.4)
+  end,
+  metal = function(o, f)
+    love.graphics.setColor(f and 1 or 0.36, f and 1 or 0.38, f and 1 or 0.48)
+    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 4, 4)
+    love.graphics.setColor(0.6, 0.65, 0.85)
+    love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
+  end,
+  barrel = function(o, f)
     love.graphics.setColor(f and 1 or 0.78, f and 1 or 0.2, f and 1 or 0.16)
     love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 6, 6)
     love.graphics.setColor(0.45, 0.1, 0.08)
@@ -1041,20 +1010,7 @@ T.barrel = {
     love.graphics.setColor(1, 0.85, 0.2)
     love.graphics.polygon("fill", o.x + o.w / 2, o.y + o.h * 0.35, o.x + o.w / 2 - 7, o.y + o.h * 0.62, o.x + o.w / 2 + 7, o.y + o.h * 0.62)
   end,
-  broken = function(o, world, source)
-    -- A short delay makes chain reactions ripple instead of all popping at once.
-    table.insert(world.pendingBlasts, { t = 0.08, x = o.x + o.w / 2, y = o.y + o.h / 2, radius = o.radius,
-      damage = o.damage, source = source })
-    fx.debris(o.x + o.w / 2, o.y + o.h / 2, { 0.6, 0.15, 0.12 }, 8, 10)
-  end,
-}
-
-T.gas = {
-  solid = true,
-  update = physicsUpdate,
-  draw = function(o)
-    if not o.alive then return end
-    local f = (o.hitFlash or 0) > 0
+  gas = function(o, f)
     love.graphics.setColor(f and 1 or 0.45, f and 1 or 0.7, f and 1 or 0.3)
     love.graphics.rectangle("fill", o.x, o.y + 6, o.w, o.h - 6, 8, 8)
     love.graphics.setColor(0.3, 0.32, 0.3)
@@ -1062,70 +1018,122 @@ T.gas = {
     love.graphics.setColor(0.15, 0.2, 0.1)
     love.graphics.circle("fill", o.x + o.w / 2, o.y + o.h * 0.55, 6)
   end,
-  broken = function(o, world, source)
-    sfx.play("gas", o.x)
-    table.insert(world.effects, { type = "cloud", x = o.x + o.w / 2, y = o.y + o.h / 2, radius = o.radius,
-      life = 4, max = 4, source = source })
-  end,
 }
 
-T.wall = {
-  solid = true,
-  init = function(o) o.maxHp = o.hp end,
-  draw = function(o)
-    if not o.alive then return end
-    local f = (o.hitFlash or 0) > 0
-    love.graphics.setColor(f and 0.7 or 0.42, f and 0.7 or 0.38, f and 0.7 or 0.36)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
-    love.graphics.setColor(0.32, 0.29, 0.27)
-    love.graphics.setLineWidth(2)
-    for row = 0, math.floor(o.h / 20) do
-      local y = o.y + row * 20
-      love.graphics.line(o.x, y, o.x + o.w, y)
-      local off = (row % 2) * 15
-      for col = 0, math.floor(o.w / 30) do
-        local x = o.x + off + col * 30
-        if x < o.x + o.w then love.graphics.line(x, y, x, math.min(o.y + o.h, y + 20)) end
-      end
-    end
-    local dmg = 1 - (o.hp or 1) / (o.maxHp or 1)
-    if dmg > 0.25 then
-      love.graphics.setColor(0.12, 0.1, 0.1, 0.8)
-      love.graphics.setLineWidth(3)
-      love.graphics.line(o.x + o.w * 0.3, o.y + o.h * 0.1, o.x + o.w * 0.6, o.y + o.h * 0.35, o.x + o.w * 0.4, o.y + o.h * 0.55)
-      if dmg > 0.6 then
-        love.graphics.line(o.x + o.w * 0.7, o.y + o.h * 0.5, o.x + o.w * 0.35, o.y + o.h * 0.8, o.x + o.w * 0.6, o.y + o.h)
-      end
-    end
-  end,
-  broken = function(o)
-    fx.debris(o.x + o.w / 2, o.y + o.h / 2, { 0.42, 0.38, 0.36 }, 14, 14)
-    sfx.play("crateBreak", o.x + o.w / 2, 1, 0.7)
-    fx.addShake(4)
-  end,
-}
+local BREAK_COLOR = { crate = { 0.62, 0.45, 0.26 }, wood = { 0.55, 0.4, 0.24 }, brick = { 0.42, 0.38, 0.36 },
+  stone = { 0.45, 0.43, 0.5 }, metal = { 0.5, 0.52, 0.6 }, barrel = { 0.6, 0.15, 0.12 }, gas = { 0.4, 0.6, 0.3 } }
 
--- A bridge plank (or any hanging platform): solid, held by a rope.
-T.plank = {
+T.block = {
   solid = true,
+  init = function(o)
+    if (o.hp or 0) > 0 then o.maxHp = o.hp end
+    if o.crumble then o.timer, o.state = 0, "solid" end
+  end,
   update = function(o, world, dt)
-    if o.falling then fall(o, world, dt) end
+    if o.conveyor then
+      o.a = (o.a + (o.speed or 0) * dt) % 20
+      for _, p in ipairs(world.players) do
+        if not p.dead and p.groundRect == o then p.beltVx = o.speed end
+      end
+    end
+    if o.crumble then
+      if o.state == "solid" then
+        for _, p in ipairs(world.players) do
+          if not p.dead and p.groundRect == o then
+            o.state, o.timer = "shaking", 0
+            sfx.play("crumble", o.x + o.w / 2, 0.6)
+            break
+          end
+        end
+      elseif o.state == "shaking" then
+        o.timer = o.timer + dt
+        if o.timer >= (o.delay or 0.5) then
+          o.state, o.timer = "gone", 0
+          o.solid = false
+          fx.debris(o.x + o.w / 2, o.y + o.h / 2, { 0.55, 0.5, 0.45 }, 6, 10)
+          sfx.play("crateBreak", o.x + o.w / 2, 0.5)
+        end
+      elseif o.state == "gone" then
+        o.timer = o.timer + dt
+        if o.timer >= (o.back or 4) then
+          local blocked = false
+          for _, p in ipairs(world.players) do
+            if not p.dead and overlapsPlayer(o, p) then blocked = true end
+          end
+          if not blocked then o.state, o.solid = "solid", true end
+        end
+      end
+      o.s = o.state == "solid" and 0 or o.state == "shaking" and 1 or 2
+    end
   end,
   draw = function(o)
     if not o.alive then return end
-    love.graphics.setColor(0.55, 0.4, 0.24)
-    love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 2, 2)
-    love.graphics.setColor(0.4, 0.28, 0.15)
-    love.graphics.setLineWidth(2)
-    love.graphics.line(o.x + 4, o.y + o.h / 2, o.x + o.w - 4, o.y + o.h / 2)
+    if o.crumble and o.s == 2 then
+      love.graphics.setColor(1, 1, 1, 0.06)
+      love.graphics.rectangle("line", o.x, o.y, o.w, o.h, 3, 3)
+      return
+    end
+    local f = (o.hitFlash or 0) > 0
+    love.graphics.push()
+    if o.crumble and o.s == 1 then love.graphics.translate((love.math.random() - 0.5) * 3, 0) end
+    if o.oneway then
+      local c = o.rgb or { 0.35, 0.33, 0.4 }
+      love.graphics.setColor(c[1], c[2], c[3], 0.55)
+      love.graphics.rectangle("fill", o.x, o.y, o.w, math.min(o.h, 10))
+      local e = o.edgeRgb or { 0.8, 0.5, 0.9 }
+      love.graphics.setColor(e)
+      love.graphics.rectangle("fill", o.x, o.y, o.w, 3)
+    else
+      local draw = MATERIAL_DRAW[o.material] or MATERIAL_DRAW.stone
+      draw(o, f)
+    end
+    if o.conveyor then
+      love.graphics.setColor(0.55, 0.56, 0.62)
+      local off = o.a or 0
+      for i = 0, math.floor(o.w / 20) do
+        local x = o.x + ((i * 20 + off) % o.w)
+        love.graphics.polygon("fill", x, o.y + 4, x + 6 * ((o.speed or 0) > 0 and 1 or -1), o.y + o.h / 2, x, o.y + o.h - 4)
+      end
+    end
+    if o.crumble then
+      love.graphics.setColor(0.2, 0.17, 0.15, 0.55)
+      love.graphics.setLineWidth(2)
+      for i = 1, math.floor(o.w / 30) do
+        love.graphics.line(o.x + i * 30, o.y, o.x + i * 30 - 6, o.y + o.h)
+      end
+    end
+    if o.burning then
+      love.graphics.setColor(0.05, 0.03, 0.02, 0.5)
+      love.graphics.rectangle("fill", o.x, o.y, o.w, o.h, 3, 3)
+    end
+    love.graphics.pop()
+  end,
+  broken = function(o, world, source)
+    local cx, cy = o.x + o.w / 2, o.y + o.h / 2
+    if o.material == "glass" then
+      for _ = 1, 3 do
+        fx.spray(cx, o.y + love.math.random() * o.h, love.math.random() * math.pi * 2, 6.3, { 0.75, 0.92, 1 }, 6, 260, 2.5, 1)
+      end
+      sfx.play("glassBreak", o.x)
+    else
+      fx.debris(cx, cy, BREAK_COLOR[o.material] or BREAK_COLOR.stone, 10, 12)
+      sfx.play("crateBreak", cx, 1, o.material == "brick" and 0.7 or 1)
+      if o.material == "brick" or o.material == "stone" then fx.addShake(4) end
+    end
+    if o.onBreak == "explode" then
+      -- A short delay makes chain reactions ripple instead of all popping at once.
+      table.insert(world.pendingBlasts, { t = 0.08, x = cx, y = cy, radius = o.radius or 110, damage = o.damage or 55, source = source })
+    elseif o.onBreak == "gas" then
+      sfx.play("gas", o.x)
+      table.insert(world.effects, { type = "cloud", x = cx, y = cy, radius = o.radius or 110, life = 4, max = 4, source = source })
+    elseif o.onBreak == "pickup" then
+      dropPickup(world, o)
+    end
   end,
 }
 
 -- Weight / chandelier: hangs from a rope, crushes whoever it falls on.
 T.weight = {
-  update = function(o, world, dt)
-    if o.falling then fall(o, world, dt) end
-  end,
   draw = function(o)
     if not o.alive then return end
     love.graphics.setColor(0.3, 0.3, 0.34)
@@ -1136,36 +1144,34 @@ T.weight = {
   end,
 }
 
--- Rope: anchor (x, y), holds object `target` (map object index). Swings it as a pendulum.
+-- Rope: anchor (x, y), holds object `target` (map object index). The swinging is a Box2D joint.
+-- Rope: a chain of Box2D segments between (x, y) and (x2, y2). Each segment has its own health;
+-- one end or both can be tied to objects (`from`, `target`). See Physics.addRope.
 T.rope = {
-  update = function(o, world, dt)
-    local h = o.held
-    if not o.alive or not h or not h.alive then return end
-    local g = 1800
-    o.omega = (o.omega or 0) - (g / o.length) * math.sin(o.angle) * dt
-    o.omega = o.omega * (1 - 0.6 * dt)
-    o.angle = o.angle + o.omega * dt
-    local bx, by = o.x + math.sin(o.angle) * o.length, o.y + math.cos(o.angle) * o.length
-    local hx, hy = Objects.hangPoint(h)
-    setHang(h, bx, by)
-    if h.solid then carryRiders(h, world, bx - hx, by - hy) end
-    o.a = o.angle
-  end,
-  hitTest = function(o, x, y, r)
-    if not o.alive or not o.held then return false end
-    local bx, by = Objects.hangPoint(o.held)
-    return segDist(x, y, o.x, o.y, bx, by) < r + 3
-  end,
-  draw = function(o, list)
+  draw = function(o)
     if not o.alive then return end
-    local h = o.held or (list and o.target and list[o.target])
-    if not h then return end
-    local bx, by = Objects.hangPoint(h)
     love.graphics.setColor(0.72, 0.6, 0.42)
     love.graphics.setLineWidth(3)
-    love.graphics.line(o.x, o.y, bx, by)
-    love.graphics.setColor(0.35, 0.36, 0.42)
-    love.graphics.circle("fill", o.x, o.y, 5)
+    local pts = o.pts
+    if pts and #pts >= 2 then
+      local run = {}
+      local function flush()
+        if #run >= 4 then love.graphics.line(run) end
+        run = {}
+      end
+      for _, p in ipairs(pts) do
+        if p[3] then flush() end
+        run[#run + 1] = p[1]
+        run[#run + 1] = p[2]
+      end
+      flush()
+    else
+      love.graphics.line(o.x, o.y, o.x2, o.y2)
+    end
+    if not o.heldFrom then
+      love.graphics.setColor(0.35, 0.36, 0.42)
+      love.graphics.circle("fill", o.x, o.y, 5)
+    end
   end,
 }
 
@@ -1173,20 +1179,30 @@ T.rope = {
 -- Explosions damage objects in range and swing hanging ones.
 function Objects.explosion(world, x, y, radius, damage, source)
   for _, o in ipairs(world.objects or {}) do
-    if o.alive then
+    if o.alive and o.type == "rope" then
+      Physics.blastRope(world, o, x, y, radius + 30, damage, source)
+    elseif o.alive then
       local cx, cy = o.x, o.y
       if o.w then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
       local d = math.sqrt((cx - x) ^ 2 + (cy - y) ^ 2)
       if d < radius + 30 then
-        if o.type == "rope" then
-          Objects.cut(world, o, source)
-        else
-          if o.hp then Objects.damage(world, o, damage, source, cx, cy) end
-          Objects.push(o, (cx - x) / math.max(1, d) * 500)
+        do
+          if damageable(o) then Objects.damage(world, o, damage, source, cx, cy) end
+          local power = 1100 * (1 - 0.5 * d / (radius + 30))
+          d = math.max(1, d)
+          -- Off centre, so the blast also sets it spinning.
+          Objects.push(o, (cx - x) / d * power, (cy - y) / d * power - 150, x + (cx - x) * 0.6, y + (cy - y) * 0.6, source)
         end
       end
     end
   end
+end
+
+-- Does a bullet at (x, y) touch the bolt of a non-solid anchored object?
+function Objects.anchorHit(o, x, y, r)
+  if o.w then return Map.overlaps(x - r, y - r, r * 2, r * 2, o) end
+  local reach = (o.r or 14) + r
+  return (x - o.x) ^ 2 + (y - o.y) ^ 2 < reach * reach
 end
 
 -- A bullet step at (x, y) radius r: cut ropes / damage non-solid targets. Returns true to stop the bullet.
@@ -1194,19 +1210,18 @@ function Objects.bulletTouch(world, b)
   for _, o in ipairs(world.objects or {}) do
     local t = T[o.type]
     if o.alive and t and t.hitTest and not (b.hitObjects and b.hitObjects[o]) and t.hitTest(o, b.x, b.y, b.r) then
-      if o.type == "rope" then
-        Objects.cut(world, o, b.owner)
-        b.hitObjects = b.hitObjects or {}
-        b.hitObjects[o] = true -- passes through ropes
-      else
-        Objects.damage(world, o, b:currentDamage(), b.owner, b.x, b.y)
-        return true
-      end
+      Objects.damage(world, o, b:currentDamage(), b.owner, b.x, b.y)
+      return true
+    elseif o.alive and o.anchored and (o.anchorHp or 0) > 0 and not o.solid and not (b.hitObjects and b.hitObjects[o])
+        and Objects.anchorHit(o, b.x, b.y, b.r) then
+      Objects.damage(world, o, b:currentDamage(), b.owner, b.x, b.y)
+      return true
     end
   end
   -- Bounce pads speed bullets up; hanging things get swung.
   for _, o in ipairs(world.objects or {}) do
     if o.alive and o.type == "pad" and Map.overlaps(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, o) then T.pad.bullet(o, b) end
+    if o.alive and o.type == "liquid" and o.bounce and Map.overlaps(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, o) then T.liquid.bullet(o, b) end
   end
   return false
 end
@@ -1214,8 +1229,8 @@ end
 -- A bullet bounced off (or stopped at) a solid object.
 function Objects.bulletHitSolid(world, o, b)
   if not o.alive then return end
-  if o.hp and o.hp > 0 then Objects.damage(world, o, b:currentDamage(), b.owner, b.x, b.y) end
-  Objects.push(o, b.vx * 0.15)
+  if damageable(o) then Objects.damage(world, o, b:currentDamage(), b.owner, b.x, b.y) end
+  Objects.push(o, b.vx * 0.25, b.vy * 0.25, b.x, b.y, b.owner)
 end
 
 -- Melee swings break and push objects in reach.
@@ -1227,8 +1242,8 @@ function Objects.melee(world, p, reach, heavy, power)
       if o.w and o.type ~= "rope" then cx, cy = o.x + o.w / 2, o.y + o.h / 2 end
       local hit
       if o.type == "rope" then
-        local bx, by = Objects.hangPoint(o.held or o)
-        hit = segDist(p.x + p.aimX * (p.r + reach * 0.6), p.y + p.aimY * (p.r + reach * 0.6), o.x, o.y, bx, by) < reach * 0.5
+        Physics.blastRope(world, o, p.x + p.aimX * (p.r + reach * 0.6), p.y + p.aimY * (p.r + reach * 0.6), reach * 0.6,
+          heavy and 40 * (1 + power) or 15, p)
       else
         local size = o.w and math.max(o.w, o.h) / 2 or (o.r or 16)
         local dx, dy = cx - p.x, cy - p.y
@@ -1238,11 +1253,10 @@ function Objects.melee(world, p, reach, heavy, power)
       end
       if hit then
         if p.lungeHit then p.lungeHit[o] = true end
-        if o.type == "rope" then
-          Objects.cut(world, o, p)
-        else
-          if o.hp and o.hp > 0 then Objects.damage(world, o, heavy and 40 * (1 + power) or 15, p, cx, cy) end
-          Objects.push(o, p.aimX * (heavy and 900 or 400))
+        do
+          if damageable(o) then Objects.damage(world, o, heavy and 40 * (1 + power) or 15, p, cx, cy) end
+          local kick = heavy and 1100 or 500
+          Objects.push(o, p.aimX * kick, p.aimY * kick, p.x + p.aimX * (p.r + reach), p.y + p.aimY * (p.r + reach), p)
         end
       end
     end
@@ -1272,7 +1286,7 @@ function Objects.update(world, dt)
     if e.type == "pickup" then
       e.vy = math.min((e.vy or 0) + 900 * dt, 500)
       local ny = e.y + e.vy * dt
-      if Map.hit(world.solids, e.x - 10, ny - 10, 20, 20) then e.vy = 0 else e.y = ny end
+      if Physics.hit(world, e.x - 10, ny - 10, 20, 20) then e.vy = 0 else e.y = ny end
       for _, p in ipairs(world.players) do
         if not p.dead and circleHitsPlayer(e.x, e.y, 14, p) then
           if e.kind == 1 then
@@ -1322,6 +1336,63 @@ function Objects.rebuildSolids(world)
 end
 
 ---------------------------------------------------------------- drawing
+local function centreOf(o)
+  if o.w then return o.x + o.w / 2, o.y + o.h / 2 end
+  return o.x, o.y
+end
+
+-- Draw through `fn` turned by the object's angle (turrets turn only their base).
+local function drawTurned(o, fn)
+  if o.rot and o.rot ~= 0 and o.type ~= "turret" and o.type ~= "flame" then
+    local cx, cy = centreOf(o)
+    love.graphics.push()
+    love.graphics.translate(cx, cy)
+    love.graphics.rotate(o.rot)
+    love.graphics.translate(-cx, -cy)
+    fn(o)
+    love.graphics.pop()
+  else
+    fn(o)
+  end
+end
+
+-- Bolts: steel for a permanent anchor, orange for one that can be shot off.
+local function drawAnchor(o)
+  local cx, cy = centreOf(o)
+  local points
+  if o.w and o.h and o.w >= 30 and o.h >= 30 then
+    local dx, dy = o.w / 2 - 7, o.h / 2 - 7
+    points = { { cx - dx, cy - dy }, { cx + dx, cy - dy }, { cx - dx, cy + dy }, { cx + dx, cy + dy } }
+  elseif o.w and o.h and o.w > o.h then
+    local dx = o.w / 2 - 8
+    points = { { cx - dx, cy }, { cx + dx, cy } }
+  elseif o.w and o.h then
+    local dy = o.h / 2 - 8
+    points = { { cx, cy - dy }, { cx, cy + dy } }
+  else
+    points = { { cx, cy } }
+  end
+  local breakable = (o.anchorHp or 0) > 0
+  for _, p in ipairs(points) do
+    love.graphics.setColor(0.12, 0.13, 0.16)
+    love.graphics.circle("fill", p[1], p[2], 5)
+    if breakable then love.graphics.setColor(1, 0.62, 0.2) else love.graphics.setColor(0.78, 0.8, 0.86) end
+    love.graphics.circle("fill", p[1], p[2], 3.2)
+  end
+end
+
+-- Clients get positions at snapshot rate; this eases loose objects between them.
+function Objects.smooth(list, dt)
+  local k = math.min(1, dt * 22)
+  for _, o in ipairs(list) do
+    if o.tx then
+      o.x, o.y = o.x + (o.tx - o.x) * k, o.y + (o.ty - o.y) * k
+      local diff = (o.trot - o.rot + math.pi) % (math.pi * 2) - math.pi
+      o.rot = o.rot + diff * k
+    end
+  end
+end
+
 function Objects.draw(list, effects)
   -- Ropes behind what they hold.
   for _, o in ipairs(list) do
@@ -1329,7 +1400,10 @@ function Objects.draw(list, effects)
   end
   for _, o in ipairs(list) do
     local t = T[o.type]
-    if o.type ~= "rope" and t and t.draw and (o.alive or o.type == "turret") then t.draw(o) end
+    if o.type ~= "rope" and t and t.draw and (o.alive or o.type == "turret") then drawTurned(o, t.draw) end
+  end
+  for _, o in ipairs(list) do
+    if o.alive and o.anchored then drawAnchor(o) end
   end
   for _, e in ipairs(effects or {}) do Objects.drawEffect(e) end
 end
@@ -1337,7 +1411,7 @@ end
 function Objects.drawGlow(list, effects)
   for _, o in ipairs(list) do
     local t = T[o.type]
-    if o.alive and t and t.glow then t.glow(o) end
+    if o.alive and t and t.glow then drawTurned(o, t.glow) end
   end
   for _, e in ipairs(effects or {}) do
     if e.type == "pickup" then
