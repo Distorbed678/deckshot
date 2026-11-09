@@ -408,8 +408,22 @@ end
 
 ---------------------------------------------------------------- hub tab
 local PER_PAGE = 40
+-- Every card, common to legendary, in list order within each rarity.
+local function byRarity()
+  local rank, list = {}, {}
+  for i, r in ipairs(Cards.RARITIES) do rank[r.id] = i end
+  for i, c in ipairs(Cards.list) do list[i] = c end
+  table.sort(list, function(a, b)
+    local ra, rb = rank[a.rarity] or #Cards.RARITIES + 1, rank[b.rarity] or #Cards.RARITIES + 1
+    if ra ~= rb then return ra < rb end
+    if (a.index or 0) ~= (b.index or 0) then return (a.index or 0) < (b.index or 0) end
+    return a.name < b.name
+  end)
+  return list
+end
+
 function CardEditor.drawHub(hub)
-  local list = Cards.list
+  local list = byRarity()
   hub.page = math.max(1, math.min(math.max(1, math.ceil(#list / PER_PAGE)), hub.page))
   local first = (hub.page - 1) * PER_PAGE + 1
   local cols, bw, bh = 4, 290, 30
