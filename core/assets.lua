@@ -28,6 +28,8 @@ function Assets.center(name, x, y, w, h, angle)
   love.graphics.draw(img, x, y, angle or 0, w / iw, h / ih, iw / 2, ih / 2)
 end
 
+local tileQuads = {} -- one quad per image, moved for each draw
+
 -- Repeated across a box, each repeat tileW by tileH.
 function Assets.tile(name, x, y, w, h, tileW, tileH, scroll)
   local img = Assets.image(name)
@@ -35,7 +37,12 @@ function Assets.tile(name, x, y, w, h, tileW, tileH, scroll)
   img:setWrap("repeat", "repeat")
   local iw, ih = img:getDimensions()
   local sx, sy = tileW / iw, tileH / ih
-  local q = love.graphics.newQuad((scroll or 0) / sx, 0, w / sx, h / sy, iw, ih)
+  local q = tileQuads[img]
+  if not q then
+    q = love.graphics.newQuad(0, 0, 1, 1, iw, ih)
+    tileQuads[img] = q
+  end
+  q:setViewport((scroll or 0) / sx, 0, w / sx, h / sy, iw, ih)
   love.graphics.draw(img, q, x, y, 0, sx, sy)
 end
 
@@ -72,33 +79,45 @@ function Assets.round(mode, x, y, w, h)
   if not img or w <= 0 or h <= 0 then return end
   local q = sliceQuads(img)
   local c = math.min(CORNER, w / 2, h / 2)
-  local xs, ys = { x, x + c, x + w - c }, { y, y + c, y + h - c }
-  local ws, hs = { c, w - c * 2, c }, { c, h - c * 2, c }
+  local midW, midH = w - c * 2, h - c * 2
   local i = 0
   for row = 1, 3 do
+    local py = row == 1 and y or row == 2 and y + c or y + h - c
+    local ph = row == 2 and midH or c
+    local sy = (row == 2) and q.mid or q.c
     for col = 1, 3 do
       i = i + 1
-      local sz = (col == 2) and q.mid or q.c
-      local sy = (row == 2) and q.mid or q.c
-      if ws[col] > 0 and hs[row] > 0 then
-        love.graphics.draw(img, q[i], xs[col], ys[row], 0, ws[col] / sz, hs[row] / sy)
+      local pw = col == 2 and midW or c
+      if pw > 0 and ph > 0 then
+        local px = col == 1 and x or col == 2 and x + c or x + w - c
+        local sz = (col == 2) and q.mid or q.c
+        love.graphics.draw(img, q[i], px, py, 0, pw / sz, ph / sy)
       end
     end
   end
 end
 
 -- A texture repeating along a bent line. flat: x1, y1, x2, y2, ...; tileLength: world units per repeat.
+-- Ropes and beams are drawn every frame, so the meshes and their vertex tables are kept and reused
+-- (one per point count).
+local stripMeshes, stripVerts = {}, {}
 function Assets.strip(name, flat, width, tileLength)
   local img = Assets.image(name)
   if not img or #flat < 4 then return end
   img:setWrap("repeat", "clamp")
-  local n = #flat / 2
-  local verts, u = {}, 0
+  local n = math.floor(#flat / 2)
+  local verts = stripVerts[n]
+  if not verts then
+    verts = {}
+    for i = 1, n * 2 do verts[i] = { 0, 0, 0, i % 2 == 1 and 0 or 1 } end
+    stripVerts[n] = verts
+    stripMeshes[n] = love.graphics.newMesh(verts, "strip", "stream")
+  end
+  local u = 0
   for i = 1, n do
     local x, y = flat[i * 2 - 1], flat[i * 2]
-    local px, py = flat[math.max(1, i - 1) * 2 - 1], flat[math.max(1, i - 1) * 2]
-    local qx, qy = flat[math.min(n, i + 1) * 2 - 1], flat[math.min(n, i + 1) * 2]
-    local dx, dy = qx - px, qy - py
+    local pi, qi = math.max(1, i - 1), math.min(n, i + 1)
+    local dx, dy = flat[qi * 2 - 1] - flat[pi * 2 - 1], flat[qi * 2] - flat[pi * 2]
     local len = math.sqrt(dx * dx + dy * dy)
     if len < 0.001 then dx, dy, len = 1, 0, 1 end
     local nx, ny = -dy / len * width / 2, dx / len * width / 2
@@ -106,10 +125,12 @@ function Assets.strip(name, flat, width, tileLength)
       local sx, sy = x - flat[(i - 1) * 2 - 1], y - flat[(i - 1) * 2]
       u = u + math.sqrt(sx * sx + sy * sy) / tileLength
     end
-    verts[#verts + 1] = { x + nx, y + ny, u, 0 }
-    verts[#verts + 1] = { x - nx, y - ny, u, 1 }
+    local a, b = verts[i * 2 - 1], verts[i * 2]
+    a[1], a[2], a[3] = x + nx, y + ny, u
+    b[1], b[2], b[3] = x - nx, y - ny, u
   end
-  local mesh = love.graphics.newMesh(verts, "strip", "stream")
+  local mesh = stripMeshes[n]
+  mesh:setVertices(verts)
   mesh:setTexture(img)
   love.graphics.draw(mesh)
 end

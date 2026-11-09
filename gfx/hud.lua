@@ -189,7 +189,8 @@ function hud.drawScores(players, winScore, rightInset)
       Assets.round("line", x, by, size, size)
       local rc = Cards.rarity[card.rarity] and Cards.rarity[card.rarity].color or { 1, 1, 1 }
       love.graphics.setColor(rc[1], rc[2], rc[3], a)
-      ui.printFit(card.name:sub(1, 2), app.fonts.small, x + 3, by + (size - app.fonts.small:getHeight()) / 2, size - 6, "center")
+      card.abbr = card.abbr or card.name:sub(1, 2)
+      ui.printFit(card.abbr, app.fonts.small, x + 3, by + (size - app.fonts.small:getHeight()) / 2, size - 6, "center")
       hover[#hover + 1] = { x = x, y = by, w = size, h = size, card = card, count = 1, bottom = by + size }
     end
     rowY = rowY + math.max(1, math.ceil(n / perRow)) * (size + sp) + 4

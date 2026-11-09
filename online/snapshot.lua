@@ -47,6 +47,13 @@ end
 local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBHHHHHHHH"
 local BULLET_FMT = "<HhhhhBBB"
 
+-- Stores a value and says whether it differed from what was there.
+local function set(t, k, v)
+  if t[k] == v then return false end
+  t[k] = v
+  return true
+end
+
 function Snap.encode(world, events)
   local P = {}
   local function add(fmt, ...) P[#P + 1] = pack("string", fmt, ...) end
@@ -54,6 +61,11 @@ function Snap.encode(world, events)
   local winner = world.roundWinner and world.roundWinner.slot or 0
   add("<BfHBBB", STATE_CODE[world.state] or 1, world.timer, u16(world.winScore), world.mapIndex or 1,
     winner, #world.players)
+  -- Snapshots are numbered so a client can drop one that arrives late and notice one that never came.
+  world.snapCount = (world.snapCount or 0) + 1
+  add("<H", world.snapCount % 65536)
+  -- The host's clock in milliseconds: clients time other players by it, not by when packets arrive.
+  add("<I4", math.floor(love.timer.getTime() * 1000) % 4294967296)
 
   -- The card pick in progress (slot 0 = none), so everyone can watch it.
   local pk = world.state == "cardPick" and world.pick
@@ -160,17 +172,27 @@ function Snap.encode(world, events)
   add("<B", math.min(#objs, 255))
   -- Most objects sit still, so only ones that changed are sent. Every second a full set goes out
   -- in case an earlier packet was lost.
-  world.snapCount = (world.snapCount or 0) + 1
   local keyframe = world.snapCount % 30 == 1 or world.snapObjects ~= objs
   world.snapObjects = objs
   for i = 1, math.min(#objs, 255) do
     local o = objs[i]
     local last = o.pts and o.pts[#o.pts]
-    local sig = table.concat({ o.alive and 1 or 0, o.anchored and 1 or 0, o.burning and 1 or 0, math.floor(o.x + 0.5), math.floor(o.y + 0.5),
-      math.floor((o.rot or 0) * 500), o.s or 0, o.ANIMATED and 0 or math.floor((o.a or 0) * 100), math.floor(o.hp or 0),
-      last and math.floor(last[1]) or 0, last and math.floor(last[2]) or 0, o.pts and #o.pts or 0 }, ",")
-    local same = not keyframe and o.snapSig == sig
-    o.snapSig = sig
+    -- Compared value by value against what was last sent (no strings or tables built per object).
+    local sv = o.snapVals
+    if not sv then sv = {}; o.snapVals = sv end
+    local changed = set(sv, 1, o.alive and 1 or 0)
+    changed = set(sv, 2, o.anchored and 1 or 0) or changed
+    changed = set(sv, 3, o.burning and 1 or 0) or changed
+    changed = set(sv, 4, math.floor(o.x + 0.5)) or changed
+    changed = set(sv, 5, math.floor(o.y + 0.5)) or changed
+    changed = set(sv, 6, math.floor((o.rot or 0) * 500)) or changed
+    changed = set(sv, 7, o.s or 0) or changed
+    changed = set(sv, 8, o.ANIMATED and 0 or math.floor((o.a or 0) * 100)) or changed
+    changed = set(sv, 9, math.floor(o.hp or 0)) or changed
+    changed = set(sv, 10, last and math.floor(last[1]) or 0) or changed
+    changed = set(sv, 11, last and math.floor(last[2]) or 0) or changed
+    changed = set(sv, 12, o.pts and #o.pts or 0) or changed
+    local same = not keyframe and not changed
     if same then
       add("<B", 32)
     else
@@ -215,7 +237,13 @@ function Snap.encode(world, events)
     add("<B", 0)
   end
 
-  events = events or {}
+  -- Effects and sounds happen once, so each snapshot also repeats the previous one's: a client that
+  -- missed a packet plays them from the next.
+  local current = events or {}
+  local previous = world.snapPrevEvents or {}
+  world.snapPrevEvents = current
+  for pass = 1, 2 do
+  local events = pass == 1 and previous or current
   add("<H", #events)
   for _, e in ipairs(events) do
     local kind = e[1]
@@ -256,6 +284,7 @@ function Snap.encode(world, events)
       add("<B", 4)
     end
   end
+  end
 
   local raw = table.concat(P)
   if #raw > COMPRESS_OVER then
@@ -272,6 +301,8 @@ function Snap.decode(data)
   local st, np, pos
   st, v.timer, v.winScore, v.mapIndex, v.winner, np, pos = unpack("<BfHBBB", raw, 1)
   v.state = Snap.STATES[st] or "countdown"
+  v.seq, pos = unpack("<H", raw, pos)
+  v.hostMs, pos = unpack("<I4", raw, pos)
 
   -- pick = { slot, serial, hover, num, total, queued = { slot... }, options = { card index... } }
   local pk = { queued = {}, options = {} }
@@ -468,6 +499,9 @@ function Snap.decode(data)
     v.barrier = { x0, y0, x1, y1 }
   end
 
+  v.fxPrev = {}
+  for pass = 1, 2 do
+  local v = pass == 1 and { fx = v.fxPrev } or v -- the same reader fills the previous list, then this one
   local ne
   ne, pos = unpack("<H", raw, pos)
   for i = 1, ne do
@@ -524,6 +558,7 @@ function Snap.decode(data)
     else
       v.fx[i] = { 4 }
     end
+  end
   end
   return v
 end

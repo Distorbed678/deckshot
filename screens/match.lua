@@ -37,7 +37,10 @@ Match.__index = Match
 Match.noPadHints = true
 
 local SNAPSHOT_INTERVAL = 1 / 30
-local INTERP_DELAY = 0.07   -- other players are drawn this far in the past, between real snapshots
+-- Other players are drawn a little in the past, between real snapshots. The delay follows the
+-- connection: short when packets arrive evenly, longer when they jitter or go missing.
+local INTERP_MIN, INTERP_MAX = 0.055, 0.22
+local INTERP_DELAY = 0.07   -- the starting delay
 local PING_EVERY = 1
 local RECONNECT_TIME = 60     -- seconds a dropped player's slot is kept for them
 local PICK_DELAY = 0.7 -- ignore "take" presses right after a hand appears
@@ -478,8 +481,18 @@ function Match:newProxy(slot, name)
 end
 
 function Match:applySnapshot(v)
-  self.snapped = true
   local now = love.timer.getTime()
+  -- Unreliable packets can arrive out of order: an older snapshot would drag everything back.
+  -- (After half a second of nothing newer, take it anyway: the host started counting again.)
+  local missed = false
+  if self.snapSeq and v.seq then
+    local ahead = (v.seq - self.snapSeq) % 65536
+    if (ahead == 0 or ahead > 32767) and now - (self.snapTime or 0) < 0.5 then return end
+    missed = ahead > 1 and ahead <= 32767
+  end
+  self.snapSeq = v.seq
+  self.snapped = true
+  local stamp = self:snapshotClock(v, now, missed)
   local view = self.view
   view.state, view.timer, view.winScore = v.state, v.timer, v.winScore
   view.mapIndex, view.winner, view.pick = v.mapIndex, v.winner, v.pick
@@ -496,7 +509,7 @@ function Match:applySnapshot(v)
     p.hist = p.hist or {}
     local last = p.hist[#p.hist]
     if p.dead or pv.dead or (last and math.abs(pv.x - last.x) + math.abs(pv.y - last.y) > 250) then p.hist = {} end
-    table.insert(p.hist, { t = now, x = pv.x, y = pv.y })
+    table.insert(p.hist, { t = stamp, x = pv.x, y = pv.y })
     if #p.hist > 12 then table.remove(p.hist, 1) end
     if #p.hist == 1 then p.x, p.y = pv.x, pv.y end
     p.ping = pv.ping
@@ -595,8 +608,17 @@ function Match:applySnapshot(v)
   view.barrier = v.barrier
   for i, p in ipairs(self.proxies) do p.isJugg = i == v.juggSlot or nil end
 
-  for _, e in ipairs(v.fx) do
-    if e[1] == 1 then
+  -- Effects and sounds: this snapshot's, plus the previous one's if that packet never arrived.
+  local events = v.fx
+  if missed and v.fxPrev and #v.fxPrev > 0 then
+    events = {}
+    for _, e in ipairs(v.fxPrev) do events[#events + 1] = e end
+    for _, e in ipairs(v.fx) do events[#events + 1] = e end
+  end
+  for _, e in ipairs(events) do
+    if self:ownShotEcho(e) then
+      -- our own shot, already shown when the button was pressed
+    elseif e[1] == 1 then
       fx.burst(e[2], e[3], e[4], e[5], e[6], e[7])
     elseif e[1] == 2 then
       fx.ring(e[2], e[3], e[4], e[5])
@@ -770,10 +792,145 @@ function Match:reconcile(pv)
   self.predErrX, self.predErrY = ex, ey
 end
 
+---------------------------------------------------------------- instant shot feedback
+-- The bullet comes from the host, but the flash, sound and kick of your own shot play the moment
+-- you fire. Each predicted shot leaves a token; when the host's copy of the flash, kick and sound
+-- arrives it is matched against a token and skipped, so nothing plays twice. Shots the host fires
+-- that weren't predicted (echo shots, a faster fire rate from a card) have no token and play as usual.
+local SHOT_SOUNDS = { shoot = true, shotgun = true, laser = true }
+
+function Match:predictShot(dt)
+  self.shotCd = math.max(0, (self.shotCd or 0) - dt)
+  local tokens = self.shotTokens or {}
+  self.shotTokens = tokens
+  local now = love.timer.getTime()
+  local unconfirmed = 0
+  for i = #tokens, 1, -1 do
+    if tokens[i].t < now then table.remove(tokens, i) elseif tokens[i].muzzle then unconfirmed = unconfirmed + 1 end
+  end
+  local pr, me = self.pred, self.proxies[self.mySlot]
+  if not pr or not me or me.dead or self.view.state ~= "playing" or self.paused then return end
+  if (me.stunTimer or 0) > 0 or not self.myInput.fire or self.shotCd > 0 then return end
+  -- The host's ammo count, less the shots it hasn't heard about yet.
+  if (me.ammo or 0) - unconfirmed <= 0 then return end
+  local s = pr.stats
+  self.shotCd = s.fireDelay
+  local ang = self.myInput.aim or math.atan2(me.aimY or 0, me.aimX or 1)
+  local ax, ay = math.cos(ang), math.sin(ang)
+  local reach = require("game.body").muzzleDist(pr)
+  fx.muzzle(me.x + ax * reach, me.y + ay * reach, ang, s.bulletSize / 5)
+  fx.kick(-ax * 1.5, -ay * 1.5)
+  me.shotT = 0.12
+  local size = s.bulletSize / 5
+  if s.laser > 0 then
+    sfx.play("laser", me.x)
+  elseif s.bullets >= 3 then
+    sfx.play("shotgun", me.x, 0.8)
+  else
+    sfx.play("shoot", me.x, 0.8, math.max(0.55, math.min(1.4, 1 / size ^ 0.4)))
+  end
+  tokens[#tokens + 1] = { t = now + 0.2 + math.min(0.6, (self.rtt or 0) / 1000 * 2), muzzle = true, kick = true, sound = true }
+end
+
+-- Is this effect from the host the echo of a shot we already showed? (Uses up part of a token.)
+function Match:ownShotEcho(e)
+  local tokens = self.shotTokens
+  if not tokens or #tokens == 0 then return false end
+  local part
+  if e[1] == 12 then
+    local me = self.proxies[self.mySlot]
+    if me and (e[2] - me.x) ^ 2 + (e[3] - me.y) ^ 2 < 150 * 150 then part = "muzzle" end
+  elseif e[1] == 9 then
+    part = "kick"
+  elseif e[1] == 5 and SHOT_SOUNDS[sfx.NAMES[e[2]] or ""] then
+    local me = self.proxies[self.mySlot]
+    if me and math.abs((e[3] or me.x) - me.x) < 150 then part = "sound" end
+  end
+  if not part then return false end
+  for _, tk in ipairs(tokens) do
+    if tk[part] then
+      tk[part] = false
+      return true
+    end
+  end
+  return false
+end
+
+---------------------------------------------------------------- network stats (F3)
+function Match:drawNetStats()
+  local now = love.timer.getTime()
+  local lines = {}
+  if self.role == "client" then
+    local ns = self.netStats
+    if not ns then return end
+    if now - ns.windowT >= 1 then
+      ns.rate, ns.kbps = ns.snaps / (now - ns.windowT), ns.bytes / (now - ns.windowT) / 1000
+      ns.snaps, ns.bytes, ns.windowT = 0, 0, now
+    end
+    lines[1] = ("ping %d ms"):format(self.rtt or 0)
+    lines[2] = ("loss %d%%   jitter %d ms"):format(ns.loss * 100 + 0.5, ns.peak * 1000 + 0.5)
+    lines[3] = ("%d snapshots/s   %.1f kB/s"):format(ns.rate + 0.5, ns.kbps)
+    lines[4] = ("smoothing delay %d ms"):format((self.interpDelay or INTERP_DELAY) * 1000 + 0.5)
+  else
+    self.sentWindow = self.sentWindow or now
+    if now - self.sentWindow >= 1 then
+      self.sentKbps = (self.sentBytes or 0) / (now - self.sentWindow) / 1000
+      self.sentBytes, self.sentWindow = 0, now
+    end
+    lines[1] = ("hosting   %.1f kB/s to each player"):format(self.sentKbps or 0)
+    for _, p in ipairs(self.world.players) do
+      if p.ping and not p.isBot and p.slot ~= self.mySlot then
+        lines[#lines + 1] = ("%s  %d ms"):format(p.name or ("Player " .. p.slot), p.ping)
+      end
+    end
+  end
+  local font = app.fonts.small
+  love.graphics.setFont(font)
+  local lh, w = font:getHeight() + 2, 0
+  for _, l in ipairs(lines) do w = math.max(w, font:getWidth(l)) end
+  local x, y = 12, app.H - 14 - #lines * lh
+  love.graphics.setColor(0, 0, 0, 0.55)
+  love.graphics.rectangle("fill", x - 6, y - 4, w + 12, #lines * lh + 8, 4, 4)
+  love.graphics.setColor(0.75, 1, 0.8)
+  for i, l in ipairs(lines) do love.graphics.print(l, x, y + (i - 1) * lh) end
+end
+
 ---------------------------------------------------------------- client interpolation
+-- Works out when the host made this snapshot, on our own clock. The offset between the two clocks
+-- is taken from the packets that arrived soonest; how late the others are is the jitter.
+function Match:snapshotClock(v, now, missed)
+  local ns = self.netStats
+  if not ns then
+    ns = { jitter = 0, peak = 0, loss = 0, snaps = 0, bytes = 0, rate = 0, kbps = 0, windowT = now }
+    self.netStats = ns
+  end
+  ns.snaps = ns.snaps + 1
+  ns.loss = ns.loss * 0.98 + (missed and 0.02 or 0)
+  if not v.hostMs then return now end
+  local hostT = v.hostMs / 1000
+  local off = now - hostT
+  local late = self.clockOff and (off - self.clockOff) or 0
+  if not self.clockOff or late < 0 or late > 0.25 or (self.lastHostMs and v.hostMs < self.lastHostMs - 1000) then
+    self.clockOff, late = off, 0 -- first packet, a quicker one than any before, or the timeline jumped
+  else
+    self.clockOff = self.clockOff + 0.0003 -- drifts up slowly, so a lasting change in delay is followed
+  end
+  self.lastHostMs = v.hostMs
+  ns.jitter = ns.jitter * 0.9 + late * 0.1
+  ns.peak = math.max(late, ns.peak * 0.985)
+  -- Enough room for the usual lateness, and one more snapshot when packets are going missing.
+  self.interpTarget = math.max(INTERP_MIN, math.min(INTERP_MAX,
+    SNAPSHOT_INTERVAL + 0.015 + ns.peak + (ns.loss > 0.03 and SNAPSHOT_INTERVAL or 0)))
+  return hostT + self.clockOff
+end
+
 function Match:clientInterpolate(dt)
   local now = love.timer.getTime()
-  local renderT = now - INTERP_DELAY
+  -- Grows quickly when the connection gets rough, shrinks back slowly.
+  local target, cur = self.interpTarget or INTERP_DELAY, self.interpDelay or INTERP_DELAY
+  cur = cur + (target - cur) * math.min(1, dt * (target > cur and 8 or 0.6))
+  self.interpDelay = cur
+  local renderT = now - cur
   for i, p in ipairs(self.proxies) do
     local h = p.hist
     if i == self.mySlot and self.pred then
@@ -849,6 +1006,7 @@ function Match:clientNetwork()
         -- Snapshots refer to the host's map list, so wait for it.
         local ok, v = pcall(Snap.decode, msg.data)
         if ok and self.mapsReady then self:applySnapshot(v) end
+        if self.netStats then self.netStats.bytes = self.netStats.bytes + #msg.data end
       elseif kind == net.MSG.ROSTER then
         for i, r in ipairs(net.decodeRoster(msg.data)) do
           local p = self.proxies[i]
@@ -967,10 +1125,12 @@ function Match:hostNetwork(dt)
 
   self.snapTimer = self.snapTimer - dt
   if self.snapTimer <= 0 then
-    self.snapTimer = SNAPSHOT_INTERVAL
+    -- Keep the remainder, so snapshots go out at an even 30 a second whatever the frame rate.
+    self.snapTimer = math.max(SNAPSHOT_INTERVAL * 0.5, self.snapTimer + SNAPSHOT_INTERVAL)
     local data = Snap.encode(self.world, fx.recorder)
     fx.recorder = {}
     self:broadcast(data, false)
+    self.sentBytes = (self.sentBytes or 0) + #data
   end
 end
 
@@ -1294,6 +1454,7 @@ function Match:update(dt, isTop)
       self.transport:send(self.hostPeer, net.encodeInput(self.myInput, self.inputSeq), false)
       self:predictStep(World.STEP, self.view.state == "countdown")
     end
+    self:predictShot(dt)
     Objects.smooth(self.objViews or {}, dt)
     self:clientInterpolate(dt)
   end
@@ -2943,6 +3104,8 @@ function Match:drawFrame()
     local item = hud.cardAt(cardItems, mx, my)
     if item then hud.drawCardTooltip(item) end
   end
+
+  if Settings.values.netStats and self.role ~= "local" then self:drawNetStats() end
 
   -- Connection trouble (clients): high ping or no snapshots for a while.
   if self.role == "client" then

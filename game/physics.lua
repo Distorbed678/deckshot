@@ -390,11 +390,15 @@ local function ropePoints(rope)
       if not prevAlive then
         n = n + 1
         local x, y = seg.body:getWorldPoint(0, -seg.len / 2)
-        pts[n] = { x, y, i > 1 or nil }
+        local pt = pts[n]
+        if not pt then pt = {}; pts[n] = pt end -- the point tables are kept from step to step
+        pt[1], pt[2], pt[3] = x, y, i > 1 or nil
       end
       n = n + 1
       local x, y = seg.body:getWorldPoint(0, seg.len / 2)
-      pts[n] = { x, y }
+      local pt = pts[n]
+      if not pt then pt = {}; pts[n] = pt end
+      pt[1], pt[2], pt[3] = x, y, nil
     end
     prevAlive = seg.alive
   end
@@ -708,11 +712,28 @@ function Physics.boxHitsPlayer(x, y, w, h, rot, p)
   return love.physics.getDistance(probe.fixture, rec.fixture) <= 0
 end
 
+-- The common ray (any solid, nothing excluded) runs thousands of times a second for line-of-sight
+-- checks, so it uses one shared callback instead of a new closure per call.
+local rayHit, rayX, rayY, rayNx, rayNy
+local function plainCallback(f, x, y, xn, yn, fraction)
+  local ud = f:getUserData()
+  if not isSolidData(ud) then return -1 end
+  rayHit, rayX, rayY, rayNx, rayNy = ud, x, y, xn, yn
+  return fraction
+end
+function Physics.plainRay(ph, x0, y0, x1, y1)
+  rayHit = nil
+  ph.b2:rayCast(x0, y0, x1, y1, plainCallback)
+  if rayHit then return rayHit, rayX, rayY, rayNx, rayNy end
+  return nil
+end
+
 -- Nearest solid along a segment: returns it with the hit point and surface normal, or nil.
 -- `accept(ud)` may be given to let other fixtures (a laser's targets) count, or to refuse some.
 function Physics.ray(world, x0, y0, x1, y1, accept, exclude)
   local ph = world.physics
   if not ph or (x0 == x1 and y0 == y1) then return nil end -- Box2D refuses zero-length rays
+  if not accept and not exclude then return Physics.plainRay(ph, x0, y0, x1, y1) end
   local hit, hx, hy, nx, ny
   ph.b2:rayCast(x0, y0, x1, y1, function(f, x, y, xn, yn, fraction)
     local ud = f:getUserData()
@@ -733,14 +754,33 @@ function Physics.canReach(world, x0, y0, x1, y1, exclude)
 end
 
 -- How far a circle reaches in each of n directions, stopped by solid things.
-function Physics.fan(world, x, y, radius, n)
-  local out = {}
+-- out: a table to fill and return (callers that run every frame pass their own, so nothing is allocated).
+local fanFraction
+local function fanCallback(f, _, _, _, _, fraction)
+  if not isSolidData(f:getUserData()) then return -1 end
+  fanFraction = fraction
+  return fraction
+end
+local FAN_DIRS = {}
+function Physics.fan(world, x, y, radius, n, out)
+  out = out or {}
   n = n or 48
-  for i = 1, n do
-    local a = (i - 1) / n * math.pi * 2
-    local _, hx, hy = Physics.ray(world, x, y, x + math.cos(a) * radius, y + math.sin(a) * radius)
-    out[i] = hx and math.sqrt((hx - x) ^ 2 + (hy - y) ^ 2) or radius
+  local dirs = FAN_DIRS[n]
+  if not dirs then
+    dirs = {}
+    for i = 1, n do
+      local a = (i - 1) / n * math.pi * 2
+      dirs[i * 2 - 1], dirs[i * 2] = math.cos(a), math.sin(a)
+    end
+    FAN_DIRS[n] = dirs
   end
+  local b2 = world.physics and world.physics.b2
+  for i = 1, n do
+    fanFraction = 1
+    if b2 and radius > 0 then b2:rayCast(x, y, x + dirs[i * 2 - 1] * radius, y + dirs[i * 2] * radius, fanCallback) end
+    out[i] = radius * fanFraction
+  end
+  for i = n + 1, #out do out[i] = nil end
   return out
 end
 
@@ -877,7 +917,7 @@ local function hurtPlayers(ph, world, o, vx, vy, speed, cx, cy, dt)
   end
 end
 
-local function afterObjects(ph, world, dt, before)
+local function afterObjects(ph, world, dt)
   local Objects = require "game.objects"
   local g = GRAVITY * dt
   for i = #ph.loose, 1, -1 do
@@ -894,9 +934,8 @@ local function afterObjects(ph, world, dt, before)
       o.rot = body:getAngle()
       local speed = math.sqrt(vx * vx + vy * vy)
       -- Sudden changes of speed are collisions.
-      local b = before[o]
-      if b then
-        local dvx, dvy = vx - b[1], vy - b[2] - g
+      if o.beforeVx then
+        local dvx, dvy = vx - o.beforeVx, vy - o.beforeVy - g
         local dv = math.sqrt(dvx * dvx + dvy * dvy)
         if dv > IMPACT_SOUND and (o.thudAt or 0) <= world.time then
           o.thudAt = world.time + 0.15
@@ -909,7 +948,7 @@ local function afterObjects(ph, world, dt, before)
       if o.alive then
         -- Judged on the speed it arrived with: the step that hits you has already slowed it.
         local vx0, vy0 = vx, vy
-        if b then vx0, vy0 = b[1], b[2] end
+        if o.beforeVx then vx0, vy0 = o.beforeVx, o.beforeVy end
         hurtPlayers(ph, world, o, vx0, vy0, math.sqrt(vx0 * vx0 + vy0 * vy0), x, y, dt)
         if speed < 30 then
           o.restTime = (o.restTime or 0) + dt
@@ -942,7 +981,9 @@ local function addBullet(ph, b)
 end
 
 local function syncBullets(ph, world, dt)
-  local current = {}
+  local current = ph.currentBullets or {}
+  ph.currentBullets = current
+  for b in pairs(current) do current[b] = nil end
   for _, b in ipairs(world.bullets or {}) do
     current[b] = true
     if not b.body and not b.dead and not b.mine and not b.laser then addBullet(ph, b) end
@@ -1024,12 +1065,12 @@ function Physics.step(world, dt)
   syncFixed(ph, dt)
   applyFields(ph, dt)
   syncBullets(ph, world, dt)
-  local before = {}
+  -- Speeds before the step, to tell how hard things landed.
   for _, o in ipairs(ph.loose) do
-    if o.body then before[o] = { o.body:getLinearVelocity() } end
+    if o.body then o.beforeVx, o.beforeVy = o.body:getLinearVelocity() end
   end
   ph.b2:update(dt, 8, 3)
-  if not ph.client then afterObjects(ph, world, dt, before) end
+  if not ph.client then afterObjects(ph, world, dt) end
   for _, rope in ipairs(ph.ropes) do
     ropePoints(rope)
     if rope.held and not rope.held.alive then rope.held = nil end

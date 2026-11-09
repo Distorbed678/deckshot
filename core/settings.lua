@@ -73,6 +73,7 @@ local defaults = {
   shake = 3,
   particles = 2,
   showFps = false,
+  netStats = false,      -- online: ping, loss, jitter and snapshot rate on screen (F3)
   roundsToWin = 5,
   subRounds = 2,         -- sub-round wins needed for a point
   pickFrom = 5,
@@ -184,8 +185,6 @@ function Settings.load()
       if v.binds[scheme] and Settings.DEFAULT_BINDS[scheme][action] and validBinding(b) then
         v.binds[scheme][action] = b
       end
-    elseif synId then
-      if synVal == "off" then v.synergies[synId] = true end
     elseif mapId then
       if Map.byId[mapId] and mapVal == "off" then v.maps[mapId] = true end
     elseif cardId then

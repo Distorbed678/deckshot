@@ -127,6 +127,11 @@ function love.keypressed(key, scancode, isrepeat)
     Settings.toggleFullscreen()
     return
   end
+  if key == "f3" and not isrepeat then
+    Settings.values.netStats = not Settings.values.netStats
+    Settings.save()
+    return
+  end
   app.keypressed(key, scancode, isrepeat)
 end
 

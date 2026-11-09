@@ -16,23 +16,43 @@ end
 
 local RAYS = 40
 
+-- One mesh and its vertex tables serve every light; the ray directions never change.
+local lightMesh, lightVerts, lightReach = nil, {}, {}
+local COS, SIN = {}, {}
+for i = 0, RAYS do
+  local ang = (i % RAYS) / RAYS * math.pi * 2
+  COS[i], SIN[i] = math.cos(ang), math.sin(ang)
+  lightVerts[i + 2] = { 0, 0, 0, 0, 0, 0, 0, 1 }
+end
+lightVerts[1] = { 0, 0, 0.5, 0.5, 0, 0, 0, 1 }
+
 -- Fills the light map with one light; brightest in the middle, nothing at its edge.
 local function drawLight(world, x, y, radius, r, g, b, a)
-  local reaches = world and world.physics and Physics.fan(world, x, y, radius, RAYS)
-  local verts = { { x, y, 0.5, 0.5, r * a, g * a, b * a, 1 } }
+  local reaches = world and world.physics and Physics.fan(world, x, y, radius, RAYS, lightReach)
+  local v = lightVerts[1]
+  v[1], v[2], v[5], v[6], v[7] = x, y, r * a, g * a, b * a
   for i = 0, RAYS do
-    local ang = (i % RAYS) / RAYS * math.pi * 2
     local d = reaches and math.min(radius, reaches[(i % RAYS) + 1]) or radius
     local fade = 1 - d / radius
-    verts[#verts + 1] = { x + math.cos(ang) * d, y + math.sin(ang) * d, 0, 0, r * a * fade, g * a * fade, b * a * fade, 1 }
+    v = lightVerts[i + 2]
+    v[1], v[2], v[5], v[6], v[7] = x + COS[i] * d, y + SIN[i] * d, r * a * fade, g * a * fade, b * a * fade
   end
-  love.graphics.draw(love.graphics.newMesh(verts, "fan", "stream"))
+  if not lightMesh then lightMesh = love.graphics.newMesh(lightVerts, "fan", "stream") end
+  lightMesh:setVertices(lightVerts)
+  love.graphics.draw(lightMesh)
 end
+
+local lightList = {}
 
 -- Everything that gives off light this frame.
 local function collect(players, objs, effects)
-  local out = {}
-  local function add(x, y, radius, r, g, b, a) out[#out + 1] = { x, y, radius, r, g, b, a } end
+  local out, n = lightList, 0
+  local function add(x, y, radius, r, g, b, a)
+    n = n + 1
+    local l = out[n]
+    if not l then l = {}; out[n] = l end
+    l[1], l[2], l[3], l[4], l[5], l[6], l[7] = x, y, radius, r, g, b, a
+  end
   for _, p in ipairs(players) do
     if not p.dead then
       local c = p.color
@@ -60,6 +80,7 @@ local function collect(players, objs, effects)
   for _, e in ipairs(effects or {}) do
     if e.type == "pickup" then add(e.x, e.y, 120, 0.9, 0.9, 0.7, 0.5) end
   end
+  out.n = n
   return out
 end
 
@@ -77,7 +98,11 @@ function Lighting.draw(world, target, players, objs, effects, sx, sy, scale)
   love.graphics.scale(ratio, ratio)
   love.graphics.translate(sx, sy)
   love.graphics.scale(scale)
-  for _, l in ipairs(collect(players, objs, effects)) do drawLight(world, l[1], l[2], l[3], l[4], l[5], l[6], l[7]) end
+  local lights = collect(players, objs, effects)
+  for i = 1, lights.n do
+    local l = lights[i]
+    drawLight(world, l[1], l[2], l[3], l[4], l[5], l[6], l[7])
+  end
   love.graphics.setCanvas(target)
   love.graphics.origin()
   love.graphics.setBlendMode("multiply", "premultiplied")

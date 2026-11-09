@@ -165,6 +165,10 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
   end
   ry = ry + gap
 
+  d = ui.cycler("Network stats (F3)", v.netStats and "On" or "Off", rx, ry, colW, h)
+  if d ~= 0 then v.netStats = not v.netStats end
+  ry = ry + gap
+
   d = ui.cycler("Damage numbers", v.damageNumbers and "On" or "Off", rx, ry, colW, h)
   if d ~= 0 then
     v.damageNumbers = not v.damageNumbers
