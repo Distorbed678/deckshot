@@ -20,16 +20,18 @@
 
 ## Why you'll keep saying "one more round"
 
-- **150 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
+- **149 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
 - **Cards that really combine.** Explosive + Bouncy makes every bounce explode. Poison spreads through your blasts and shards. Nothing is scripted as a special pair.
 - **Losers get stronger.** Win 2 sub-rounds to take a point, then everyone else picks a card, so no match is over until it's over.
-- **55 hand-tuned arenas** with saws, lasers, crushers, acid, ropes and breakable everything.
-- **Elimination or King of the Hill**, free-for-all or teams picked by colour, with a sudden-death barrier that ends the stalling.
+- **Physics runs the whole game.** Crates tumble, walls topple, ropes sag and snap a segment at a time, and everything is simulated with Box2D. Shove cover around, cut something down onto your opponent, or hide behind a wall: blasts and presence cards can't reach through it.
+- **24 arenas built around physics**, with rope bridges, spinning arms, rails, crushers, flame jets, liquids you can float crates on, and blocks that break, burn or collapse.
+- **Elimination, King of the Hill or Juggernaut**, free-for-all or teams picked by colour, with a sudden-death barrier that ends the stalling. In Juggernaut, one over-powered player takes on everyone, and whoever brings them down takes over.
 - **Vote on the next map, ban the card you hate, chat with your friends.**
-- **A recap after every match** with everyone's stats, builds and awards, saved as an image to show off.
+- **A recap after every match** with everyone's stats, builds and awards, saved as an image to show off, and you can save the whole match as a replay to watch again.
 - **Unlock about 60 hats, eyes, mouths and details** through 44 achievements.
 - **Voice chat** over Steam and LAN, with push-to-talk or open mic.
-- **Make your own** maps and cards in the built-in editors, then share them with a code.
+- **Make your own** maps and cards. The map editor has swipe painting, rotation and slopes, groups, colours and live physics testing, and you can share what you make with a code.
+- **Community browser:** download maps and custom cards other players have added, or send in your own through GitHub (desktop versions).
 
 <table>
   <tr>
@@ -69,7 +71,7 @@
 
 ### Browser
 
-Open **https://distorbed678.github.io/deckshot/play/**. Nothing to install. Play against bots, or share the keyboard. Gamepads work, and on a phone or tablet the touch controls appear when you touch the screen (turn it sideways; "Add to Home Screen" gives a full-screen app). Settings are saved in your browser. Steam play isn't available in the browser. To join a LAN game from a browser or phone, open the address (or scan the QR code) the desktop host's lobby shows (see [LAN play](#lan-play)).
+Open **https://distorbed678.github.io/deckshot/play/**. Nothing to install. Play against bots, or share the keyboard. Gamepads work, and on a phone or tablet the touch controls appear when you touch the screen (turn it sideways; "Add to Home Screen" gives a full-screen app). Settings are saved in your browser. Steam play, saved replays, the Community browser and voice chat aren't available in the browser. To join a LAN game from a browser or phone, open the address (or scan the QR code) the desktop host's lobby shows (see [LAN play](#lan-play)).
 
 On Windows and Linux the game checks for new versions and offers a one-click update from the main menu.
 
@@ -84,6 +86,7 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 | **Online** | A / D | Space or W | Mouse | Left click | Right click | Left Shift | Q |
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
+- There's no double jump by default. If you walk or get knocked off an edge without jumping, you keep **one jump** to use any time during that fall. Air-jump cards add more.
 - Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.
 - **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online, and **V** (or clicking the right stick) is push-to-talk when voice chat is on. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
 - **Touch:** drag on the left half to move, drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
@@ -153,7 +156,7 @@ Traffic goes through Cloudflare, so expect more delay than on a real LAN. Browse
 
 ## Credits
 
-Deckshot is a fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/) by Landfall Games, and isn't affiliated with or endorsed by them. Built with [LÖVE](https://love2d.org/). Fonts: Russo One and Barlow (SIL Open Font License). Every sound and track is synthesized in code.
+Deckshot is a fan-made game heavily inspired by [ROUNDS](https://store.steampowered.com/app/1557740/ROUNDS/) by Landfall Games, and isn't affiliated with or endorsed by them. Built with [LÖVE](https://love2d.org/). Fonts: Russo One and Barlow (SIL Open Font License). All other art, sound and music were made for this project.
 
 This project's source code is released under the [MIT License](LICENSE).
 
@@ -205,9 +208,13 @@ Output goes to `dist/`:
 | `web/` | The browser version: [love.js](https://github.com/Davidobot/love.js) (LÖVE compiled to WebAssembly) with the game, using the page in `web/index.html`. Serve the folder over HTTP to test it locally, e.g. `python3 -m http.server -d dist/web`. |
 | `site/` | What GitHub Pages serves: the landing page from `site/index.html` at the root, with the browser version under `play/`. |
 
-Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git push origin v1.2.3`) runs `.github/workflows/release.yml`, which builds both packages on Linux, publishes the GitHub release with the tag message as its notes (plus downloads and SHA-256 checksums), and then runs `.github/workflows/pages.yml` to deploy the landing page and browser version to GitHub Pages. You can also run the Pages workflow by hand from the Actions tab.
+Pushing a version tag (`git tag -a v1.2.3 --cleanup=verbatim -F notes.md && git push origin v1.2.3`) runs `.github/workflows/release.yml`, which runs the tests, builds both packages on Linux, publishes the GitHub release with the tag message as its notes (plus downloads and SHA-256 checksums), and then runs `.github/workflows/pages.yml` to deploy the landing page and browser version to GitHub Pages. You can also run the Pages workflow by hand from the Actions tab.
 
 The LÖVE 11.5 runtimes and `appimagetool` are downloaded once from their official GitHub releases into `build/cache/`.
+
+`tests/run.sh` runs the headless behaviour and bot tests (it needs LÖVE on your PATH).
+
+**Art and sound:** LÖVE can't read SVG, so sprites are edited in `assets/art/*.svg` and turned into the PNGs in `assets/sprites/` by `tools/build_art.sh` (it needs `rsvg-convert`). Commit both. Sounds are `assets/sfx/<name>.ogg`, listed in `assets/sfx/sounds.txt`, and music is in `assets/music/`.
 
 </details>
 
@@ -221,37 +228,45 @@ deckshot/
 ├── main.lua, conf.lua   entry points (LÖVE needs them at the root), crash screen, window icon
 ├── core/                app (screen stack, virtual canvas, transitions), ui, input (keys, mouse, pads, touch,
 │                        bots), touch, settings, profile (card stats), achievements, cosmetics, glyphs
-│                        (controller icons), qr, version, updater, webkeyboard, platform, bit
-├── game/                world (authoritative simulation), player, body (drawn limbs and gun), bullet, objects
-│                        (hazards, breakables), cards + carddata + stats + triggers (data-driven
-│                        cards), map, bot
-├── gfx/                 fx (particles), sfx (synthesized sounds), music, atmosphere (map backgrounds), logo,
-│                        bloom, hud, cardart (card medallions and foil), recap (end-of-match page)
+│                        (controller icons), qr, version, updater, webkeyboard, platform, bit, assets
+│                        (sprite loader), community (GitHub browser)
+├── game/                world (authoritative simulation), physics (Box2D), player, body (limb targets and gun),
+│                        bullet, objects (blocks, hazards, machines, ropes, liquid), events (gameplay to
+│                        visuals and sound), cards + carddata + stats + triggers (data-driven cards), map, bot
+├── gfx/                 fx (particles), sfx, music, atmosphere (map backgrounds), logo, bloom, hud, lighting,
+│                        limbs (physics limbs and ragdolls), objectview + playerview + bulletview (drawing),
+│                        cardart (card medallions and foil), recap (end-of-match page)
 ├── online/              net (message codec), chat, voice, snapshot, session (Steam lobby), steam (library loader),
-│                        lan (LAN host/client/discovery), webbridge (browser LAN), active, presence
+│                        lan (LAN host/client/discovery), webbridge (browser LAN), active, presence, discord,
+│                        replay (saved matches)
 ├── screens/             splash, menu, whatsnew, update, confirm, localmenu, localsetup, match, practice,
-│                        customize, editor_hub, editor_map, editor_cards, howtoplay, credits, settings,
-│                        library, maps, touchlayout, online, lan, lobby, reconnect
+│                        customize, editor_hub, editor_map, editor_object, editor_cards, howtoplay, credits,
+│                        settings, library, maps, touchlayout, online, lan, lobby, reconnect, replays, community
 ├── data/maps/           the built-in maps (map editor files)
 ├── data/cards/          the built-in cards (card editor files)
+├── data/objects.txt     default settings for map objects and block materials
+├── assets/              art sources (art/), built sprites (sprites/), sfx/, music/, fonts/
+├── community/           maps and custom cards shown in the Community browser, added by pull request
+├── tests/, tools/       headless tests, and the SVG-to-PNG art build
 ├── lib/windows|linux/   Steam libraries
 ├── web/                 the browser version's page and manifest
 ├── site/                the landing page on GitHub Pages
 ├── docs/media/          README and landing page images
-├── .github/workflows/   release builds and GitHub Pages deployment
+├── .github/workflows/   release builds, GitHub Pages deployment and checks on community pull requests
 ├── build.sh             release builder
 └── steam_appid.txt      Spacewar app id for running from source
 ```
 
 - `main.lua` adds a frame-capped `love.run`. `conf.lua` starts Steam before the window exists so the overlay can hook in.
 - Everything renders to a 1280×720 virtual canvas that is letterboxed to the window.
-- `game/world.lua` holds the whole match state and round flow: card picks, teams, the sudden-death barrier, bots and disconnects.
+- `game/world.lua` holds the whole match state and round flow: card picks, teams, the sudden-death barrier, bots and disconnects. It advances in fixed 1/60 s steps, and drawing blends between them.
+- `game/physics.lua` runs all movement and collision through Box2D (`love.physics`). Gameplay code keeps reading and writing positions and velocities; those become body moves and impulses around each physics step.
 
 ### Networking model
 
-- **Host-authoritative.** The host runs the only simulation. Clients send their input every frame (unreliable, with sequence numbers) and render what the host sends back on proxy objects that reuse the same `draw()` code.
-- **Client prediction:** your own player is simulated locally right away. Snapshots carry the last input the host applied; the client resets to the host's state, replays newer inputs and blends small corrections. Other players are drawn about 70 ms behind, between real snapshots.
-- **Snapshots** go out about 30 times a second: players, bullets, map objects, effects, the barrier, the current card pick, scoreboard stats, and recorded particle, sound and damage-number events. They're compact binary (`love.data.pack`), lz4-compressed when large.
+- **Host-authoritative.** The host runs the only simulation. Clients send their input every simulation step (unreliable, with sequence numbers) and render what the host sends back on proxy objects that reuse the same `draw()` code.
+- **Client prediction:** your own player is simulated locally right away, in a small Box2D world of the client's own. Snapshots carry the last input the host applied; the client resets to the host's state, replays newer inputs and blends small corrections. Other players are drawn about 70 ms behind, between real snapshots.
+- **Snapshots** go out about 30 times a second: players, bullets, map objects, effects, the barrier, the current card pick, scoreboard stats, and recorded particle, sound and damage-number events. Map objects are only sent when they've changed, with a full set once a second in case a packet was lost. Snapshots are compact binary (`love.data.pack`), lz4-compressed when large.
 - **Reliable messages** cover match start (slots, colours, teams, bots), the map and card lists (full text for custom or edited ones), rules, roster, toasts, the kill feed, votes, discards, lobby streaks and return-to-lobby.
 - **Versioning:** `session.PROTOCOL` is stored in the lobby data (and sent in the LAN hello), and mismatched peers are refused.
 - **Transports:** Steam uses NetworkingMessages. LAN uses one TCP connection per client to the host (`online/lan.lua`): desktop clients send length-prefixed frames, and browser clients use a WebSocket on the same port, which also serves the browser version over HTTP. In the browser, `online/webbridge.lua` talks to the page's WebSocket code through `print` and a file in the in-memory filesystem, since love.js has no sockets.
@@ -277,6 +292,7 @@ Everything is saved in the game's save folder:
 | `settings.txt` | settings as `key=value` lines, key bindings (`bind.<scheme>.<action>=<key>`), card pool (`card.<id>=<rarity>,<on|off>`), and the map pool |
 | `profile.txt` | statistics per card, and lifetime counts for achievements |
 | `recaps/` | match recaps saved as images |
+| `replays/`, `videos/` | saved matches, and replays exported as video (exporting needs ffmpeg installed) |
 | `user/custom_maps/`, `user/custom_cards/` | things you made in the editors |
 | `user/maps/`, `user/cards/` | your edits to built-in ones (delete a file, or use Reset, to undo) |
 | `crash.txt` | the last crash report |
