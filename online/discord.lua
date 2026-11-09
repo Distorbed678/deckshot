@@ -1,9 +1,10 @@
 -- Discord Rich Presence over Discord's local socket, with no library to ship. Desktop only: it
--- needs ffi, so the browser build leaves it switched off. Set APP_ID to your Discord application
--- id (discord.com/developers) to turn it on. Every failure is silent: no Discord, no problem.
+-- needs ffi, so the browser build leaves it switched off. APP_ID is the Discord application
+-- (discord.com/developers); its Art Assets must include one named "logo" for the large image.
+-- Every failure is silent: no Discord, no problem.
 local Platform = require "core.platform"
 
-local Discord = { APP_ID = nil, connected = false, retry = 0, startedAt = os.time() }
+local Discord = { APP_ID = "1569473562580881549", connected = false, retry = 0, startedAt = os.time() }
 
 local ffi, libc, handle, isWindows
 
@@ -153,7 +154,8 @@ function Discord.set(details, state)
     pid = tonumber(ffi.C.getpid())
   end
   if not sendFrame(1, { cmd = "SET_ACTIVITY", nonce = tostring(love.timer.getTime()), args = { pid = pid,
-    activity = { details = details, state = state, timestamps = { start = Discord.startedAt } } } }) then
+    activity = { details = details, state = state, timestamps = { start = Discord.startedAt },
+      assets = { large_image = "logo", large_text = "Deckshot" } } } }) then
     close()
   end
 end
