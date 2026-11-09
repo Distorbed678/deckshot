@@ -1,0 +1,9 @@
+deckshot-card 1
+name Three-Round
+rarity common
+art bullets x2 sky
+row add burst 2
+row add ammo 2
+row mul gunDamage 0.5
+note +every shot fires 2 more bullets in a row for free
+stack +2 more bullets in the row per copy

@@ -1,0 +1,10 @@
+deckshot-card 1
+name Pulse Ring
+rarity uncommon
+art burst snow ice
+block
+row add blockNova 8
+row add novaFrost 1.5
+row add blockCooldown 0.25
+note +blocking fires 8 slowing bullets around you
+stack +8 bullets per copy

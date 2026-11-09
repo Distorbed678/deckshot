@@ -1,0 +1,6 @@
+deckshot-card 1
+name Hot Load
+rarity common
+art bullet dash volt
+row mul bulletSpeed 2.2
+row add reloadTime 0.25

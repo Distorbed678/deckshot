@@ -1,0 +1,9 @@
+deckshot-card 1
+name Bank Shot
+rarity uncommon
+art bounce seek sky
+row add bounces 2
+row add seek 2.5
+row mul gunDamage 0.8
+note +bullets turn toward an enemy after they bounce
+stack sharper turns per copy

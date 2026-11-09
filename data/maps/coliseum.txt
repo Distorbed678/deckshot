@@ -1,0 +1,18 @@
+deckshot-map 4
+name Coliseum
+theme desert
+spawn 470 708
+spawn 1066 708
+spawn 590 708
+spawn 946 708
+rect 384 756 768 108
+obj block h=240 id=1 material=stone slope=left w=240 x=144 y=516
+obj block h=240 id=2 material=stone slope=right w=240 x=1152 y=516
+rect 144 756 240 108
+rect 1152 756 240 108
+rect 96 516 48 348
+rect 1392 516 48 348
+oneway 648 580 240 14
+oneway 430 440 180 14
+oneway 926 440 180 14
+oneway 672 300 192 14

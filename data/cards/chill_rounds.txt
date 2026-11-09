@@ -1,0 +1,8 @@
+deckshot-card 1
+name Chill Rounds
+rarity common
+art snow bullet ice
+row add frost 1.5
+row add reloadTime 0.25
+note +hits slow the enemy by 50% for 1.5s
+stack +1.5s of slow per copy

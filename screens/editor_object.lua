@@ -47,6 +47,7 @@ local ROWS = {
     { "radius", "Blast radius", 10, 30, 400, show = function(o) return o.onBreak == "explode" or o.onBreak == "gas" end },
     { "damage", "Blast damage", 5, 0, 300, show = function(o) return o.onBreak == "explode" end },
     { "drop", "Drop chance", 0.01, 0, 1, show = function(o) return o.onBreak == "pickup" end },
+    { "slope", "Ramp (high side)", options = { "none", "left", "right" } },
     { "oneway", "One-way", options = YESNO },
     { "crumble", "Crumbles", options = YESNO },
     { "delay", "Crumble delay", 0.1, 0.1, 5, show = when("crumble") },

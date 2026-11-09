@@ -1,0 +1,9 @@
+deckshot-card 1
+name Bloodhound
+rarity uncommon
+art seek eye blood
+row add homing 1.6
+row mul gunDamage 0.75
+row mul fireDelay 1.428571
+note +bullets curve toward enemies ahead of them
+stack sharper turns per copy

@@ -1,0 +1,6 @@
+deckshot-card 1
+name Wall Runner
+rarity uncommon
+art wall boot sky
+row mul jump 1.2
+trigger wallJump dash

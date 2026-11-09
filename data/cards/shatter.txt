@@ -1,0 +1,7 @@
+deckshot-card 1
+name Shatter
+rarity rare
+art burst bullet steel
+row add shrapnel 1
+note +bullet impacts burst into 4 shards (25% damage each)
+stack +4 shards per copy

@@ -64,8 +64,15 @@ function Bullet.new(owner, x, y, vx, vy)
     distDamage = s.distDamage,
     accel = s.accel,
     frost = s.frost,
-    ghost = s.ghost > 0,
+    ghost = s.ghost > 0 or (s.drill or 0) > 0,
     ghostLevel = s.ghost,
+    drillLeft = ((s.drill or 0) > 0 and s.ghost <= 0) and 150 * s.drill or nil, -- Auger: how much wall it can still chew through
+    thruster = s.thruster or 0, -- copies; hits keep pushing the target
+    fuse = s.fuse or 0,         -- copies; leaves a delayed bomb where it lands
+    dazzle = s.dazzle or 0,     -- copies; hits stun briefly
+    cloudShot = s.cloudShot or 0, -- copies; leaves a poison cloud where it lands
+    remote = s.remote or 0,     -- copies; steers towards its owner's aim
+    snare = s.snare or 0,       -- copies; ropes enemies near where it lands
     sticky = s.sticky,         -- copies; > 0 turns spent bullets into mines
     blackhole = s.blackhole,   -- copies
     scavenger = s.scavenger,
@@ -113,6 +120,7 @@ function Bullet:spawnChild(game, x, y, ang, speed, damage, skip)
   c.explosion, c.homing, c.seek = 0, 0, 0 -- poison and frost carry over
   c.splitsLeft, c.sticky, c.blackhole, c.pierce = 0, 0, 0, 0
   c.shrapnel, c.cluster, c.hydra = 0, 0, 0
+  c.fuse, c.cloudShot, c.snare, c.thruster, c.dazzle, c.remote = 0, 0, 0, 0, 0, 0
   if skip then c.hitSet = { [skip] = true } end
   game:addBullet(c)
   return c
@@ -175,6 +183,18 @@ function Bullet:update(dt, game)
         self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
       end
     end
+  end
+
+  -- Joystick: the bullet turns towards wherever its owner is aiming.
+  if self.remote > 0 and not self.owner.dead and self.owner.aimX then
+    local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
+    local cur = math.atan2(self.vy, self.vx)
+    local want = math.atan2(self.owner.aimY, self.owner.aimX)
+    local diff = (want - cur + math.pi) % (math.pi * 2) - math.pi
+    local maxTurn = (4 + 2 * self.remote) * dt
+    cur = cur + math.max(-maxTurn, math.min(maxTurn, diff))
+    self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
+    self.gravity = 0
   end
 
   if self.accel > 0 then
@@ -274,6 +294,15 @@ function Bullet:afterStep(game)
     self.dead = true
     return
   end
+  -- Auger: drilling uses the bullet up, and it bursts when it can't go any deeper.
+  if self.drillLeft and Physics.hit(game, self.x - 1, self.y - 1, 2, 2) then
+    self.drillLeft = self.drillLeft - dist
+    if self.drillLeft <= 0 then
+      self.dead = true
+      self:impact(game)
+      return
+    end
+  end
   if game.objects then
     local x1, y1 = self.x, self.y
     local steps = math.max(1, math.ceil(dist / 6))
@@ -319,6 +348,10 @@ function Bullet:traceStep(dt, game)
     if self.ghost and Physics.hit(game, self.x - 1, self.y - 1, 2, 2) then
       self.phased = true -- passed through a wall (Ghost Bullets bonus)
       self.lastSolid = Physics.hit(game, self.x - 1, self.y - 1, 2, 2)
+      if self.drillLeft then
+        self.drillLeft = self.drillLeft - math.sqrt(mx * mx + my * my)
+        if self.drillLeft <= 0 then self.ghost, self.drillLeft = false, nil end
+      end
     end
   end
   if self.x < -200 or self.x > Map.W + 200 or self.y > Map.H + 180 or self.y < -600 then
@@ -380,6 +413,7 @@ function Bullet:spawnFragments(game)
     f.splitsLeft = 0
     f.sticky = 0
     f.shrapnel, f.cluster, f.hydra = 0, 0, 0
+    f.fuse, f.cloudShot, f.snare = 0, 0, 0
     f.damage = self.damage * 0.5
     f.r = math.max(2.5, self.r * 0.7)
     f.bounces = math.max(0, self.bounces) -- split bullets keep what's left
@@ -467,7 +501,18 @@ function Bullet:hitPlayer(p, game)
   if landed then
     if o.st then o.st.hits = o.st.hits + 1 end
     if not self.fromTrigger and not self.isChild and o.trigger then o:trigger("hit", { target = p }) end
-    if (os.bloodPact or 0) > 0 and not o.dead and o.heal then o:heal(10 * os.bloodPact) end
+    if (os.bloodPact or 0) > 0 and not o.dead and o.heal then o:heal(5 * os.bloodPact) end
+    if self.thruster > 0 and not p.dead and (p.stats.knockbackImmune or 0) <= 0 then
+      -- Jet Rounds: the bullet keeps shoving for a while.
+      local sp = math.max(1, math.sqrt(self.vx * self.vx + self.vy * self.vy))
+      p.thrustX, p.thrustY = self.vx / sp * 1500, self.vy / sp * 1500 - 300
+      p.thrustT = 0.6 + 0.4 * self.thruster
+    end
+    if self.dazzle > 0 and not p.dead and (p.dazzleCd or 0) <= 0 then
+      p:stun(0.25 * self.dazzle)
+      p.dazzleCd = 2
+      fx.burst(p.x, p.y, { 1, 1, 0.8 }, 10, 240, 3)
+    end
     if self.lifesteal > 0 then o:heal(dmg * self.lifesteal) end
     self:applyEffects(p, dmg)
     if self.scavenger > 0 and not o.dead and o ~= p then
@@ -512,6 +557,30 @@ end
 
 -- hitPlayer: the player this bullet just hit (shards don't hit them again).
 function Bullet:impact(game, hitPlayer)
+  if not self.isChild and game.effects and game.enemiesOf then
+    if self.fuse > 0 then
+      -- Fuse: a bomb that goes off half a second later.
+      table.insert(game.effects, { type = "bomb", x = self.x, y = self.y, life = 0.5, max = 0.5, owner = self.owner,
+        damage = self.damage * 0.6 * self.fuse, radius = 85 })
+    end
+    if self.cloudShot > 0 then
+      local radius = 85 * extra(self.cloudShot, 0.3)
+      table.insert(game.effects, { type = "cloud", x = self.x, y = self.y, radius = radius, life = 3, max = 3,
+        owner = self.owner, source = self.owner, slow = true })
+      sfx.play("gas", self.x, 0.5)
+    end
+    if self.snare > 0 then
+      for _, e in ipairs(game:enemiesOf(self.owner)) do
+        local d = math.sqrt((e.x - self.x) ^ 2 + (e.y - self.y) ^ 2)
+        if d < 120 + e.r then
+          local t = 2 * self.snare
+          e.snare = { x = self.x, y = self.y, t = t, len = math.max(50, math.min(d, 110)) }
+          table.insert(game.effects, { type = "snare", x = self.x, y = self.y, life = t, max = t, radius = e.snare.len })
+          sfx.play("ropeSnap", self.x, 0.6, 1.4)
+        end
+      end
+    end
+  end
   if self.blackhole > 0 then
     -- Extra Black Hole copies: +30% pull radius and strength each.
     local mult = extra(self.blackhole, 0.3)

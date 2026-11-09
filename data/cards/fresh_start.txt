@@ -1,0 +1,7 @@
+deckshot-card 1
+name Fresh Start
+rarity rare
+art heart star gold
+row add pristine 1
+note +take 60% less damage while above 90% HP
+stack another 60% less per copy

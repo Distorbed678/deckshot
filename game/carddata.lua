@@ -4,7 +4,7 @@
 --   rarity common
 --   art bullet up fire             (optional: motif, badge, tint; see gfx/cardart.lua)
 --   block                          (optional: a block card, shown in the card's footer)
---   special reroll                 (optional: reroll | tableflip | shrine)
+--   special reroll                 (optional: reroll | tableflip | shrine | double)
 --   row mul gunDamage 1.7          (op add | mul | set, stat, value)
 --   row first mul gunDamage 0.85   (first copy only)
 --   row extra mul gunDamage 1.5    (extra copies only)
@@ -17,7 +17,7 @@ local CardData = {}
 
 CardData.HEADER = "deckshot-card 1"
 CardData.SHARE_PREFIX = "DSCARD1:"
-CardData.SPECIALS = { "reroll", "tableflip", "shrine" }
+CardData.SPECIALS = { "reroll", "tableflip", "shrine", "double" }
 
 local function fmt(v)
   if type(v) == "number" then

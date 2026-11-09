@@ -1,0 +1,10 @@
+deckshot-card 1
+name Last Word
+rarity rare
+art shield bullet gold
+block
+row add lastBlock 1
+row add reloadTime 0.5
+row add blockCooldown 0.5
+row extra add blockTime 0.1
+note +firing your last bullet triggers a free block

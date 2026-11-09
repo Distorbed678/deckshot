@@ -117,8 +117,23 @@ local function buildGraph(w)
     if r.w >= 30 then surf[#surf + 1] = { x0 = r.x, x1 = r.x + r.w, y = r.y, rect = r, edges = {} } end
   end
   for _, o in ipairs(w.objects or {}) do
-    if o.solid and o.w and o.w >= 30 and o.type == "block" then
+    if o.solid and o.w and o.w >= 30 and o.type == "block" and not Physics.slopeOf(o) then
       surf[#surf + 1] = { x0 = o.x, x1 = o.x + o.w, y = o.y, rect = o, edges = {} }
+    end
+  end
+  -- A ramp is a walkway between whatever lies at its foot and at its top.
+  local function surfaceAt(x, y)
+    for _, s in ipairs(surf) do
+      if x >= s.x0 - 10 and x <= s.x1 + 10 and math.abs(s.y - y) <= 10 then return s end
+    end
+  end
+  local ramps = {}
+  for _, o in ipairs(w.objects or {}) do
+    local slope = o.solid and Physics.slopeOf(o)
+    if slope then
+      local lowX, highX = slope == "right" and o.x or o.x + o.w, slope == "right" and o.x + o.w or o.x
+      local a, b = surfaceAt(lowX, o.y + o.h), surfaceAt(highX, o.y)
+      if a and b and a ~= b then ramps[#ramps + 1] = { a, b } end
     end
   end
   for _, a in ipairs(surf) do
@@ -147,6 +162,10 @@ local function buildGraph(w)
         if ok then a.edges[#a.edges + 1] = b end
       end
     end
+  end
+  for _, r in ipairs(ramps) do
+    r[1].edges[#r[1].edges + 1] = r[2]
+    r[2].edges[#r[2].edges + 1] = r[1]
   end
   return surf
 end
@@ -300,6 +319,7 @@ function Bot.update(p, w, dt)
     end
   elseif stale and route == nil and t then
     goalX = t.x -- no route found: just walk at them
+    dir = (goalX > p.x + 30) and 1 or (goalX < p.x - 30) and -1 or 0
   end
   -- Pressed against a wall in the air: double jump, then dash, to get over it.
   if not p.onGround and dir ~= 0 and p.wallDir == dir and p.vy > -150 then

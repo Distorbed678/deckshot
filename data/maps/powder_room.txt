@@ -1,0 +1,23 @@
+deckshot-map 4
+name Powder Room
+theme foundry
+spawn 200 708
+spawn 1336 708
+spawn 236 708
+spawn 1300 708
+rect 144 756 1248 48
+rect 300 570 240 24
+rect 996 570 240 24
+rect 648 430 240 24
+oneway 140 400 170 14
+oneway 1226 400 170 14
+obj block damage=55 h=52 hp=30 id=1 material=barrel onBreak=explode physics=true radius=120 w=40 x=640 y=704
+obj block damage=55 h=52 hp=30 id=2 material=barrel onBreak=explode physics=true radius=120 w=40 x=748 y=704
+obj block damage=55 h=52 hp=30 id=3 material=barrel onBreak=explode physics=true radius=120 w=40 x=856 y=704
+obj block damage=55 h=52 hp=30 id=4 material=barrel onBreak=explode physics=true radius=120 w=40 x=400 y=518
+obj block damage=55 h=52 hp=30 id=5 material=barrel onBreak=explode physics=true radius=120 w=40 x=1096 y=518
+obj block damage=55 h=52 hp=30 id=6 material=barrel onBreak=explode physics=true radius=120 w=40 x=748 y=378
+obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=694 y=708
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=802 y=708
+obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=330 y=522
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=1158 y=522

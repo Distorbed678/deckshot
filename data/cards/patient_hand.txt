@@ -1,0 +1,7 @@
+deckshot-card 1
+name Patient Hand
+rarity uncommon
+art hand clock gold
+row mul gunDamage 2
+row mul fireDelay 2.5
+row add reloadTime 0.5

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Cold Slam
+rarity common
+art snow wave ice
+block
+row add maxHp 25
+row add blockCooldown 0.25
+trigger block slow radius=220 time=1.5

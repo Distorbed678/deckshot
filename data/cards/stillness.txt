@@ -1,0 +1,8 @@
+deckshot-card 1
+name Stillness
+rarity epic
+art pause gold
+row add stillness 1
+note +stand still for 3s to charge your next shot
+note +the charged shot deals +200% damage
+stack +200% per copy

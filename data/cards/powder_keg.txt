@@ -1,0 +1,9 @@
+deckshot-card 1
+name Powder Keg
+rarity uncommon
+art bomb burst fire
+row add explosion 70
+row mul fireDelay 2
+row add reloadTime 0.25
+note +bullets explode
+note +bounces and piercing shots explode too

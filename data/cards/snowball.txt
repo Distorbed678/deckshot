@@ -1,0 +1,8 @@
+deckshot-card 1
+name Snowball
+rarity uncommon
+art snowball ice
+row add distDamage 1
+note +bullets gain damage the farther they fly
+note +100% for every 1000 px
+stack +100% per 1000 px per copy

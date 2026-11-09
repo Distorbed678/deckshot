@@ -1,0 +1,5 @@
+deckshot-card 1
+name Bloodrush
+rarity uncommon
+art boot heart blood
+trigger hit speed pct=50 time=3

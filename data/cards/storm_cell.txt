@@ -1,0 +1,10 @@
+deckshot-card 1
+name Storm Cell
+rarity rare
+art cloud volt volt
+block
+row add stormCell 1
+row add blockCooldown 0.25
+note +blocking leaves a field for 3s
+note +the field slows and hurts enemies inside it
+stack +12 damage per second per copy

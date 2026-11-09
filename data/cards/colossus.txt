@@ -1,0 +1,10 @@
+deckshot-card 1
+name Colossus
+rarity legendary
+art armor crown steel
+row add maxHp 150
+row add radius 8
+row add knockbackImmune 1
+row mul speed 0.85
+note +immune to knockback
+note -bigger body

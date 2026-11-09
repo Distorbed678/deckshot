@@ -1,0 +1,8 @@
+deckshot-card 1
+name Sunbeam
+rarity legendary
+art laser sun pink
+row add laser 1
+note +your shots become instant laser beams
+note +beams bounce off walls
+stack +50% beam width and +20% damage per extra copy

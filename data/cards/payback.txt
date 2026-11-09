@@ -1,0 +1,10 @@
+deckshot-card 1
+name Payback
+rarity uncommon
+art fist shield blood
+block
+row add payback 1
+row add maxHp 25
+row add blockCooldown 0.25
+note +blocking deals 15% of your max HP to nearby enemies
+stack +15% per copy

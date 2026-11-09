@@ -67,6 +67,7 @@ Triggers.EFFECTS = {
   { id = "lightning", name = "Lightning", params = { { "damage", 30, 5, 1, 200, "Damage" }, { "delay", 0.75, 0.05, 0.2, 3, "Charge (s)" } },
     text = function(p) return "lightning charges on every enemy, striking for " .. p.damage .. " after " .. p.delay .. "s" end },
   { id = "melee", name = "Reset melee", params = {}, text = function() return "reset your melee cooldown" end },
+  { id = "block", name = "Refresh block", params = {}, text = function() return "refresh your block" end },
 }
 Triggers.EFFECT = {}
 for _, e in ipairs(Triggers.EFFECTS) do Triggers.EFFECT[e.id] = e end
@@ -186,6 +187,12 @@ function RUN.dash(p)
 end
 function RUN.melee(p)
   p.meleeCd = 0
+end
+function RUN.block(p)
+  if p.blockCd > 0 then
+    p.blockCd = 0
+    fx.ring(p.x, p.y, p.r + 12, { 1, 1, 1 })
+  end
 end
 
 -- Run one rule for player p. ctx: { target = player, x = .., y = .. } (where it happened).

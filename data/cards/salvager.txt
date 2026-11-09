@@ -1,0 +1,7 @@
+deckshot-card 1
+name Salvager
+rarity uncommon
+art crate bullet gold
+row add scavenger 1
+row add reloadTime 0.5
+note +hits cancel your reload

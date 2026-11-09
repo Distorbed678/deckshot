@@ -1,0 +1,23 @@
+deckshot-map 4
+name Ice Shelf
+theme ice
+spawn 160 592
+spawn 1376 592
+spawn 260 592
+spawn 1276 592
+rect 96 640 240 224
+rect 1200 640 240 224
+obj liquid buoyant=true color=#3A8BE0 frost=true h=84 id=1 w=864 x=336 y=780
+obj block h=18 hp=20 id=2 material=glass w=108 x=336 y=640
+obj block h=18 hp=20 id=3 material=glass w=108 x=444 y=640
+obj block h=18 hp=20 id=4 material=glass w=108 x=552 y=640
+obj block h=18 hp=20 id=5 material=glass w=108 x=660 y=640
+obj block h=18 hp=20 id=6 material=glass w=108 x=768 y=640
+obj block h=18 hp=20 id=7 material=glass w=108 x=876 y=640
+obj block h=18 hp=20 id=8 material=glass w=108 x=984 y=640
+obj block h=18 hp=20 id=9 material=glass w=108 x=1092 y=640
+rect 420 450 180 30
+rect 936 450 180 30
+oneway 660 310 216 14
+oneway 170 440 150 14
+oneway 1216 440 150 14

@@ -1,0 +1,10 @@
+deckshot-card 1
+name Sweep
+rarity rare
+art radar toxic
+block
+row add radar 1
+row add maxHp 30
+row add blockCooldown 0.25
+note +blocking fires a shot at every enemy you can see
+stack +1 shot per enemy per copy

@@ -1,0 +1,5 @@
+deckshot-card 1
+name Thick Hide
+rarity common
+art heart plus blood
+row add maxHp 50

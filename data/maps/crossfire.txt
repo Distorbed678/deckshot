@@ -1,0 +1,19 @@
+deckshot-map 4
+name Crossfire
+theme void
+spawn 320 708
+spawn 1216 708
+spawn 460 378
+spawn 1076 378
+rect 240 756 1056 48
+rect 696 372 144 144
+rect 372 426 252 36
+rect 912 426 252 36
+rect 750 190 36 120
+rect 750 576 36 100
+oneway 132 590 180 14
+oneway 1224 590 180 14
+oneway 132 290 180 14
+oneway 1224 290 180 14
+oneway 470 620 150 14
+oneway 916 620 150 14

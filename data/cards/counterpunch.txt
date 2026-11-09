@@ -1,0 +1,8 @@
+deckshot-card 1
+name Counterpunch
+rarity rare
+art fist bounce pink
+block
+row add meleeStun 0.5
+trigger meleeBlocked melee
+trigger meleeBlocked invuln time=0.4

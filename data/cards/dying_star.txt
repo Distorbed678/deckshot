@@ -1,0 +1,11 @@
+deckshot-card 1
+name Dying Star
+rarity epic
+art star swirl gold
+block
+row add star 1
+row add maxHp 50
+row add blockCooldown 0.5
+note +blocking plants a star that pulls enemies in for 2s
+note +then it bursts and stuns everyone close for 1s
+stack +1s of stun per copy

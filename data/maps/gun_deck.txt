@@ -1,0 +1,19 @@
+deckshot-map 4
+name Gun Deck
+theme void
+spawn 230 708
+spawn 1306 708
+spawn 330 708
+spawn 1206 708
+rect 144 756 1248 48
+rect 360 570 216 36
+rect 960 570 216 36
+rect 720 430 96 36
+rect 96 320 132 24
+rect 1308 320 132 24
+obj turret damage=15 hp=60 id=1 physics=false rate=2.4 x=768 y=412
+obj turret damage=15 hp=60 id=2 physics=false rate=3 x=162 y=302
+obj turret damage=15 hp=60 id=3 physics=false rate=3 x=1374 y=302
+obj block h=48 hp=150 id=4 material=brick w=144 x=420 y=708
+obj block h=48 hp=150 id=5 material=brick w=144 x=972 y=708
+obj block h=48 hp=150 id=6 material=brick w=144 x=696 y=708

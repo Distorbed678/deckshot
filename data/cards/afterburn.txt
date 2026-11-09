@@ -1,0 +1,6 @@
+deckshot-card 1
+name Afterburn
+rarity common
+art boot flame fire
+row mul dashCooldown 0.7
+row mul dashSpeed 1.15

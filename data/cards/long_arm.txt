@@ -1,0 +1,5 @@
+deckshot-card 1
+name Long Arm
+rarity common
+art fist dash steel
+row mul meleeRange 1.4

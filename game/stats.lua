@@ -126,6 +126,34 @@ Stats.LIST = {
   { "adrenaline", 0, "Abilities", "count", "high", "adrenaline" },
   { "swap", 0, "Abilities", "count", "high", "swap shot" },
   { "sentry", 0, "Abilities", "count", "high", "sentry" },
+  -- Bullets that do something when they land.
+  { "thruster", 0, "Bullets", "count", "high", "jet rounds" },
+  { "fuse", 0, "Bullets", "count", "high", "fuse bombs" },
+  { "dazzle", 0, "Bullets", "count", "high", "flashbang" },
+  { "drill", 0, "Bullets", "count", "high", "drilling bullets" },
+  { "cloudShot", 0, "Bullets", "count", "high", "poison clouds" },
+  { "remote", 0, "Bullets", "count", "high", "steered bullets" },
+  { "snare", 0, "Bullets", "count", "high", "tethers" },
+  -- Things a block sets off.
+  { "blockEcho", 0, "Block", "count", "high", "echo blocks" },
+  { "payback", 0, "Block", "count", "high", "payback" },
+  { "saw", 0, "Block", "count", "high", "buzzsaw" },
+  { "radar", 0, "Block", "count", "high", "sweep shots" },
+  { "hush", 0, "Block", "count", "high", "hush" },
+  { "star", 0, "Block", "count", "high", "dying star" },
+  { "stormCell", 0, "Block", "count", "high", "storm cell" },
+  { "ram", 0, "Block", "count", "high", "ram" },
+  { "implode", 0, "Block", "count", "high", "undertow" },
+  { "carpet", 0, "Block", "count", "high", "carpet bombs" },
+  { "lastBlock", 0, "Block", "count", "high", "last word" },
+  { "novaFrost", 0, "Block", "hidden", "high", "nova slow" },
+  { "pursuit", 0, "Abilities", "count", "high", "pursuit" },
+  { "coldAura", 0, "Abilities", "count", "high", "cold aura" },
+  { "pristine", 0, "Defense", "count", "high", "fresh start" },
+  { "leech", 0, "Abilities", "count", "high", "leech aura" },
+  { "stillness", 0, "Abilities", "count", "high", "stillness" },
+  { "sunflare", 0, "Abilities", "count", "high", "sunflare" },
+  { "demolition", 0, "Abilities", "count", "high", "demolition" },
 }
 
 Stats.BASE = {}
@@ -135,6 +163,10 @@ for i, row in ipairs(Stats.LIST) do
   Stats.INFO[info.key] = info
   Stats.BASE[info.key] = info.base
 end
+
+-- These are shown in seconds when a card adds to them ("+0.25s reload time").
+Stats.INFO.reloadTime.addSecs = true
+Stats.INFO.blockCooldown.addSecs = true
 
 -- Renamed stats (old card files / settings).
 Stats.ALIAS = { damage = "gunDamage" }
@@ -178,9 +210,9 @@ function Stats.describe(row)
   else -- add
     if v == 0 then return nil end
     up = v > 0
-    if info.fmt == "pct" and math.abs(info.base) <= 1.5 then
+    if info.fmt == "pct" and math.abs(info.base) <= 1.5 and not info.addSecs then
       text = (v > 0 and "+" or "") .. round(v * 100) .. "% " .. info.label
-    elseif info.fmt == "secs" then
+    elseif info.fmt == "secs" or info.addSecs then
       text = (v > 0 and "+" or "") .. num(v) .. "s " .. info.label
     elseif info.fmt == "rate" then
       text = (v > 0 and "+" or "") .. num(v) .. "s between shots"

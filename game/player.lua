@@ -52,6 +52,14 @@ Player.ORB_SIZE = ORB_SIZE
 local SHOCKWAVE_RADIUS = 170
 local STATIC_RADIUS = 130
 local SENTRY_DELAY = 0.9
+local SAW_RADIUS = 46      -- Buzzsaw: how far the spinning saw reaches from your centre
+local AURA_RADIUS = 200    -- Cold Aura
+local LEECH_RADIUS = 150   -- Leech Aura
+local FLARE_RADIUS = 180   -- Sunflare
+local PAYBACK_RADIUS = 170
+local IMPLODE_RADIUS = 280
+local HUSH_RADIUS = 230
+Player.SAW_RADIUS = SAW_RADIUS
 local ARENA_W, ARENA_H = Map.W, Map.H
 
 local Stats = require "game.stats"
@@ -205,6 +213,12 @@ function Player:spawn(x, y, facing, game)
   self.lastAttacker = nil
   self.boostSpeed, self.boostSpeedTimer, self.boostDamage, self.boostShots = 0, 0, 0, 0
   self.roundStartPending = true
+  self.thrustT, self.snare, self.dazzleCd = 0, nil, 0
+  self.silenceTimer, self.chillTimer = 0, 0
+  self.sawTimer, self.sawTick = 0, 0
+  self.echoBlocks, self.echoBlockT, self.ramT = 0, 0, 0
+  self.stillT, self.stillReady = 0, false
+  self.flareT, self.auraT = 0, 0
   for _, inst in ipairs(self.triggerList or {}) do inst.ready, inst.t = 0, 0 end
 end
 
@@ -244,6 +258,9 @@ function Player:update(dt, frozen)
   self.freeAmmo = math.max(0, self.freeAmmo - dt)
   self.warpTimer = math.max(0, self.warpTimer - dt)
   self.swapCd = math.max(0, self.swapCd - dt)
+  self.silenceTimer = math.max(0, (self.silenceTimer or 0) - dt)
+  self.chillTimer = math.max(0, (self.chillTimer or 0) - dt)
+  self.dazzleCd = math.max(0, (self.dazzleCd or 0) - dt)
   if self.comboTimer > 0 then
     self.comboTimer = self.comboTimer - dt
     if self.comboTimer <= 0 then self.comboCount = 0 end
@@ -373,8 +390,14 @@ function Player:update(dt, frozen)
   if self:adrenalineActive() then speed = speed * (1 + 0.2 * s.adrenaline) end
   if self.charging and self.meleeCharge > MELEE.lightThreshold then speed = speed * MELEE.chargeSpeedMul end
   if (self.boostSpeedTimer or 0) > 0 then speed = speed * (1 + self.boostSpeed) end
+  if (self.chillTimer or 0) > 0 then speed = speed * 0.75 end -- inside an enemy's Cold Aura
+  if s.pursuit > 0 and dir ~= 0 and game.nearestEnemy then
+    -- Pursuit: faster while you're closing in on the nearest enemy.
+    local e = game:nearestEnemy(self, self.x, self.y)
+    if e and (e.x - self.x) * dir > 0 then speed = speed * (1 + 0.4 * s.pursuit) end
+  end
 
-  self.forceX, self.gravScale, self.groundMu = 0, 0, 0
+  self.forceX, self.forceY, self.gravScale, self.groundMu = 0, 0, 0, 0
   if self.dashTimer > 0 or self.lungeTimer > 0 then
     -- Dashing / lunging: fixed velocity, no gravity.
     if self.dashTimer > 0 then
@@ -407,6 +430,29 @@ function Player:update(dt, frozen)
         self.vy = self.vy + dy / d * f
         self.controlLock = math.max(self.controlLock, 0.05)
       end
+    end
+  end
+
+  -- Jet Rounds: a bullet that hit you is still pushing.
+  if (self.thrustT or 0) > 0 then
+    self.thrustT = self.thrustT - dt
+    self.vx, self.vy = self.vx + self.thrustX * dt, self.vy + self.thrustY * dt
+    self.controlLock = math.max(self.controlLock, 0.05)
+  end
+  -- Tangle: roped to a spot, you can move around it but not away from it.
+  local sn = self.snare
+  if sn then
+    sn.t = sn.t - dt
+    local dx, dy = self.x - sn.x, self.y - sn.y
+    local d = math.sqrt(dx * dx + dy * dy)
+    if sn.t <= 0 then
+      self.snare = nil
+    elseif d > sn.len then
+      local nx, ny = dx / d, dy / d
+      local out = self.vx * nx + self.vy * ny
+      if out > 0 then self.vx, self.vy = self.vx - out * nx, self.vy - out * ny end
+      local pull = math.min(900, (d - sn.len) * 30)
+      self.vx, self.vy = self.vx - nx * pull, self.vy - ny * pull
     end
   end
 
@@ -504,6 +550,7 @@ function Player:afterStep(dt)
   if not frozen then
     if s.static > 0 then self:updateStatic(dt) end
     if s.sentry > 0 then self:updateSentry(dt) end
+    self:updateAbilities(dt)
   end
 
 end
@@ -514,17 +561,24 @@ function Player:runPhysics(dt, dir, speed, acting)
   local belt = self.beltVx or 0 -- standing on a conveyor
   self.beltVx = nil
   local target = dir * speed + belt
+  -- On a ramp you walk along its surface: (tx, ty) points along it to the right.
+  local tx, ty = 1, 0
+  if self.onGround and (self.groundNy or -1) > -0.999 and (self.groundNy or -1) < 0 then
+    tx, ty = -self.groundNy, self.groundNx
+  end
+  local onSlope = ty ~= 0
+  local along = onSlope and (self.vx * tx + self.vy * ty) or self.vx -- speed along the ground
   local accel
   if self.controlLock > 0 then
     accel = MOVE.lockAccel
-  elseif math.abs(self.vx - belt) > speed and (dir == 0 or (self.vx > 0) == (dir > 0)) then
+  elseif math.abs(along - belt) > speed and (dir == 0 or (along > 0) == (dir > 0)) then
     accel = self.onGround and MOVE.overDecelGround or MOVE.overDecelAir -- keep momentum from launches
-    target = belt + (dir == 0 and 0 or (self.vx > 0 and speed or -speed))
+    target = belt + (dir == 0 and 0 or (along > 0 and speed or -speed))
   elseif dir == 0 then
     accel = self.onGround and MOVE.groundDecel or MOVE.airDecel
   else
     accel = self.onGround and MOVE.groundAccel or MOVE.airAccel
-    if self.vx ~= 0 and (self.vx > 0) ~= (dir > 0) then accel = accel * MOVE.turnMul end
+    if along ~= 0 and (along > 0) ~= (dir > 0) then accel = accel * MOVE.turnMul end
   end
   -- Shoving something heavy takes more of your effort.
   local effort = accel
@@ -558,7 +612,19 @@ function Player:runPhysics(dt, dir, speed, acting)
   self.gravScale = gEffective / Physics.GRAVITY
 
   -- Walking is a force; letting go on the ground is friction against what you stand on.
-  if self.onGround and dir == 0 and belt == 0 then
+  if onSlope then
+    -- Ramps never make you slide: the part of gravity that pulls along the ramp is cancelled,
+    -- and walking pushes along the surface instead of sideways into it.
+    local push = -Physics.PLAYER_MASS * gEffective * ty
+    if dir == 0 and belt == 0 then
+      self.groundMu = accel / math.max(200, g)
+      push = push + Physics.PLAYER_MASS * (approach(along, 0, effort * dt) - along) / dt
+    else
+      push = push + Physics.PLAYER_MASS * (approach(along, target, effort * dt) - along) / dt
+      self.groundMu = 0
+    end
+    self.forceX, self.forceY = push * tx, push * ty
+  elseif self.onGround and dir == 0 and belt == 0 then
     self.forceX = 0
     self.groundMu = accel / math.max(200, g)
   else
@@ -713,6 +779,87 @@ function Player:updateSentry(dt)
   b.gravity = 0
   game:addBullet(b)
   fx.burst(sx, sy, self.color, 3, 100, 2)
+end
+
+-- Timed and presence abilities from cards: echo blocks, the buzzsaw, auras, Stillness and Sunflare.
+function Player:updateAbilities(dt)
+  local s, game = self.stats, self.game
+  if not game.enemiesOf or not game.effects then return end
+  if (self.echoBlocks or 0) > 0 then
+    self.echoBlockT = self.echoBlockT - dt
+    if self.echoBlockT <= 0 then
+      self.echoBlocks, self.echoBlockT = self.echoBlocks - 1, 1
+      self:doBlock(true)
+    end
+  end
+  if (self.ramT or 0) > 0 then
+    self.ramT = self.ramT - dt
+    if self.ramT <= 0 then self:doBlock(true) end
+  end
+  if (self.sawTimer or 0) > 0 then
+    self.sawTimer = self.sawTimer - dt
+    self.sawTick = (self.sawTick or 0) - dt
+    if self.sawTick <= 0 then
+      self.sawTick = 0.25
+      for _, e in ipairs(game:enemiesOf(self)) do
+        local dx, dy = e.x - self.x, e.y - self.y
+        if dx * dx + dy * dy < (SAW_RADIUS + e.r) ^ 2 then e:hit(12 * s.saw, dx, dy, 350, self, "saw") end
+      end
+    end
+  end
+  if s.coldAura > 0 or s.leech > 0 then
+    local cold = AURA_RADIUS * (1 + 0.25 * (s.coldAura - 1))
+    for _, e in ipairs(game:enemiesOf(self)) do
+      local dx, dy = e.x - self.x, e.y - self.y
+      local d2 = dx * dx + dy * dy
+      if (d2 < (cold + e.r) ^ 2 or d2 < (LEECH_RADIUS + e.r) ^ 2) and Physics.canReach(game, self.x, self.y, e.x, e.y) then
+        if s.coldAura > 0 and d2 < (cold + e.r) ^ 2 then e.chillTimer = 0.2 end
+        if s.leech > 0 and d2 < (LEECH_RADIUS + e.r) ^ 2 and e.invuln <= 0 and not e:isBlocking() then
+          -- Leech Aura: a slow drain that only works up close.
+          local amount = 4 * s.leech * dt
+          e.hp = e.hp - amount
+          e.lastAttacker = self
+          self:heal(amount)
+          if e.hp <= 0 then e:die() end
+        end
+      end
+    end
+    self.auraT = (self.auraT or 0) - dt
+    if self.auraT <= 0 then
+      self.auraT = 0.9
+      if s.coldAura > 0 then fx.ring(self.x, self.y, cold, { 0.65, 0.88, 1 }) end
+      if s.leech > 0 then fx.ring(self.x, self.y, LEECH_RADIUS, { 0.85, 0.2, 0.3 }) end
+    end
+  end
+  if s.stillness > 0 and not self.stillReady then
+    if self.onGround and math.abs(self.vx) < 30 then
+      self.stillT = (self.stillT or 0) + dt
+      if self.stillT >= 3 then
+        self.stillReady = true
+        fx.ring(self.x, self.y, 70, { 1, 0.9, 0.5 })
+        fx.burst(self.x, self.y, { 1, 0.9, 0.5 }, 12, 200, 3)
+        self:emitSound("dashReady", 0.8, 0.7)
+      end
+    else
+      self.stillT = 0
+    end
+  end
+  if s.sunflare > 0 and self.reloadTimer > 0 and self.ammo == 0 then
+    -- Sunflare: waves come faster as the reload nears its end.
+    self.flareT = (self.flareT or 0) - dt
+    if self.flareT <= 0 then
+      self.flareT = 0.2 + 0.5 * self.reloadTimer / s.reloadTime
+      fx.ring(self.x, self.y, FLARE_RADIUS, { 1, 0.8, 0.3 })
+      for _, e in ipairs(game:enemiesOf(self)) do
+        local dx, dy = e.x - self.x, e.y - self.y
+        if dx * dx + dy * dy < (FLARE_RADIUS + e.r) ^ 2 and Physics.canReach(game, self.x, self.y, e.x, e.y) then
+          e:hit(7 * s.sunflare, dx, dy, 120, self, "sunflare")
+        end
+      end
+    end
+  else
+    self.flareT = 0
+  end
 end
 
 -- A reload just finished.
@@ -918,10 +1065,17 @@ function Player:stun(t)
 end
 
 function Player:blockPressed()
-  if self.dead or self.blockCd > 0 then return end
+  if self.dead or self.blockCd > 0 or (self.silenceTimer or 0) > 0 then return end
+  self.blockCd = self.stats.blockCooldown
+  self:doBlock(false)
+end
+
+-- A block and everything it sets off. echo: a free extra block (Aftershock, Ram, Last Word),
+-- which doesn't start more echoes.
+function Player:doBlock(echo)
+  if self.dead then return end
   local s, game = self.stats, self.game
   self.blockTimer = s.blockTime
-  self.blockCd = s.blockCooldown
   fx.ring(self.x, self.y, self.r + 18, { 1, 1, 1 })
   self:emitSound("block", 0.45, 1.25)
   self:trigger("block")
@@ -979,7 +1133,84 @@ function Player:blockPressed()
 
   if s.blockNova > 0 then
     for i = 1, s.blockNova do
-      self:spawnBullet(i / s.blockNova * math.pi * 2, 0.8, false)
+      local b = self:spawnBullet(i / s.blockNova * math.pi * 2, 0.8, false)
+      if b and s.novaFrost > 0 then b.frost = math.max(b.frost, s.novaFrost) end
+    end
+  end
+
+  local function near(radius, fn)
+    for _, e in ipairs(game:enemiesOf(self)) do
+      local dx, dy = e.x - self.x, e.y - self.y
+      if dx * dx + dy * dy < (radius + e.r) ^ 2 and Physics.canReach(game, self.x, self.y, e.x, e.y) then fn(e, dx, dy) end
+    end
+  end
+  if s.payback > 0 then
+    fx.ring(self.x, self.y, PAYBACK_RADIUS, { 1, 0.5, 0.3 })
+    near(PAYBACK_RADIUS, function(e, dx, dy) e:hit(0.15 * s.maxHp * s.payback, dx, dy, 400, self) end)
+  end
+  if s.implode > 0 then
+    local radius = IMPLODE_RADIUS * (1 + 0.3 * (s.implode - 1))
+    fx.ring(self.x, self.y, radius, { 0.6, 0.5, 1 })
+    near(radius, function(e, dx, dy)
+      local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+      if (e.stats.knockbackImmune or 0) <= 0 then
+        e.vx, e.vy = -dx / d * 800, -dy / d * 800 - 150
+        e.controlLock = math.max(e.controlLock, 0.25)
+      end
+    end)
+  end
+  if s.hush > 0 then
+    fx.ring(self.x, self.y, HUSH_RADIUS, { 0.8, 0.45, 1 })
+    near(HUSH_RADIUS, function(e)
+      e.silenceTimer = math.max(e.silenceTimer or 0, 2 * s.hush)
+      fx.burst(e.x, e.y, { 0.8, 0.45, 1 }, 8, 160, 3)
+    end)
+  end
+  if s.radar > 0 then
+    fx.ring(self.x, self.y, 320, { 0.4, 1, 0.6 })
+    for _, e in ipairs(game:enemiesOf(self)) do
+      if Physics.canReach(game, self.x, self.y, e.x, e.y) then
+        local ang = math.atan2(e.y - self.y, e.x - self.x)
+        for i = 1, s.radar do self:spawnBullet(ang + (i - (s.radar + 1) / 2) * 0.07, 1, false) end
+      end
+    end
+  end
+  if game.effects then
+    if s.saw > 0 then
+      self.sawTimer, self.sawTick = 2 + (s.saw - 1), 0
+      table.insert(game.effects, { type = "saw", x = self.x, y = self.y, life = self.sawTimer, max = self.sawTimer,
+        radius = SAW_RADIUS, follow = self })
+    end
+    if s.star > 0 then
+      -- Dying Star: pulls for 2 seconds, then stuns whoever is still close.
+      table.insert(game.wells, { x = self.x, y = self.y, t = 2, max = 2, owner = self, radius = 320, strength = 2800 })
+      table.insert(game.effects, { type = "star", x = self.x, y = self.y, life = 2, max = 2, owner = self, radius = 150,
+        stun = 1 * s.star })
+      self:emitSound("blackhole")
+    end
+    if s.stormCell > 0 then
+      table.insert(game.effects, { type = "field", x = self.x, y = self.y, life = 3, max = 3, owner = self, radius = 130,
+        dps = 12 * s.stormCell })
+    end
+    for i = 1, 4 * s.carpet do
+      local a = (i + love.math.random() * 0.6) / (4 * s.carpet) * math.pi * 2
+      local d = 60 + love.math.random() * 70
+      local t = 0.6 + love.math.random() * 0.5
+      table.insert(game.effects, { type = "bomb", x = self.x + math.cos(a) * d, y = self.y + math.sin(a) * d * 0.6,
+        life = t, max = t, owner = self, damage = 25, radius = 80 })
+    end
+  end
+
+  if not echo then
+    if s.blockEcho > 0 then self.echoBlocks, self.echoBlockT = s.blockEcho, 1 end
+    if s.ram > 0 then
+      -- Ram: a short charge where you're aiming, with a second block when it ends.
+      local sp = 900 * (1 + 0.25 * (s.ram - 1))
+      self.dashX, self.dashY = self.aimX * sp, self.aimY * sp
+      self.dashTimer, self.lungeTimer = 0.2, 0
+      self.jumping = false
+      self.ramT = 0.2
+      fx.spray(self.x, self.y, math.atan2(-self.aimY, -self.aimX), 0.8, self.color, 12, 340, 3, 0)
     end
   end
 end
@@ -1030,12 +1261,17 @@ function Player:tryFire()
     mult = mult * (1 + 0.6 * s.spite)
     self.spiteReady = false
   end
+  if self.stillReady then -- Stillness: the charged shot
+    mult = mult * (1 + 2 * s.stillness)
+    self.stillReady, self.stillT = false, 0
+  end
 
   if not free then self.ammo = self.ammo - 1 end
   self.fireTimer = delay
   self.sinceShot = 0
   self.reloadTimer = (self.ammo == 0) and s.reloadTime or 0
   if self.ammo == 0 then self:emitSound("reload", 0.6) end
+  if s.lastBlock > 0 and self.ammo == 0 and not free then self:doBlock(true) end -- Last Word
 
   self:volley(true, mult)
   self.st.shots = self.st.shots + s.bullets
@@ -1129,6 +1365,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
   if s.crit > 0 and love.math.random() < s.crit then b:makeCrit() end
   game:addBullet(b)
   if s.mirror > 0 then self:mirrorBullet(b) end
+  return b
 end
 
 -- Mirror Shot: copies of a bullet from the mirrored side(s) of the arena.
@@ -1173,6 +1410,8 @@ function Player:hit(amount, dx, dy, knock, source, kind)
   if self.invuln > 0 then return false end
 
   local s = self.stats
+  -- Fresh Start: hits land softer while you're nearly unhurt.
+  if s.pristine > 0 and self.hp > s.maxHp * 0.9 then amount = amount * 0.4 ^ s.pristine end
   local taken = amount
   if s.armor > 0 then amount = math.max(amount * 0.25, amount - s.armor) end
   if self.shield > 0 then

@@ -1,0 +1,10 @@
+deckshot-card 1
+name Miasma
+rarity rare
+art cloud skull toxic
+row add cloudShot 1
+row mul fireDelay 1.25
+row add reloadTime 0.5
+note +bullets leave a poison cloud where they land
+note +clouds poison and slow your enemies
+stack +30% cloud size per copy

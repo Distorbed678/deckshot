@@ -1,0 +1,5 @@
+deckshot-card 1
+name Rally
+rarity rare
+art shield heart pink
+trigger hit block cd=3

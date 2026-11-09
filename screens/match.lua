@@ -651,6 +651,19 @@ function Match:predictionWorld()
     self.predWorld = w
   end
   w.map, w.solids, w.rules = map, solids, Cards.rules
+  -- Pursuit needs to know where the nearest enemy is.
+  local match = self
+  w.nearestEnemy = function(_, p, x, y)
+    local best, bestD
+    local mine = match.proxies[match.mySlot]
+    for i, e in ipairs(match.proxies) do
+      if i ~= match.mySlot and not e.dead and not e.disconnected and not (mine and mine.team and e.team == mine.team) then
+        local d = (e.x - x) ^ 2 + (e.y - y) ^ 2
+        if not bestD or d < bestD then best, bestD = e, d end
+      end
+    end
+    return best
+  end
   -- Your own player is predicted through a small Box2D world of its own.
   local objViews = self.objViews or {}
   if not w.physics or w.physics.objects ~= objViews or w.physics.map ~= map then
@@ -731,6 +744,7 @@ function Match:reconcile(pv)
   pr.dashTimer, pr.dashCd = pv.dashT, pv.dashCd2
   if pr.dashTimer > 0 then pr.dashX, pr.dashY = pv.vx, pv.vy end
   pr.facing = pv.facing
+  pr.slowTimer, pr.chillTimer = pv.slowed and 0.2 or 0, pv.chilled and 0.2 or 0 -- both change how fast you walk
   pr.blockTimer = pv.blocking and math.max(pr.blockTimer or 0, 0.05) or 0 -- blocking changes edge bounces
   local hist, keep = self.predHistory, {}
   for _, e in ipairs(hist) do

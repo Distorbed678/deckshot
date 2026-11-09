@@ -1,0 +1,6 @@
+deckshot-card 1
+name Stomp
+rarity uncommon
+art wave down fire
+trigger land shockwave damage=20 radius=120
+note +hits harder the farther you fall

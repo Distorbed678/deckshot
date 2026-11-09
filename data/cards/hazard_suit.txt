@@ -1,0 +1,6 @@
+deckshot-card 1
+name Hazard Suit
+rarity common
+art saw shield toxic
+row mul hazardTaken 0.5
+row add maxHp 20

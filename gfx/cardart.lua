@@ -42,7 +42,9 @@ local function motif(name, x, y, s, accent)
 end
 
 local M = {}
-for _, name in ipairs({ "armor", "axe", "bat", "blackhole", "blade", "body", "bomb", "bone", "boot", "bounce", "bullet", "bullets", "burst", "cannon", "card", "clock", "cloud", "crate", "crown", "dash", "dice", "down", "drop", "eye", "fang", "feather", "fist", "flame", "fork", "gear", "ghost", "gun", "hand", "heart", "hourglass", "hydra", "laser", "mag", "magnet", "mine", "minus", "mirror", "moon", "orb", "orbit", "phoenix", "pierce", "plus", "rocket", "saw", "seek", "shield", "shrine", "skull", "snow", "spread", "spring", "star", "swap", "swirl", "target", "thorns", "turret", "up", "uturn", "volt", "wall", "wave", "weight", "wing", "x2" }) do M[name] = true end
+for _, name in ipairs({ "armor", "axe", "bat", "blackhole", "blade", "body", "bomb", "bone", "boot", "bounce", "bullet", "bullets", "burst", "cannon", "card", "clock", "cloud", "crate", "crown", "dash", "dice", "down", "drop", "eye", "fang", "feather", "fist", "flame", "fork", "gear", "ghost", "gun", "hand", "heart", "hourglass", "hydra", "laser", "mag", "magnet", "mine", "minus", "mirror", "moon", "orb", "orbit", "phoenix", "pierce", "plus", "rocket", "saw", "seek", "shield", "shrine", "skull", "snow", "spread", "spring", "star", "swap", "swirl", "target", "thorns", "turret", "up", "uturn", "volt", "wall", "wave", "weight", "wing", "x2",
+  "drill", "jet", "fuse", "flash", "stick", "lasso", "sun", "radar", "mute", "ripple", "aura", "pause", "deck", "door",
+  "leech", "ram", "hammer", "chase", "snowball", "ramp" }) do M[name] = true end
 M.hit = true -- an old name for burst, still used by some card files
 
 -- Motifs an editor can offer, as a sorted list.

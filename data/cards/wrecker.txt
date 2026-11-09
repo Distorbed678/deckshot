@@ -1,0 +1,5 @@
+deckshot-card 1
+name Wrecker
+rarity common
+art hammer crate fire
+row mul objectDamage 2.5

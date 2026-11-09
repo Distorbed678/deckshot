@@ -1,0 +1,6 @@
+deckshot-card 1
+name Hollow Point
+rarity common
+art bullet up fire
+row mul gunDamage 1.6
+row add reloadTime 0.25

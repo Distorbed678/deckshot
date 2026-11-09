@@ -1,0 +1,9 @@
+deckshot-card 1
+name Bullet Hose
+rarity uncommon
+art bullets flame fire
+row mul fireDelay 0.3
+row add ammo 6
+row mul gunDamage 0.4
+row add spread 0.1
+row add reloadTime 0.25

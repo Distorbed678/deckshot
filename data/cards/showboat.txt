@@ -1,0 +1,7 @@
+deckshot-card 1
+name Showboat
+rarity rare
+art bounce star pink
+row add bounces 2
+row add bounceDamage 0.8
+row mul gunDamage 0.8

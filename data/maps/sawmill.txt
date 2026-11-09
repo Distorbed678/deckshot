@@ -1,21 +1,18 @@
 deckshot-map 4
 name Sawmill
 theme jungle
-spawn 216 696
-spawn 1320 696
-spawn 768 492
-spawn 600 640
-rect 144 744 1248 48
-oneway 672 540 192 14
-obj arm force=1 id=1 length=150 spin=1.8 x=444 y=420
-obj saw damage=25 id=2 parent=1 r=26 x=594 y=420
-obj saw damage=25 id=3 parent=1 r=26 x=294 y=420
-obj arm force=1 id=4 length=150 spin=-1.8 x=1092 y=420
-obj saw damage=25 id=5 parent=4 r=26 x=1242 y=420
-obj saw damage=25 id=6 parent=4 r=26 x=942 y=420
-obj rail force=1 id=7 path=600,250;936,250 speed=170 x=600 y=250
-obj saw damage=25 id=8 parent=7 r=26 x=600 y=250
-obj block h=324 id=9 material=stone w=24 x=432 y=420
-obj block h=324 id=10 material=stone w=24 x=1080 y=420
-obj block h=48 id=11 material=wood physics=true w=144 x=600 y=696
-obj block h=48 id=12 material=wood physics=true w=144 x=792 y=696
+spawn 190 708
+spawn 1346 708
+spawn 290 708
+spawn 1246 708
+rect 144 756 1248 48
+obj rail id=1 path=480,732;1056,732 speed=170 x=480 y=732
+obj saw damage=25 id=2 parent=1 r=26 x=480 y=732
+obj arm count=2 id=3 length=150 spin=1.6 x=768 y=400
+obj saw damage=25 id=4 parent=3 r=26 x=918 y=400
+obj saw damage=25 id=5 parent=3 r=26 x=618 y=400
+oneway 230 570 220 14
+oneway 1086 570 220 14
+oneway 330 370 180 14
+oneway 1026 370 180 14
+oneway 684 180 168 14

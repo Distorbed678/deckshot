@@ -1,0 +1,15 @@
+deckshot-map 4
+name Drift
+theme void
+spawn 180 572
+spawn 1356 572
+spawn 300 572
+spawn 1236 572
+rect 120 620 240 48
+rect 1176 620 240 48
+rect 432 480 216 48
+rect 888 480 216 48
+rect 660 660 216 48
+oneway 672 330 192 14
+oneway 200 330 170 14
+oneway 1166 330 170 14

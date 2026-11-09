@@ -217,6 +217,7 @@ end
 -- Plain blocks are stored as map rects; everything with a setting stays an object.
 function Map.plainBlock(o)
   return o.type == "block" and (o.material or "stone") == "stone" and not o.physics and (o.hp or 0) <= 0 and not o.rot
+    and (o.slope or "none") == "none"
     and not o.crumble and not o.conveyor and not o.anchored and not o.parent and not o.color
     and (o.onBreak or "none") == "none"
 end

@@ -3,9 +3,15 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.5.6",
+  VERSION = "0.6.0",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "A whole new deck: 100 new cards, built around one strong upside and a small cost, with many more block cards.",
+    "50 new maps: clean arenas, moving platforms, breakable lattices, hanging structures, stacked towers and hazard rooms.",
+    "Ramps: blocks can be sloped (Edit Object > Ramp). You never slide on them, and ten of the new maps are built around them.",
+    "New card effects: drilling and steered bullets, tethers, delayed bombs, a buzzsaw block, auras, and Stacked Deck.",
+    "The old cards and maps are kept in the repo's legacy folder.",
+    "Bots walk ramps and no longer freeze in a standoff across an obstacle.",
     "Fixed: spaces can be typed in chat and other text boxes in the browser version.",
     "Touch: pushing the move stick up no longer jumps, so use the Jump button.",
     "Touch: the pause button is now in the top right corner.",

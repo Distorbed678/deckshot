@@ -1,0 +1,10 @@
+deckshot-card 1
+name Buzzsaw
+rarity rare
+art saw orbit blood
+block
+row add saw 1
+row add maxHp 30
+row add blockCooldown 0.25
+note +blocking spins a saw around you for 2s
+stack +1s and +12 damage per copy

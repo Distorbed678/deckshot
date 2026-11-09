@@ -1,0 +1,9 @@
+deckshot-card 1
+name Top Up
+rarity rare
+art mag shield sky
+block
+row add blockReload 1
+row add blockCooldown 0.25
+note +blocking instantly reloads
+stack +1 bonus round above max ammo per extra copy

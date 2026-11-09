@@ -1,0 +1,7 @@
+deckshot-card 1
+name Slugger
+rarity common
+art cannon down steel
+row mul gunDamage 1.8
+row add ammo -2
+row add reloadTime 0.5

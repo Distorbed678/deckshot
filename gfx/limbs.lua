@@ -30,6 +30,14 @@ local function addTerrain(rig)
       f:setCategory(CAT_TERRAIN)
     end
   end
+  -- Ramps (blocks with a slope) are part of the ground for ragdolls too.
+  for _, o in ipairs(Limbs.map and Limbs.map.objects or {}) do
+    if o.type == "block" and (o.slope == "left" or o.slope == "right") and not o.physics and o.w and o.h and not o.rot then
+      local high = o.slope == "right" and o.x + o.w or o.x
+      local f = P.newFixture(rig.terrain, P.newPolygonShape(o.x, o.y + o.h, o.x + o.w, o.y + o.h, high, o.y))
+      f:setCategory(CAT_TERRAIN)
+    end
+  end
   rig.mapRef = Limbs.map
 end
 

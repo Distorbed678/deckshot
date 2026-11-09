@@ -1,0 +1,8 @@
+deckshot-card 1
+name Auger
+rarity rare
+art drill steel
+row add drill 1
+row add reloadTime 0.25
+note +bullets drill through up to 150 px of wall
+stack +150 px per copy

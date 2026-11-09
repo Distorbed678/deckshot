@@ -1,0 +1,10 @@
+deckshot-card 1
+name Hush
+rarity rare
+art mute void
+block
+row add hush 1
+row add maxHp 25
+row add blockCooldown 0.25
+note +blocking stops nearby enemies from blocking for 2s
+stack +2s per copy

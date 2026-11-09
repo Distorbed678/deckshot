@@ -15,6 +15,12 @@ local COMPRESS_OVER = 1100
 local MAX_BULLETS = 1500
 local MAX_LASER_POINTS = 64
 
+-- Spawned effects by code (append only).
+local EFFECT_TYPES = { "pickup", "cloud", "strike", "bomb", "star", "field", "saw", "snare" }
+local EFFECT_CODE = {}
+for i, name in ipairs(EFFECT_TYPES) do EFFECT_CODE[name] = i end
+local EFFECT_MAX = { strike = 0.75, bomb = 0.5, star = 2, field = 3, saw = 2, snare = 2 }
+
 local function i16(v)
   v = math.floor((v or 0) + 0.5)
   if v > 32767 then return 32767 elseif v < -32768 then return -32768 end
@@ -96,7 +102,7 @@ function Snap.encode(world, events)
   for _, p in ipairs(world.players) do
     local s = p.stats
     local flags = bit.bor(
-      p.dead and 1 or 0, p:isBlocking() and 2 or 0, p.empowered and 4 or 0, 0,
+      p.dead and 1 or 0, p:isBlocking() and 2 or 0, p.empowered and 4 or 0, (p.chillTimer or 0) > 0 and 8 or 0,
       (p.poisonTimer or 0) > 0 and 16 or 0, (p.slowTimer or 0) > 0 and 32 or 0,
       (p.cloakTimer or 0) > 0 and 64 or 0, (p.hitFlash or 0) > 0 and 128 or 0)
     local pending = 0
@@ -196,7 +202,7 @@ function Snap.encode(world, events)
   add("<B", math.min(#effects, 255))
   for i = 1, math.min(#effects, 255) do
     local e = effects[i]
-    local code = e.type == "pickup" and 1 or e.type == "cloud" and 2 or 3
+    local code = EFFECT_CODE[e.type] or 3
     add("<BhhBBB", code, i16(e.x), i16(e.y), e.kind or 0, u8(math.max(0, e.life) * 20), u8((e.radius or 0) / 2))
   end
   local juggSlot = 0
@@ -357,6 +363,7 @@ function Snap.decode(data)
     p.empowered = bit.band(flags, 4) ~= 0
     p.poisoned = bit.band(flags, 16) ~= 0
     p.slowed = bit.band(flags, 32) ~= 0
+    p.chilled = bit.band(flags, 8) ~= 0
     p.cloaked = bit.band(flags, 64) ~= 0
     p.hitFlash = bit.band(flags, 128) ~= 0
     v.players[i] = p
@@ -449,8 +456,8 @@ function Snap.decode(data)
   for i = 1, nfx do
     local kind, x, y, k, life, rad
     kind, x, y, k, life, rad, pos = unpack("<BhhBBB", raw, pos)
-    v.effects[i] = { type = kind == 1 and "pickup" or kind == 2 and "cloud" or "strike", x = x, y = y, kind = k,
-      life = life / 20, max = 0.75, radius = rad * 2 }
+    local etype = EFFECT_TYPES[kind] or "strike"
+    v.effects[i] = { type = etype, x = x, y = y, kind = k, life = life / 20, max = EFFECT_MAX[etype] or 0.75, radius = rad * 2 }
   end
   v.juggSlot, pos = unpack("<B", raw, pos)
   local hasBarrier

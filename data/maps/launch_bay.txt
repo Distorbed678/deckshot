@@ -1,0 +1,19 @@
+deckshot-map 4
+name Launch Bay
+theme neon
+spawn 290 708
+spawn 1246 708
+spawn 370 708
+spawn 1166 708
+rect 144 756 1248 48
+obj block h=120 id=1 material=stone slope=right w=180 x=432 y=636
+obj block h=120 id=2 material=stone slope=left w=180 x=924 y=636
+obj pad h=14 id=3 power=1500 w=84 x=726 y=742
+obj pad h=14 id=4 power=1350 w=84 x=156 y=742
+obj pad h=14 id=5 power=1350 w=84 x=1296 y=742
+rect 300 340 200 24
+rect 1036 340 200 24
+oneway 660 250 216 14
+oneway 660 480 216 14
+oneway 120 500 150 14
+oneway 1266 500 150 14

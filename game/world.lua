@@ -929,6 +929,10 @@ function World:choose(slot, optionIndex, serial)
     self:toast(Cards.tableFlip(p), slot)
   elseif card.special == "shrine" then
     self:toast(Cards.shrine(p), 5)
+  elseif card.special == "double" then
+    -- Stacked Deck: two picks in its place.
+    self:toast((p.name or "Player") .. " draws two more", slot)
+    for _ = 1, 2 do table.insert(self.pickQueue, 1, { slot = slot, num = pk.num, total = pk.total }) end
   else
     p:addCard(card)
   end

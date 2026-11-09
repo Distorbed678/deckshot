@@ -1,0 +1,27 @@
+deckshot-map 4
+name Lifeboats
+theme ice
+spawn 126 522
+spawn 1410 522
+spawn 192 522
+spawn 1344 522
+rect 96 570 132 294
+rect 1308 570 132 294
+rect 228 360 1080 18
+obj liquid buoyant=true color=#3A8BE0 h=114 id=1 w=1080 x=228 y=750
+obj block h=22 id=2 material=wood physics=true w=168 x=264 y=690
+obj rope id=3 level=true segHp=60 slack=1.05 target=2 x=272 x2=272 y=378 y2=690
+obj rope id=4 level=true segHp=60 slack=1.05 target=2 x=424 x2=424 y=378 y2=690
+obj block h=22 id=5 material=wood physics=true w=168 x=474 y=690
+obj rope id=6 level=true segHp=60 slack=1.05 target=5 x=482 x2=482 y=378 y2=690
+obj rope id=7 level=true segHp=60 slack=1.05 target=5 x=634 x2=634 y=378 y2=690
+obj block h=22 id=8 material=wood physics=true w=168 x=684 y=690
+obj rope id=9 level=true segHp=60 slack=1.05 target=8 x=692 x2=692 y=378 y2=690
+obj rope id=10 level=true segHp=60 slack=1.05 target=8 x=844 x2=844 y=378 y2=690
+obj block h=22 id=11 material=wood physics=true w=168 x=894 y=690
+obj rope id=12 level=true segHp=60 slack=1.05 target=11 x=902 x2=902 y=378 y2=690
+obj rope id=13 level=true segHp=60 slack=1.05 target=11 x=1054 x2=1054 y=378 y2=690
+obj block h=22 id=14 material=wood physics=true w=168 x=1104 y=690
+obj rope id=15 level=true segHp=60 slack=1.05 target=14 x=1112 x2=1112 y=378 y2=690
+obj rope id=16 level=true segHp=60 slack=1.05 target=14 x=1264 x2=1264 y=378 y2=690
+obj block drop=0.1 h=48 hp=60 id=17 material=crate onBreak=pickup physics=true w=48 x=744 y=642

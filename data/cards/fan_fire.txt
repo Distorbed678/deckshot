@@ -1,0 +1,9 @@
+deckshot-card 1
+name Fan Fire
+rarity uncommon
+art spread plus gold
+row add bullets 4
+row add ammo 4
+row add spread 0.7
+row mul gunDamage 0.35
+row add reloadTime 0.25

@@ -35,8 +35,32 @@ local MATERIAL = {
   gas = function(o) Assets.rect("gas", o.x, o.y, o.w, o.h) end,
 }
 
+-- Ramps are drawn as flat triangles in the material's colour, with a lit edge along the walking surface.
+local SLOPE_RGB = { crate = { 0.62, 0.45, 0.27 }, wood = { 0.55, 0.39, 0.23 }, brick = { 0.6, 0.32, 0.26 },
+  glass = { 0.62, 0.86, 0.95 }, metal = { 0.55, 0.58, 0.66 }, barrel = { 0.7, 0.32, 0.22 }, gas = { 0.5, 0.7, 0.32 } }
+
+local function drawSlope(o, slope)
+  local x0, y0, x1, y1 = o.x, o.y, o.x + o.w, o.y + o.h
+  local highX, lowX = slope == "right" and x1 or x0, slope == "right" and x0 or x1
+  local stone = (o.material or "stone") == "stone"
+  local c = stone and (o.rgb or { 0.35, 0.33, 0.4 }) or SLOPE_RGB[o.material] or { 0.5, 0.5, 0.55 }
+  local e = stone and (o.edgeRgb or o.rgb or { 0.6, 0.58, 0.68 }) or { c[1] * 1.3, c[2] * 1.3, c[3] * 1.3 }
+  g.setColor(c[1], c[2], c[3], o.material == "glass" and 0.6 or 1)
+  g.polygon("fill", x0, y1, x1, y1, highX, y0)
+  g.setColor(e[1], e[2], e[3], 0.8)
+  g.setLineWidth(3)
+  g.line(lowX, y1, highX, y0)
+  g.setLineWidth(1)
+  if (o.hitFlash or 0) > 0 then
+    g.setColor(1, 1, 1, 0.55)
+    g.polygon("fill", x0, y1, x1, y1, highX, y0)
+  end
+end
+
 local function drawBlock(o)
   if not o.alive then return end
+  local slope = (o.slope == "left" or o.slope == "right") and o.slope
+  if slope then return drawSlope(o, slope) end
   if o.crumble and o.s == 2 then
     g.setColor(1, 1, 1, 0.06)
     g.rectangle("line", o.x, o.y, o.w, o.h, 3, 3)
@@ -411,7 +435,53 @@ function Objects.drawEffect(e)
     g.line(e.x, e.y - 400, e.x, e.y - 400 + 400 * k)
   elseif e.type == "cloud" then
     drawCloud(e, t)
+  elseif e.type == "bomb" then
+    -- A card's delayed bomb: blinks faster as the fuse runs out.
+    local k = 1 - math.max(0, e.life or 0) / math.max(0.1, e.max or 0.5)
+    g.setColor(1, 0.5, 0.2, 0.12 + 0.2 * k)
+    g.circle("fill", e.x, e.y, (e.radius or 80) * k)
+    g.setColor(0.15, 0.13, 0.16)
+    g.circle("fill", e.x, e.y, 8)
+    local blink = math.floor(t * (6 + 14 * k)) % 2 == 0
+    g.setColor(1, blink and 0.9 or 0.3, 0.2)
+    g.circle("fill", e.x, e.y, 4)
+  elseif e.type == "star" then
+    local k = 1 - math.max(0, e.life or 0) / math.max(0.1, e.max or 2)
+    g.setColor(1, 0.85, 0.5, 0.1 + 0.15 * k)
+    g.circle("fill", e.x, e.y, e.radius or 150)
+    g.setColor(1, 0.9, 0.6, 0.7)
+    g.setLineWidth(2)
+    g.circle("line", e.x, e.y, (e.radius or 150) * (1 - k) + 12)
+    g.setColor(1, 0.95, 0.8)
+    g.circle("fill", e.x, e.y, 8 + 10 * k + math.sin(t * 20) * 2)
+  elseif e.type == "field" then
+    local fade = math.min(1, (e.life or 0) * 2)
+    g.setColor(0.45, 0.75, 1, 0.14 * fade)
+    g.circle("fill", e.x, e.y, e.radius or 130)
+    g.setColor(0.6, 0.85, 1, 0.7 * fade)
+    g.setLineWidth(2)
+    g.circle("line", e.x, e.y, e.radius or 130)
+    for i = 1, 5 do
+      local a = t * 1.7 + i * 1.256
+      local r = (e.radius or 130) * (0.35 + 0.5 * ((i * 0.37 + t * 0.6) % 1))
+      g.line(e.x + math.cos(a) * r, e.y + math.sin(a) * r, e.x + math.cos(a + 0.25) * (r + 14), e.y + math.sin(a + 0.25) * (r + 14))
+    end
+  elseif e.type == "saw" then
+    white(0.9)
+    local r = e.radius or 46
+    Assets.center("saw", e.x, e.y, r * 2, r * 2, t * 16)
+  elseif e.type == "snare" then
+    local fade = math.min(1, (e.life or 0) * 3)
+    g.setColor(0.95, 0.8, 0.45, 0.8 * fade)
+    g.setLineWidth(2)
+    local r, n = e.radius or 80, 20
+    for i = 0, n - 1, 2 do
+      local a0, a1 = i / n * math.pi * 2 + t, (i + 1) / n * math.pi * 2 + t
+      g.line(e.x + math.cos(a0) * r, e.y + math.sin(a0) * r, e.x + math.cos(a1) * r, e.y + math.sin(a1) * r)
+    end
+    g.circle("fill", e.x, e.y, 5)
   end
+  g.setLineWidth(1)
 end
 
 function Objects.draw(list, effects)

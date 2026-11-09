@@ -24,8 +24,8 @@ local OPS = { "add", "mul", "set" }
 local OP_NAMES = { add = "Add", mul = "Multiply", set = "Set to" }
 local COPIES = { false, "first", "extra" }
 local COPY_NAMES = { [false] = "Every copy", first = "First copy", extra = "Extra copies" }
-local SPECIALS = { false, "reroll", "tableflip", "shrine" }
-local SPECIAL_NAMES = { [false] = "None", reroll = "Reroll hand", tableflip = "Table Flip", shrine = "Shrine of Order" }
+local SPECIALS = { false, "reroll", "tableflip", "shrine", "double" }
+local SPECIAL_NAMES = { [false] = "None", reroll = "Reroll hand", tableflip = "Table Flip", shrine = "Shrine of Order", double = "Draw two more" }
 
 local function cycle(list, value, d)
   local idx = 1

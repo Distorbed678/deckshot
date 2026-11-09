@@ -1,0 +1,10 @@
+deckshot-card 1
+name Charged Guard
+rarity rare
+art star bullet gold
+block
+row add empower 1
+row add blockCooldown 0.25
+note +after blocking, your next shot is bigger and faster
+note +that shot deals double damage
+stack +1 charged shot per copy

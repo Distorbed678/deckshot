@@ -1,0 +1,6 @@
+deckshot-card 1
+name Stacked Deck
+rarity legendary
+art deck gold
+special double
+note Draw two more cards right away

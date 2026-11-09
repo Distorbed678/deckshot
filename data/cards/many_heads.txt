@@ -1,0 +1,7 @@
+deckshot-card 1
+name Many Heads
+rarity epic
+art hydra toxic
+row add hydra 1
+note +hits spawn 2 bullets that fly off (35% damage)
+stack +1 bullet per extra copy

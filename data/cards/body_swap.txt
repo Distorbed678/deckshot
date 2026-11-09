@@ -1,0 +1,8 @@
+deckshot-card 1
+name Body Swap
+rarity epic
+art swap void
+row add swap 1
+note +hitting an enemy swaps your places
+note 1.5s cooldown
+stack -30% cooldown per extra copy

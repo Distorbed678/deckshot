@@ -1,0 +1,23 @@
+deckshot-map 4
+name Pagoda
+theme jungle
+spawn 300 708
+spawn 1236 708
+spawn 400 708
+spawn 1136 708
+rect 240 756 1056 48
+rect 492 600 552 24
+obj block h=36 id=1 material=stone slope=left w=72 x=420 y=564
+obj block h=36 id=2 material=stone slope=right w=72 x=1044 y=564
+rect 564 440 408 24
+obj block h=30 id=3 material=stone slope=left w=60 x=504 y=410
+obj block h=30 id=4 material=stone slope=right w=60 x=972 y=410
+rect 636 290 264 24
+obj block h=24 id=5 material=stone slope=left w=48 x=588 y=266
+obj block h=24 id=6 material=stone slope=right w=48 x=900 y=266
+rect 744 314 48 60
+rect 744 464 48 60
+oneway 120 600 160 14
+oneway 1256 600 160 14
+oneway 250 440 160 14
+oneway 1126 440 160 14

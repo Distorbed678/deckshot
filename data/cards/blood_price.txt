@@ -1,0 +1,11 @@
+deckshot-card 1
+name Blood Price
+rarity epic
+art drop heart blood
+row set fireDelay 0.06
+row add bloodPact 1
+row add ammo 6
+note +fire as fast as your gun allows
+note -every shot costs 5 HP (it can't kill you)
+note +every hit gives 5 HP back
+stack +5 HP cost and return per copy

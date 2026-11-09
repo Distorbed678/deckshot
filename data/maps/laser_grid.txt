@@ -1,0 +1,19 @@
+deckshot-map 4
+name Laser Grid
+theme neon
+spawn 190 708
+spawn 1346 708
+spawn 285 708
+spawn 1251 708
+rect 144 756 1248 48
+rect 300 72 936 36
+obj laser damage=40 dir=down id=1 off=2.4 on=1 phase=0 physics=false warn=0.8 x=384 y=118
+obj laser damage=40 dir=down id=2 off=2.4 on=1 phase=0.7 physics=false warn=0.8 x=576 y=118
+obj laser damage=40 dir=down id=3 off=2.4 on=1 phase=1.4 physics=false warn=0.8 x=768 y=118
+obj laser damage=40 dir=down id=4 off=2.4 on=1 phase=2.1 physics=false warn=0.8 x=960 y=118
+obj laser damage=40 dir=down id=5 off=2.4 on=1 phase=2.8 physics=false warn=0.8 x=1152 y=118
+oneway 290 560 180 14
+oneway 1066 560 180 14
+oneway 678 560 180 14
+oneway 470 380 170 14
+oneway 896 380 170 14

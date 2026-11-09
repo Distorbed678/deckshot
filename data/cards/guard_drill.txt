@@ -1,0 +1,7 @@
+deckshot-card 1
+name Guard Drill
+rarity common
+art shield clock gold
+block
+row mul blockCooldown 0.7
+row add maxHp 25

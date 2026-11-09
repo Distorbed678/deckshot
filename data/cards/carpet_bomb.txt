@@ -1,0 +1,10 @@
+deckshot-card 1
+name Carpet Bomb
+rarity uncommon
+art bomb x2 fire
+block
+row add carpet 1
+row add maxHp 25
+row add blockCooldown 0.25
+note +blocking scatters 4 small bombs around you
+stack +4 bombs per copy

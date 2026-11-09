@@ -1,0 +1,6 @@
+deckshot-card 1
+name Siphon
+rarity uncommon
+art fang heart blood
+row add lifesteal 0.15
+row add maxHp -20

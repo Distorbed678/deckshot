@@ -1,0 +1,21 @@
+deckshot-map 4
+name Canopy
+theme jungle
+spawn 230 336
+spawn 1306 336
+spawn 400 336
+spawn 1136 336
+rect 96 780 1344 48
+rect 294 420 48 72
+rect 1194 420 48 72
+rect 180 384 276 36
+rect 1080 384 276 36
+rect 744 300 48 72
+rect 630 264 276 36
+rect 294 690 48 90
+rect 1194 690 48 90
+rect 744 660 48 120
+oneway 480 560 170 14
+oneway 886 560 170 14
+oneway 500 180 150 14
+oneway 886 180 150 14

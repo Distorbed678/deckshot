@@ -1,0 +1,8 @@
+deckshot-card 1
+name Pursuit
+rarity uncommon
+art chase fire
+row add pursuit 1
+row add maxHp 25
+note +40% move speed while moving toward the nearest enemy
+stack +40% per copy

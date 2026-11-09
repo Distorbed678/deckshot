@@ -1,0 +1,9 @@
+deckshot-card 1
+name Joystick
+rarity rare
+art stick pink
+row add remote 1
+row mul bulletSpeed 0.6
+row add reloadTime 0.25
+note +bullets steer toward where you aim
+stack tighter turns per copy

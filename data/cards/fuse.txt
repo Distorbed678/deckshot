@@ -1,0 +1,9 @@
+deckshot-card 1
+name Fuse
+rarity uncommon
+art fuse volt
+row add fuse 1
+row mul gunDamage 0.85
+row add reloadTime 0.25
+note +bullets leave a bomb that blows up 0.5s later
+stack +100% bomb damage per copy

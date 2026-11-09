@@ -1,0 +1,8 @@
+deckshot-card 1
+name Cold Aura
+rarity rare
+art aura ice
+row add coldAura 1
+row add maxHp 25
+note +enemies near you move 25% slower
+stack +25% aura size per copy

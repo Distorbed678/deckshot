@@ -14,7 +14,7 @@ for suite in behaviour bots; do
   echo "== $suite"
   DECKSHOT_REPO="$ROOT" timeout 900 love "$dir" > "$TMP/$suite.log" 2>&1
   code=$?
-  grep -E "^FAIL|ERROR on|^DONE|^END|rror:" "$TMP/$suite.log" | cut -c1-160
+  grep -E "^FAIL|ERROR on|^DONE|^END|rror:|NO ROUND|^flung|NAN" "$TMP/$suite.log" | cut -c1-160
   [ "$code" -eq 0 ] || { echo "$suite failed (exit $code)"; fail=1; }
 done
 exit $fail

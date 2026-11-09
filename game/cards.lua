@@ -157,7 +157,7 @@ end
 -- Table Flip / Shrine are only offered to a player who already owns cards.
 local function offerable(c, player, used)
   if c.disabled or c.banned or used[c] then return false end
-  if c.special and c.special ~= "reroll" and #player.cards == 0 then return false end
+  if c.special and c.special ~= "reroll" and c.special ~= "double" and #player.cards == 0 then return false end
   return true
 end
 

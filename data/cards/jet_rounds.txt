@@ -1,0 +1,8 @@
+deckshot-card 1
+name Jet Rounds
+rarity uncommon
+art jet fire
+row add thruster 1
+row add reloadTime 0.25
+note +bullets keep pushing whoever they hit for 1s
+stack +0.4s of push per copy

@@ -70,6 +70,20 @@ local function centre(o)
   return o.x, o.y
 end
 
+-- A block can be a ramp: "right" is high on its right side, "left" on its left.
+function Physics.slopeOf(o)
+  return o.type == "block" and (o.slope == "left" or o.slope == "right") and o.slope or nil
+end
+
+-- The collision shape of a box-like object, centred on its body.
+local function boxShape(o)
+  local slope = Physics.slopeOf(o)
+  local hw, hh = o.w / 2, o.h / 2
+  if slope == "right" then return love.physics.newPolygonShape(-hw, hh, hw, hh, hw, -hh) end
+  if slope == "left" then return love.physics.newPolygonShape(-hw, hh, hw, hh, -hw, -hh) end
+  return love.physics.newRectangleShape(o.w, o.h)
+end
+
 local function setCentre(o, x, y)
   if o.w then o.x, o.y = x - o.w / 2, y - o.h / 2 else o.x, o.y = x, y end
 end
@@ -204,7 +218,7 @@ local function addLoose(ph, o)
   body:setAngle(o.rot or 0)
   local shape
   if o.w and o.h then
-    shape = P.newRectangleShape(o.w, o.h)
+    shape = boxShape(o)
   elseif o.type == "saw" then
     shape = P.newCircleShape(o.r or 18)
   else
@@ -296,7 +310,7 @@ local function addFixed(ph, o)
   local cx, cy = centre(o)
   local body = P.newBody(ph.b2, cx, cy, "kinematic")
   body:setAngle(o.rot or 0)
-  local fixture = P.newFixture(body, P.newRectangleShape(o.w, o.h))
+  local fixture = P.newFixture(body, boxShape(o))
   fixture:setFriction(0.7)
   fixture:setUserData(o)
   fixture:setCategory(CAT_WORLD)
@@ -594,7 +608,7 @@ function Physics.pushPlayer(p)
     body:applyLinearImpulse(dvx * Physics.PLAYER_MASS, dvy * Physics.PLAYER_MASS)
   end
   body:setGravityScale(p.gravScale or 1)
-  if p.forceX and p.forceX ~= 0 then body:applyForce(p.forceX, 0) end
+  if (p.forceX and p.forceX ~= 0) or (p.forceY and p.forceY ~= 0) then body:applyForce(p.forceX or 0, p.forceY or 0) end
 end
 
 -- Read the result back and see what the player is touching.
@@ -607,6 +621,7 @@ function Physics.pullPlayer(p)
   p.x, p.y = x, y - p.leg / 2
   p.vx, p.vy = body:getLinearVelocity()
   p.onGround, p.groundOneway, p.groundRect, p.pushing = false, false, nil, nil
+  p.groundNx, p.groundNy = 0, -1
   local tag = rec.fixture:getUserData()
   for _, c in ipairs(body:getContacts()) do
     if c:isTouching() and c:isEnabled() then
@@ -618,8 +633,11 @@ function Physics.pullPlayer(p)
         local nx, ny = c:getNormal()
         if mine == a then nx, ny = -nx, -ny end
         -- Box2D's contact list is from the start of the step, so a jump is still "touching" here.
-        local _, surfaceVy = other:getBody():getLinearVelocity()
-        if ny < -GROUND_NORMAL and p.vy >= surfaceVy - 40 then
+        -- Judged along the surface's normal, so walking up a ramp still counts as standing on it.
+        local surfaceVx, surfaceVy = other:getBody():getLinearVelocity()
+        local away = ny > -0.999 and ((p.vx - surfaceVx) * nx + (p.vy - surfaceVy) * ny) or (surfaceVy - p.vy)
+        if ny < -GROUND_NORMAL and away <= 40 then
+          if not p.onGround or ny < p.groundNy then p.groundNx, p.groundNy = nx, ny end
           p.onGround = true
           p.groundRect = ud and ud.kind == "player" and ud.p or ud
           p.groundOneway = (ud and ud.oneway) and true or false
@@ -633,10 +651,13 @@ function Physics.pullPlayer(p)
   p.wallDir = 0
   if not p.onGround then
     local reach = p.r + WALL_PROBE
-    if Physics.ray(p.game, p.x, p.y, p.x - reach, p.y) then
+    -- Only upright faces are walls: a ramp isn't something to slide down or kick off.
+    local hit, _, _, nx = Physics.ray(p.game, p.x, p.y, p.x - reach, p.y)
+    if hit and math.abs(nx) > 0.8 then
       p.wallDir = -1
-    elseif Physics.ray(p.game, p.x, p.y, p.x + reach, p.y) then
-      p.wallDir = 1
+    else
+      hit, _, _, nx = Physics.ray(p.game, p.x, p.y, p.x + reach, p.y)
+      if hit and math.abs(nx) > 0.8 then p.wallDir = 1 end
     end
   end
 end

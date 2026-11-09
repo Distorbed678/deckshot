@@ -1,0 +1,18 @@
+deckshot-map 4
+name Furnace
+theme foundry
+spawn 200 572
+spawn 1336 572
+spawn 330 572
+spawn 1206 572
+obj liquid buoyant=false burn=true color=#FF5A1A damage=30 density=2 h=64 id=1 w=1344 x=96 y=800
+rect 144 620 264 36
+rect 1128 620 264 36
+rect 456 500 216 36
+rect 864 500 216 36
+rect 660 650 216 36
+oneway 672 340 192 14
+oneway 200 400 170 14
+oneway 1166 400 170 14
+obj flame damage=12 dir=up id=2 length=230 off=2.5 on=1.2 phase=0 physics=false warn=0.5 x=540 y=800
+obj flame damage=12 dir=up id=3 length=230 off=2.5 on=1.2 phase=1.3 physics=false warn=0.5 x=996 y=800

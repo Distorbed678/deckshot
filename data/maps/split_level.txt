@@ -1,0 +1,16 @@
+deckshot-map 4
+name Split Level
+theme ice
+spawn 200 552
+spawn 1336 552
+spawn 340 552
+spawn 1196 552
+rect 96 600 420 264
+rect 1020 600 420 264
+rect 516 756 504 108
+obj block h=156 id=1 material=stone slope=left w=156 x=516 y=600
+obj block h=156 id=2 material=stone slope=right w=156 x=864 y=600
+oneway 648 500 240 14
+oneway 240 420 190 14
+oneway 1106 420 190 14
+oneway 672 300 192 14

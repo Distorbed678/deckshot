@@ -1,0 +1,5 @@
+deckshot-card 1
+name Deep Pockets
+rarity common
+art mag plus gold
+row add ammo 4

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Flashbang
+rarity uncommon
+art flash volt
+row add dazzle 1
+row add reloadTime 0.25
+note +hits stun for 0.25s (once every 2s per enemy)
+stack +0.25s of stun per copy

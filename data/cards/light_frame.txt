@@ -1,0 +1,8 @@
+deckshot-card 1
+name Light Frame
+rarity common
+art body minus sky
+row add radius -3
+row add maxHp -10
+note +smaller body (harder to hit)
+stack smaller again per copy

@@ -257,6 +257,12 @@ function Objects.damage(world, o, amount, source, x, y)
   o.alive = false
   local t = T[o.type]
   if t and t.broken then t.broken(o, world, source) end
+  local demo = source and source.stats and source.stats.demolition or 0
+  if demo > 0 and o.w and (o.onBreak or "none") ~= "explode" then
+    -- Demolition Crew: whatever this player breaks goes off like a small bomb.
+    table.insert(world.pendingBlasts, { t = 0.06, x = o.x + o.w / 2, y = o.y + o.h / 2, radius = 90 * (1 + 0.3 * (demo - 1)),
+      damage = 30 * demo, source = source, owner = source })
+  end
   return true
 end
 
@@ -635,12 +641,13 @@ end
 
 
 
-local function explodeAt(world, x, y, radius, damage, source, color)
+-- owner: when a player's card made the blast, it only hurts who that player can hurt.
+local function explodeAt(world, x, y, radius, damage, source, color, owner)
   fx.explosion(x, y, radius, color)
-  fx.addShake(9)
-  sfx.play("explosion", x)
+  fx.addShake(owner and 5 or 9)
+  sfx.play(radius > 100 and "explosion" or "explosionSmall", x)
   for _, p in ipairs(world.players) do
-    if not p.dead then
+    if not p.dead and (not owner or world:canHurt(owner, p)) then
       local dx, dy = p.x - x, p.y - y
       local d = math.sqrt(dx * dx + dy * dy)
       if d < radius + p.r and Physics.canReach(world, x, y, p.x, p.y) then p:hit(damage * (1 - 0.4 * d / (radius + p.r)), dx, dy - 40, 700, source, "explosion") end
@@ -836,14 +843,40 @@ function Objects.update(world, dt)
     e.t = e.t - dt
     if e.t <= 0 then
       table.remove(world.pendingBlasts, i)
-      explodeAt(world, e.x, e.y, e.radius, e.damage, e.source, { 1, 0.55, 0.15 })
+      explodeAt(world, e.x, e.y, e.radius, e.damage, e.source, { 1, 0.55, 0.15 }, e.owner)
     end
   end
   -- Pickups and gas clouds.
   for i = #world.effects, 1, -1 do
     local e = world.effects[i]
     e.life = e.life - dt
-    if e.type == "pickup" then
+    if e.follow then e.x, e.y = e.follow.x, e.follow.y end
+    if e.follow and e.follow.dead then e.life = 0 end
+    if e.type == "bomb" then
+      if e.life <= 0 then explodeAt(world, e.x, e.y, e.radius, e.damage, e.owner, e.owner and e.owner.color, e.owner) end
+    elseif e.type == "star" then
+      if e.life <= 0 then
+        fx.ring(e.x, e.y, e.radius, { 1, 0.9, 0.6 })
+        fx.burst(e.x, e.y, { 1, 0.9, 0.6 }, 24, 420, 4)
+        fx.addShake(8)
+        sfx.play("explosion", e.x, 0.7, 1.5)
+        for _, p in ipairs(world.players) do
+          if not p.dead and p ~= e.owner and world:canHurt(e.owner, p) and circleHitsPlayer(e.x, e.y, e.radius, p) then
+            p:stun(e.stun or 1)
+          end
+        end
+      end
+    elseif e.type == "field" then
+      for _, p in ipairs(world.players) do
+        if not p.dead and p ~= e.owner and world:canHurt(e.owner, p) and circleHitsPlayer(e.x, e.y, e.radius, p)
+            and p.invuln <= 0 and not p:isBlocking() then
+          p.slowTimer = math.max(p.slowTimer or 0, 0.3)
+          p.hp = p.hp - e.dps * dt
+          p.lastAttacker, p.lastHitKind = e.owner, "field"
+          if p.hp <= 0 then p:die() end
+        end
+      end
+    elseif e.type == "pickup" then
       e.vy = math.min((e.vy or 0) + 900 * dt, 500)
       local ny = e.y + e.vy * dt
       if Physics.hit(world, e.x - 10, ny - 10, 20, 20) then e.vy = 0 else e.y = ny end
@@ -875,8 +908,12 @@ function Objects.update(world, dt)
       end
     elseif e.type == "cloud" then
       for _, p in ipairs(world.players) do
-        if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (p.poisonTimer or 0) < 0.6
+        if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (not e.owner or world:canHurt(e.owner, p))
             and Physics.canReach(world, e.x, e.y, p.x, p.y) then
+          if e.slow then p.slowTimer = math.max(p.slowTimer or 0, 0.3) end
+        end
+        if not p.dead and circleHitsPlayer(e.x, e.y, e.radius, p) and (p.poisonTimer or 0) < 0.6
+            and (not e.owner or world:canHurt(e.owner, p)) and Physics.canReach(world, e.x, e.y, p.x, p.y) then
           p:poisonFor(8, 1)
           p.lastAttacker = e.source or p.lastAttacker
           p.lastHitKind = "gas"

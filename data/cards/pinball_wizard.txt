@@ -1,0 +1,7 @@
+deckshot-card 1
+name Pinball Wizard
+rarity uncommon
+art bounce crown gold
+row add bounces 5
+row mul gunDamage 0.85
+row add reloadTime 0.5

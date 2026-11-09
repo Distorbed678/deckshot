@@ -1,0 +1,8 @@
+deckshot-card 1
+name Leech Aura
+rarity epic
+art leech blood
+row add leech 1
+row add maxHp 25
+note +drain 4 HP per second from each enemy close to you
+stack +4 HP per second per copy

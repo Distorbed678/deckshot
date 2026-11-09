@@ -1,0 +1,9 @@
+deckshot-card 1
+name Tangle
+rarity rare
+art lasso gold
+row add snare 1
+row add reloadTime 0.25
+note +bullets rope enemies near where they land
+note +roped enemies can't leave that spot for 2s
+stack +2s per copy

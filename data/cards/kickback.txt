@@ -1,0 +1,9 @@
+deckshot-card 1
+name Kickback
+rarity common
+art rocket uturn fire
+row mul bulletSpeed 2
+row add recoil 450
+note -every shot shoves you backwards
+note +aim down to fly
+stack a harder shove per copy

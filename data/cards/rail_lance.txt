@@ -1,0 +1,15 @@
+deckshot-card 1
+name Rail Lance
+rarity epic
+art laser dash volt
+row first mul bulletSpeed 2.5
+row first set bulletGravity 0
+row first add pierce 10
+row first mul gunDamage 2
+row first mul fireDelay 1.8
+row first add ammo -1
+row extra mul gunDamage 1.5
+row add railgun 1
+note +shots become super-fast bolts
+note +bolts pierce every player
+stack +50% damage per extra copy

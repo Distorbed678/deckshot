@@ -1,0 +1,14 @@
+deckshot-map 4
+name Carousel
+theme neon
+spawn 290 708
+spawn 1246 708
+spawn 200 708
+spawn 1336 708
+rect 144 756 1248 48
+obj arm count=2 force=4 id=1 length=270 spin=0.7 x=768 y=430
+obj block h=18 id=2 material=metal parent=1 w=144 x=966 y=421
+obj block h=18 id=3 material=metal parent=1 w=144 x=426 y=421
+oneway 150 560 170 14
+oneway 1216 560 170 14
+oneway 684 180 168 14

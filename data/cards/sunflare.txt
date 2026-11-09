@@ -1,0 +1,9 @@
+deckshot-card 1
+name Sunflare
+rarity epic
+art sun fire
+row add sunflare 1
+row add maxHp 30
+note +while you reload, waves of heat hurt nearby enemies
+note +the waves come faster as the reload ends
+stack +7 damage per wave per copy

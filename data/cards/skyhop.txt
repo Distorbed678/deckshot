@@ -1,0 +1,5 @@
+deckshot-card 1
+name Skyhop
+rarity common
+art wing up sky
+row add airJumps 1

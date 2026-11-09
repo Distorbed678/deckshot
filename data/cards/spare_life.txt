@@ -1,0 +1,8 @@
+deckshot-card 1
+name Spare Life
+rarity epic
+art phoenix flame fire
+row add lives 1
+row add maxHp -35
+note +revive once per round at 50% HP
+stack +1 revive per round per copy

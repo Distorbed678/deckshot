@@ -1,0 +1,10 @@
+deckshot-card 1
+name Mag Dump
+rarity epic
+art bullets down volt
+row set fireDelay 0.06
+row add ammo 10
+row mul gunDamage 0.25
+row add spread 0.15
+row add reloadTime 0.25
+note +fire as fast as your gun allows

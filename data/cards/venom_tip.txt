@@ -1,0 +1,7 @@
+deckshot-card 1
+name Venom Tip
+rarity common
+art drop bullet toxic
+row add poison 0.5
+row add reloadTime 0.25
+note +poison deals its damage over 3s

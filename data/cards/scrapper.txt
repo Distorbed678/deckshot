@@ -1,0 +1,5 @@
+deckshot-card 1
+name Scrapper
+rarity uncommon
+art fist armor steel
+trigger hit shield amount=40 cd=10

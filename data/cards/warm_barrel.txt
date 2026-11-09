@@ -1,0 +1,7 @@
+deckshot-card 1
+name Warm Barrel
+rarity uncommon
+art gun flame fire
+row add spinup 1
+note +fire rate ramps up to 3x while you hold fire
+stack ramps up faster and cools down slower per copy

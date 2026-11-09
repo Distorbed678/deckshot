@@ -1,0 +1,9 @@
+deckshot-card 1
+name Undertow
+rarity uncommon
+art magnet down void
+block
+row add implode 1
+row add maxHp 40
+note +blocking drags nearby enemies to you
+stack +30% reach per copy

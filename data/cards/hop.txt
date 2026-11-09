@@ -1,0 +1,9 @@
+deckshot-card 1
+name Hop
+rarity rare
+art swirl dash void
+block
+row add blink 240
+row mul blockCooldown 0.7
+note +blocking teleports you where you aim
+stack +240 px of reach per copy

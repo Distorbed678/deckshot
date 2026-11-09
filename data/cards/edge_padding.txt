@@ -1,0 +1,5 @@
+deckshot-card 1
+name Edge Padding
+rarity common
+art wall shield pink
+row mul edgeTaken 0.6

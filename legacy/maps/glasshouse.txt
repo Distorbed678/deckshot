@@ -1,0 +1,19 @@
+deckshot-map 4
+name Glasshouse
+theme neon
+spawn 288 696
+spawn 1248 696
+spawn 480 696
+spawn 1056 696
+rect 144 744 1248 48
+oneway 432 480 672 14
+oneway 216 516 168 14
+oneway 1152 516 168 14
+obj block h=120 hp=1 id=1 material=glass physics=true w=12 x=432 y=624
+obj block h=120 hp=1 id=2 material=glass physics=true w=12 x=576 y=624
+obj block h=120 hp=1 id=3 material=glass physics=true w=12 x=720 y=624
+obj block h=120 hp=1 id=4 material=glass physics=true w=12 x=804 y=624
+obj block h=120 hp=1 id=5 material=glass physics=true w=12 x=948 y=624
+obj block h=120 hp=1 id=6 material=glass physics=true w=12 x=1092 y=624
+obj block drop=0.08 h=48 hp=60 id=7 material=crate onBreak=pickup physics=true w=48 x=480 y=432
+obj block drop=0.08 h=48 hp=60 id=8 material=crate onBreak=pickup physics=true w=48 x=1020 y=432

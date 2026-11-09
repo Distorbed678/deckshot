@@ -1,0 +1,7 @@
+deckshot-card 1
+name Pinball
+rarity common
+art bounce plus pink
+row add bounces 2
+row mul gunDamage 1.15
+row add reloadTime 0.25
