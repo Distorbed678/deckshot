@@ -153,6 +153,8 @@
 
     // Keep game keys (space, arrows, tab, backspace) from scrolling or navigating the page.
     window.addEventListener("keydown", function (e) {
+      // Blocking a key here also stops the browser typing it, so spaces must get through to text boxes.
+      if (e.keyCode === 32 && (textFieldActive || e.target === kbd)) return;
       if ([8, 9, 32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) e.preventDefault();
     }, false);
 
@@ -236,7 +238,7 @@
     }
 
     // The phone keyboard for text fields (see core/webkeyboard.lua).
-    var kbd = document.getElementById("kbd"), kbdBuffer = "";
+    var kbd = document.getElementById("kbd"), kbdBuffer = "", textFieldActive = false;
     kbd.addEventListener("input", function () { kbdBuffer += kbd.value; kbd.value = ""; });
     kbd.addEventListener("keydown", function (e) {
       if (e.key === "Backspace") { kbdBuffer += "\b"; e.preventDefault(); }
@@ -246,6 +248,7 @@
       var cmd = line.split(" ")[1];
       if (cmd === "show") { kbd.value = ""; kbd.focus(); }
       else if (cmd === "hide") { kbd.blur(); canvas.focus(); }
+      else if (cmd === "typing") { textFieldActive = line.split(" ")[2] === "1"; }
       else if (cmd === "poll") {
         try { Module.FS_unlink("/tmp/rckbd.txt"); } catch (e) {}
         Module.FS_createDataFile("/tmp", "rckbd.txt", new TextEncoder().encode(kbdBuffer), true, true, true);

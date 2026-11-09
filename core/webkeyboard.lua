@@ -11,6 +11,11 @@ function kb.update()
   if not platform.web then return end
   local ui = require "core.ui"
   local Touch = require "core.touch"
+  local typing = ui.textWasActive and true or false
+  if typing ~= kb.typing then -- so the page lets the space key through to the text box
+    kb.typing = typing
+    print("\27KBD typing " .. (typing and "1" or "0"))
+  end
   local want = ui.textWasActive and Touch.enabled
   if want and not kb.shown then
     print("\27KBD show")
