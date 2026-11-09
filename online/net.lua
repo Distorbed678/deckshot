@@ -192,6 +192,7 @@ function net.encodeRules(rules, cards, rarities)
   end
   parts[#parts + 1] = pack("string", "<BBBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
     rules.allowDiscard and 1 or 0, rules.hazards == false and 0 or 1)
+  parts[#parts + 1] = pack("string", "<BB", (rules.draft and 1 or 0) + (rules.draftSnake and 2 or 0), rules.draftExtra or 0)
   -- Everything else the host set (sudden death, mode, votes, teams...).
   parts[#parts + 1] = pack("string", "<HBBBBBBBBBHBB", math.min(65535, rules.suddenDeath or 0), rules.barrierClose or 2,
     rules.barrierBox or 2, rules.barrierDamage or 2, rules.mode == "koth" and 1 or 0, rules.mapVote and 1 or 0,
@@ -223,6 +224,9 @@ function net.decodeRules(data, rarities)
   rules.startCards, rules.pickTimer, discard, hazards, pos = unpack("<BBBB", data, pos)
   rules.allowDiscard = discard == 1
   rules.hazards = hazards == 1
+  local draft
+  draft, rules.draftExtra, pos = unpack("<BB", data, pos)
+  rules.draft, rules.draftSnake = draft % 2 == 1, draft >= 2
   local mode, vote, bans, teams, ff
   rules.suddenDeath, rules.barrierClose, rules.barrierBox, rules.barrierDamage, mode, vote, rules.mapVoteCount, bans,
     teams, ff, rules.roundsToWin, rules.subRounds, rules.teamSize, pos = unpack("<HBBBBBBBBBHBB", data, pos)

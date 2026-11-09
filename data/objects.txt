@@ -24,3 +24,6 @@ material glass name=Glass hp=1 density=0.5 bounce=0.05
 material metal name=Metal hp=200 density=1.5
 material barrel name=Barrel hp=30 density=1 bounce=0.15
 material gas name=Gas\ can hp=20 density=0.6 bounce=0.2
+# ice: almost no grip, so you keep your momentum. sticky: slows walking, weakens jumps, stops bullets bouncing.
+material ice name=Ice hp=80 density=0.9 bounce=0.05 slip=true
+material sticky name=Sticky hp=120 density=1.4 bounce=0 sticky=true

@@ -60,5 +60,7 @@ obj block h=36 hp=40 id=51 material=wood w=36 x=876 y=656
 obj block h=36 hp=40 id=52 material=wood w=36 x=948 y=656
 obj block h=36 hp=40 id=53 material=wood w=36 x=1020 y=656
 obj block h=36 hp=40 id=54 material=wood w=36 x=1092 y=656
+obj block h=6 id=55 material=sticky w=192 x=420 y=750
+obj block h=6 id=56 material=sticky w=192 x=924 y=750
 oneway 150 560 170 14
 oneway 1216 560 170 14

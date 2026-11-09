@@ -441,7 +441,7 @@ end
 -- The gameplay values to show: this machine's settings, or for a client the host's.
 local function viewOfRules(r)
   local v = { roundsToWin = r.roundsToWin, matchMode = r.mode, teams = r.teams, teamSize = r.teamSize, friendlyFire = r.friendlyFire, pickFrom = r.pickFrom,
-    picksPerRound = r.picksPerRound, startCards = r.startCards, pickTimer = r.pickTimer, allowDiscard = r.allowDiscard,
+    picksPerRound = r.picksPerRound, startCards = r.startCards, draft = r.draft, draftExtra = r.draftExtra, draftSnake = r.draftSnake, pickTimer = r.pickTimer, allowDiscard = r.allowDiscard,
     mapVote = r.mapVote, mapVoteCount = r.mapVoteCount, cardBans = r.cardBans, hazards = r.hazards, subRounds = r.subRounds,
     suddenDeath = r.suddenDeath, barrierClose = r.barrierClose, barrierBox = r.barrierBox, barrierDamage = r.barrierDamage }
   for i, x in ipairs(Cards.RARITIES) do v["weight_" .. x.id] = r.weights[i] or 0 end
@@ -473,7 +473,7 @@ function Screen:drawGameplay(x, y, w, viewH)
   local v = client and viewOfRules(rules) or Settings.values
   local h, gap, head = 38, 44, 42
   local colW = (w - 50) / 2
-  local contentH = head + 15 * gap
+  local contentH = head + (16 + ((v.draft and v.startCards > 0) and 2 or 0)) * gap
   local top = y
   if client then
     love.graphics.setFont(app.fonts.med)
@@ -527,6 +527,20 @@ function Screen:drawGameplay(x, y, w, viewH)
   d = ui.cycler("Starting cards", v.startCards == 0 and "None" or tostring(v.startCards), lx, ly, colW, h)
   if d ~= 0 then v.startCards = sc.min + cycle(v.startCards - sc.min + 1, sc.max - sc.min + 1, d) - 1 end
   ly = ly + gap
+  -- Draft: the starting cards come from one shared spread, picked in turn.
+  local noStart = v.startCards == 0
+  d = ui.cycler("Draft starting cards", v.draft and "On" or "Off", lx, ly, colW, h, { disabled = noStart })
+  if d ~= 0 then v.draft = not v.draft end
+  ly = ly + gap
+  if v.draft and not noStart then
+    local de = Settings.DRAFT_EXTRA
+    d = ui.cycler("Draft spare cards", tostring(v.draftExtra or 0), lx, ly, colW, h)
+    if d ~= 0 then v.draftExtra = de.min + cycle((v.draftExtra or 0) - de.min + 1, de.max - de.min + 1, d) - 1 end
+    ly = ly + gap
+    d = ui.cycler("Draft order", v.draftSnake and "Snake" or "Same each round", lx, ly, colW, h)
+    if d ~= 0 then v.draftSnake = not v.draftSnake end
+    ly = ly + gap
+  end
   local timers = Settings.PICK_TIMER_OPTIONS
   d = ui.cycler("Pick timer (online)", v.pickTimer == 0 and "Off" or (v.pickTimer .. "s"), lx, ly, colW, h)
   if d ~= 0 then v.pickTimer = timers[cycle(indexOf(timers, v.pickTimer), #timers, d)] end

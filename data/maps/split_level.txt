@@ -10,6 +10,7 @@ rect 1020 600 420 264
 rect 516 756 504 108
 obj block h=156 id=1 material=stone slope=left w=156 x=516 y=600
 obj block h=156 id=2 material=stone slope=right w=156 x=864 y=600
+obj block h=6 id=3 material=ice w=192 x=672 y=750
 oneway 648 500 240 14
 oneway 240 420 190 14
 oneway 1106 420 190 14

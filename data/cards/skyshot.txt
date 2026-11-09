@@ -1,0 +1,5 @@
+deckshot-card 1
+name Skyshot
+rarity uncommon
+art wing bullet sky
+row add airDamage 0.3

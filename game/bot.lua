@@ -319,6 +319,13 @@ function Bot.update(p, w, dt)
     end
   elseif stale and route == nil and t then
     goalX = t.x -- no route found: just walk at them
+    -- Straight above or below them with something solid between: step off to one side instead.
+    if math.abs(t.x - p.x) < 70 and math.abs(t.y - p.y) > 60 then
+      b.sidestep = b.sidestep or ((love.math.random() < 0.5) and -1 or 1)
+      goalX = t.x + b.sidestep * 170
+    else
+      b.sidestep = nil
+    end
     dir = (goalX > p.x + 30) and 1 or (goalX < p.x - 30) and -1 or 0
   end
   -- Pressed against a wall in the air: double jump, then dash, to get over it.

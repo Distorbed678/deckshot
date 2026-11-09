@@ -1,0 +1,8 @@
+deckshot-card 1
+name Hill Runner
+rarity uncommon
+art ramp fire
+row add hillRunner 1
+note +40% move speed on ramps
+note +20% jump power when you jump off a ramp
+stack +40% speed and +20% jump per copy

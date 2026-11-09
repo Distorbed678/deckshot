@@ -220,10 +220,27 @@ function World:afterBans()
   self:placePlayers()
   self.roundWinner = nil
   self.pickQueue = {}
-  for _, p in ipairs(self.players) do
-    if not p.disconnected then
-      for num = 1, n do
-        self.pickQueue[#self.pickQueue + 1] = { slot = p.slot, num = num, total = n, start = true }
+  self.draft = nil
+  if self.rules.draft then
+    -- Draft: each round one spread is laid out and everyone takes a card from it in turn.
+    local order = {}
+    for _, p in ipairs(self.players) do
+      if not p.disconnected then order[#order + 1] = p.slot end
+    end
+    for round = 1, n do
+      local reverse = self.rules.draftSnake and round % 2 == 0
+      for i = 1, #order do
+        local slot = order[reverse and (#order + 1 - i) or i]
+        self.pickQueue[#self.pickQueue + 1] = { slot = slot, num = round, total = n, start = true, draft = round,
+          size = #order + (self.rules.draftExtra or 0) }
+      end
+    end
+  else
+    for _, p in ipairs(self.players) do
+      if not p.disconnected then
+        for num = 1, n do
+          self.pickQueue[#self.pickQueue + 1] = { slot = p.slot, num = num, total = n, start = true }
+        end
       end
     end
   end
@@ -864,15 +881,33 @@ function World:openPicks()
   self:nextPick()
 end
 
-function World:dealPick(slot, num, total)
-  local options = Cards.deal(self.rules.pickFrom or 3, self.players[slot])
+-- The shared spread for a draft round: no special cards, since they act on one player's hand.
+function World:draftSpread(round, size)
+  local d = self.draft
+  if not d or d.round ~= round then
+    local pool = {}
+    for _, c in ipairs(Cards.deal(size + 4, self.players[1])) do
+      if not c.special and #pool < size then pool[#pool + 1] = c end
+    end
+    d = { round = round, pool = pool }
+    self.draft = d
+  end
+  local options = {}
+  for i, c in ipairs(d.pool) do options[i] = c end
+  return options
+end
+
+-- q: the queue entry (draft picks carry their round and spread size).
+function World:dealPick(slot, num, total, q)
+  local draft = q and q.draft
+  local options = draft and self:draftSpread(draft, q.size) or Cards.deal(self.rules.pickFrom or 3, self.players[slot])
   if #options == 0 then return false end
   self.pickSerial = (self.pickSerial + 1) % 256
   local timer = self.rules.pickTimer or 0
   local hover = math.ceil(#options / 2)
   self.pick = {
     slot = slot, options = options, hover = hover,
-    num = num, total = total, serial = self.pickSerial,
+    num = num, total = total, serial = self.pickSerial, draft = draft, q = q,
     flipped = { [hover] = true }, -- cards are dealt face down; hovering one turns it over
     timeLeft = timer > 0 and timer or nil,
   }
@@ -885,7 +920,7 @@ function World:nextPick()
   self.pick = nil
   while #self.pickQueue > 0 do
     local q = table.remove(self.pickQueue, 1)
-    if not self.players[q.slot].disconnected and self:dealPick(q.slot, q.num, q.total) then return end
+    if not self.players[q.slot].disconnected and self:dealPick(q.slot, q.num, q.total, q) then return end
   end
   self:startRound()
 end
@@ -922,6 +957,12 @@ function World:choose(slot, optionIndex, serial)
   if not card then return end
   local p = self.players[slot]
 
+  if pk.draft and self.draft then
+    -- A drafted card leaves the spread for everyone after you.
+    for i, c in ipairs(self.draft.pool) do
+      if c == card then table.remove(self.draft.pool, i) break end
+    end
+  end
   if card.special == "reroll" then
     if not self:dealPick(slot, pk.num, pk.total) then self:nextPick() end
     return

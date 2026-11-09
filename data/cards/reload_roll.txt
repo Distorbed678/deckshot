@@ -1,0 +1,5 @@
+deckshot-card 1
+name Reload Roll
+rarity uncommon
+art dash bullet gold
+trigger dash ammo amount=2

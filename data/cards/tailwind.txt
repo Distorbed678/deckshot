@@ -1,0 +1,6 @@
+deckshot-card 1
+name Tailwind
+rarity uncommon
+art wing dash sky
+row mul dashCooldown 0.85
+trigger dash speed pct=30 time=2

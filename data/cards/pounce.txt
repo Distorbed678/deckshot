@@ -1,0 +1,6 @@
+deckshot-card 1
+name Pounce
+rarity common
+art blade dash sky
+row mul heavyDash 1.5
+row mul meleeRange 1.15

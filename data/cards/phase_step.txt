@@ -1,0 +1,6 @@
+deckshot-card 1
+name Phase Step
+rarity rare
+art ghost dash void
+row mul dashCooldown 0.8
+trigger dash invuln time=0.15

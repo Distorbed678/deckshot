@@ -1,0 +1,5 @@
+deckshot-card 1
+name Sticky Fingers
+rarity uncommon
+art hand bullet gold
+trigger meleeHit ammo amount=20

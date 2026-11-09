@@ -2101,6 +2101,15 @@ function Match:drawCardPick(st)
   local a = self.pickAnim
   local inK = a and math.max(0, math.min(1, a.t / 0.4)) or 1
 
+  -- Draft: the starting cards come from one spread that everyone takes from in turn.
+  local drafting = cp.draft ~= nil
+  if not drafting and self.role == "client" and Cards.rules and Cards.rules.draft then
+    drafting = true
+    for _, q in ipairs(players) do
+      if (q.score or 0) > 0 or (q.subWins or 0) > 0 then drafting = false end
+    end
+  end
+  if drafting then count = "  (DRAFT ROUND " .. cp.num .. "/" .. cp.total .. ")" end
   local title
   if pu and self.role ~= "local" then title = "PICK A CARD" .. count
   elseif pu then title = name .. " - PICK A CARD" .. count

@@ -8,19 +8,19 @@ spawn 1226 708
 rect 144 756 1248 48
 rect 396 420 30 216
 rect 1110 420 30 216
-rect 396 396 300 24
-rect 840 396 300 24
-rect 753 480 30 90
+oneway 396 396 300 14
+oneway 840 396 300 14
 obj block h=14 hp=1 id=1 material=glass w=144 x=696 y=396
 obj block h=120 hp=1 id=2 material=glass w=30 x=396 y=636
 obj block h=120 hp=1 id=3 material=glass w=30 x=1110 y=636
-obj block h=186 hp=1 id=4 material=glass w=30 x=753 y=570
-obj block h=14 hp=1 id=5 material=glass w=163 x=426 y=560
-obj block h=14 hp=1 id=6 material=glass w=163 x=590 y=560
-obj block h=14 hp=1 id=7 material=glass w=163 x=783 y=560
-obj block h=14 hp=1 id=8 material=glass w=163 x=947 y=560
+obj block h=150 hp=1 id=4 material=glass w=30 x=753 y=410
+obj block h=182 hp=1 id=5 material=glass w=30 x=753 y=574
+obj block h=14 hp=1 id=6 material=glass w=163 x=426 y=560
+obj block h=14 hp=1 id=7 material=glass w=163 x=590 y=560
+obj block h=14 hp=1 id=8 material=glass w=163 x=783 y=560
+obj block h=14 hp=1 id=9 material=glass w=163 x=947 y=560
 oneway 170 560 170 14
 oneway 1196 560 170 14
 oneway 672 230 192 14
-obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=560 y=708
-obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=928 y=708
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=560 y=708
+obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=928 y=708

@@ -292,7 +292,7 @@ function Setup:drawRules(rx, ry, rw, rh)
     { "Wins per point", tostring(v.subRounds) },
     { "Cards to choose from", tostring(v.pickFrom) },
     { "Picks per round", tostring(v.picksPerRound) },
-    { "Starting cards", v.startCards == 0 and "None" or tostring(v.startCards) },
+    { "Starting cards", v.startCards == 0 and "None" or (tostring(v.startCards) .. ((v.draft and " (draft)") or "")) },
   }
   local y = ry + 58
   for _, row in ipairs(rows) do

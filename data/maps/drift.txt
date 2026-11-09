@@ -9,7 +9,7 @@ rect 120 620 240 48
 rect 1176 620 240 48
 rect 432 480 216 48
 rect 888 480 216 48
-rect 660 660 216 48
+obj block h=48 id=1 material=ice w=216 x=660 y=660
 oneway 672 330 192 14
 oneway 200 330 170 14
 oneway 1166 330 170 14

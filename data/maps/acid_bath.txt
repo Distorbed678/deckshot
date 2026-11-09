@@ -9,9 +9,9 @@ rect 96 700 360 164
 rect 1080 700 360 164
 rect 456 820 624 44
 obj liquid buoyant=false color=#59D934 damage=20 h=70 id=1 poison=true w=624 x=456 y=750
-rect 540 650 96 24
-rect 720 590 96 24
-rect 900 650 96 24
+obj block h=24 id=2 material=sticky w=96 x=540 y=650
+obj block h=24 id=3 material=sticky w=96 x=720 y=590
+obj block h=24 id=4 material=sticky w=96 x=900 y=650
 oneway 290 510 180 14
 oneway 1066 510 180 14
 rect 648 390 240 24

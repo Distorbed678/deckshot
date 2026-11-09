@@ -663,7 +663,7 @@ Objects.explodeAt = explodeAt
 -- A bridge plank (or any hanging platform): solid, held by a rope.
 
 local BREAK_COLOR = { crate = { 0.62, 0.45, 0.26 }, wood = { 0.55, 0.4, 0.24 }, brick = { 0.42, 0.38, 0.36 },
-  stone = { 0.45, 0.43, 0.5 }, metal = { 0.5, 0.52, 0.6 }, barrel = { 0.6, 0.15, 0.12 }, gas = { 0.4, 0.6, 0.3 } }
+  ice = { 0.7, 0.9, 1 }, sticky = { 0.75, 0.35, 0.7 }, stone = { 0.45, 0.43, 0.5 }, metal = { 0.5, 0.52, 0.6 }, barrel = { 0.6, 0.15, 0.12 }, gas = { 0.4, 0.6, 0.3 } }
 
 T.block = {
   solid = true,

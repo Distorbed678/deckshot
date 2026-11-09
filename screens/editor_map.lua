@@ -45,6 +45,8 @@ local PALETTE = {
     { name = "Brick", def = block("brick", { w = 48, h = 120, hp = 150, physics = true }) },
     { name = "Glass", def = block("glass", { w = 12, h = 120, hp = 1, physics = true }) },
     { name = "Metal", def = block("metal", { w = 96, h = 24 }) },
+    { name = "Ice", def = block("ice", { w = 144, h = 24 }) },
+    { name = "Sticky", def = block("sticky", { w = 144, h = 24 }) },
     { name = "Barrel", def = block("barrel", { w = 36, h = 48, hp = 30, physics = true, onBreak = "explode", radius = 110, damage = 55 }) },
     { name = "Gas can", def = block("gas", { w = 28, h = 42, hp = 20, physics = true, onBreak = "gas", radius = 110 }) },
   } },

@@ -277,6 +277,7 @@ end
 function Bullet:onSolid(game, solid, nx, ny)
   self.lastSolid = solid
   if solid.isObject then objects().bulletHitSolid(game, solid, self) end
+  if solid.material == "sticky" and not self.mine then self.bounces = math.min(self.bounces, 0) end -- nothing bounces off it
   self:bounce(game, math.atan2(ny, nx))
 end
 
@@ -365,7 +366,7 @@ function Bullet:traceStep(dt, game)
 end
 
 local IMPACT_SOUNDS = { crate = "impactWood", wood = "impactWood", barrel = "impactWood", brick = "impactWood",
-  glass = "impactGlass", metal = "impactMetal", crusher = "impactMetal", gas = "impactMetal" }
+  glass = "impactGlass", ice = "impactGlass", metal = "impactMetal", crusher = "impactMetal", gas = "impactMetal" }
 
 function Bullet:impactSound()
   local s = self.lastSolid

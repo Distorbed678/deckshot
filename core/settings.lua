@@ -24,6 +24,7 @@ Settings.ROUND_OPTIONS = { 3, 5, 7, 10, 15 }
 Settings.PICK_FROM = { min = 2, max = 6 }
 Settings.PICKS_PER_ROUND = { min = 1, max = 5 }
 Settings.START_CARDS = { min = 0, max = 5 }
+Settings.DRAFT_EXTRA = { min = 0, max = 3 }
 Settings.TEXT_SIZES = { { "Small", 0.9 }, { "Normal", 1 }, { "Large", 1.15 } }
 Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
 Settings.SUB_ROUNDS = { min = 1, max = 5 }
@@ -77,6 +78,9 @@ local defaults = {
   pickFrom = 5,
   picksPerRound = 1,
   startCards = 1,        -- cards everyone picks before round 1
+  draft = false,         -- starting cards are drafted in turn from one shared spread
+  draftExtra = 2,        -- spare cards in each spread, beyond one per player
+  draftSnake = true,     -- the pick order reverses every draft round
   pickTimer = 45,        -- seconds per pick online (0 = off); local play has no timer
   allowDiscard = true,   -- "discard a card instead" on the pick screen
   hazards = true,        -- map hazards on (breakables always stay)
@@ -260,6 +264,7 @@ function Settings.load()
   v.pickFrom = clamp(math.floor(v.pickFrom), Settings.PICK_FROM.min, Settings.PICK_FROM.max)
   v.picksPerRound = clamp(math.floor(v.picksPerRound), Settings.PICKS_PER_ROUND.min, Settings.PICKS_PER_ROUND.max)
   v.startCards = clamp(math.floor(v.startCards), Settings.START_CARDS.min, Settings.START_CARDS.max)
+  v.draftExtra = clamp(math.floor(tonumber(v.draftExtra) or 2), Settings.DRAFT_EXTRA.min, Settings.DRAFT_EXTRA.max)
   v.textSize = clamp(math.floor(v.textSize), 1, #Settings.TEXT_SIZES)
   v.pickTimer = clamp(math.floor(v.pickTimer), 0, 255)
   for _, r in ipairs(Cards.RARITIES) do
@@ -416,6 +421,7 @@ function Settings.resetGameplay()
   v.pickFrom = defaults.pickFrom
   v.picksPerRound = defaults.picksPerRound
   v.startCards = defaults.startCards
+  v.draft, v.draftExtra, v.draftSnake = defaults.draft, defaults.draftExtra, defaults.draftSnake
   v.pickTimer = defaults.pickTimer
   v.allowDiscard = defaults.allowDiscard
   v.hazards = defaults.hazards
@@ -447,6 +453,7 @@ function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
     startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
+    draft = v.draft, draftExtra = v.draftExtra, draftSnake = v.draftSnake,
     hazards = v.hazards,
     teams = v.teams, teamSize = v.teamSize, friendlyFire = v.friendlyFire, roundsToWin = v.roundsToWin,
     suddenDeath = v.suddenDeath, barrierClose = v.barrierClose, barrierBox = v.barrierBox,

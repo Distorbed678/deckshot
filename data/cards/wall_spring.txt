@@ -1,0 +1,5 @@
+deckshot-card 1
+name Wall Spring
+rarity common
+art wall spring toxic
+trigger wallJump speed pct=30 time=1.5

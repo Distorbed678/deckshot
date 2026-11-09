@@ -154,6 +154,7 @@ Stats.LIST = {
   { "stillness", 0, "Abilities", "count", "high", "stillness" },
   { "sunflare", 0, "Abilities", "count", "high", "sunflare" },
   { "demolition", 0, "Abilities", "count", "high", "demolition" },
+  { "hillRunner", 0, "Movement", "count", "high", "hill runner" },
 }
 
 Stats.BASE = {}

@@ -1,0 +1,6 @@
+deckshot-card 1
+name Spare Dash
+rarity common
+art dash plus sky
+row add dashes 1
+row add maxHp -10

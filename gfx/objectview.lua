@@ -33,11 +33,34 @@ local MATERIAL = {
   metal = function(o) Assets.rect("metal", o.x, o.y, o.w, o.h) end,
   barrel = function(o) Assets.rect("barrel", o.x, o.y, o.w, o.h) end,
   gas = function(o) Assets.rect("gas", o.x, o.y, o.w, o.h) end,
+  ice = function(o)
+    g.setColor(0.55, 0.8, 0.95, 0.85)
+    Assets.rect("tile_white", o.x, o.y, o.w, o.h)
+    g.setColor(0.92, 0.98, 1)
+    Assets.rect("tile_white", o.x, o.y, o.w, 3)
+    g.setColor(1, 1, 1, 0.35)
+    g.setLineWidth(2)
+    for x = o.x + 14, o.x + o.w - 10, 46 do
+      local len = math.min(14, o.h - 8)
+      if len > 3 then g.line(x, o.y + 6, x - len * 0.6, o.y + 6 + len) end
+    end
+    g.setLineWidth(1)
+  end,
+  sticky = function(o)
+    g.setColor(0.5, 0.2, 0.48)
+    Assets.rect("tile_white", o.x, o.y, o.w, o.h)
+    g.setColor(0.95, 0.45, 0.85)
+    Assets.rect("tile_white", o.x, o.y, o.w, 4)
+    for x = o.x + 10, o.x + o.w - 8, 30 do -- drips
+      local len = math.min(6 + ((x * 7) % 9), math.max(0, o.h - 6))
+      g.rectangle("fill", x, o.y + 3, 5, len, 2, 2)
+    end
+  end,
 }
 
 -- Ramps are drawn as flat triangles in the material's colour, with a lit edge along the walking surface.
 local SLOPE_RGB = { crate = { 0.62, 0.45, 0.27 }, wood = { 0.55, 0.39, 0.23 }, brick = { 0.6, 0.32, 0.26 },
-  glass = { 0.62, 0.86, 0.95 }, metal = { 0.55, 0.58, 0.66 }, barrel = { 0.7, 0.32, 0.22 }, gas = { 0.5, 0.7, 0.32 } }
+  glass = { 0.62, 0.86, 0.95 }, ice = { 0.55, 0.8, 0.95 }, sticky = { 0.55, 0.22, 0.52 }, metal = { 0.55, 0.58, 0.66 }, barrel = { 0.7, 0.32, 0.22 }, gas = { 0.5, 0.7, 0.32 } }
 
 local function drawSlope(o, slope)
   local x0, y0, x1, y1 = o.x, o.y, o.x + o.w, o.y + o.h

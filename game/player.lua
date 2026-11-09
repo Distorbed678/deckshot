@@ -560,6 +560,10 @@ function Player:runPhysics(dt, dir, speed, acting)
   local s, inp = self.stats, self.input
   local belt = self.beltVx or 0 -- standing on a conveyor
   self.beltVx = nil
+  -- What you're standing on: ice barely grips, sticky ground slows you down.
+  local ground = self.onGround and self.groundRect
+  local icy = ground and ground.material == "ice"
+  if ground and ground.material == "sticky" then speed = speed * 0.55 end
   local target = dir * speed + belt
   -- On a ramp you walk along its surface: (tx, ty) points along it to the right.
   local tx, ty = 1, 0
@@ -567,6 +571,10 @@ function Player:runPhysics(dt, dir, speed, acting)
     tx, ty = -self.groundNy, self.groundNx
   end
   local onSlope = ty ~= 0
+  if onSlope and s.hillRunner > 0 then -- Hill Runner: ramps are where you're fastest
+    speed = speed * (1 + 0.4 * s.hillRunner)
+    target = dir * speed + belt
+  end
   local along = onSlope and (self.vx * tx + self.vy * ty) or self.vx -- speed along the ground
   local accel
   if self.controlLock > 0 then
@@ -580,6 +588,7 @@ function Player:runPhysics(dt, dir, speed, acting)
     accel = self.onGround and MOVE.groundAccel or MOVE.airAccel
     if along ~= 0 and (along > 0) ~= (dir > 0) then accel = accel * MOVE.turnMul end
   end
+  if icy and self.controlLock <= 0 then accel = accel * (dir == 0 and 0.04 or 0.2) end -- slow to start, slower to stop
   -- Shoving something heavy takes more of your effort.
   local effort = accel
   if self.pushing and self.pushing.mass then effort = accel / (1 + self.pushing.mass * 1.2) end
@@ -893,7 +902,9 @@ function Player:jumpPressed(fromBuffer)
     return
   end
   if self.onGround or self.coyote > 0 then
-    self.vy = -s.jump
+    local sticky = self.onGround and self.groundRect and self.groundRect.material == "sticky"
+    local ramp = s.hillRunner > 0 and self.onGround and (self.groundNy or -1) > -0.999
+    self.vy = -s.jump * (sticky and 0.75 or 1) * (ramp and (1 + 0.2 * s.hillRunner) or 1)
     self.coyote = 0
     self.onGround = false
     self.fallJump = false
