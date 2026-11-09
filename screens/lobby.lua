@@ -7,6 +7,7 @@ local Settings = require "core.settings"
 local World = require "game.world"
 local net = require "online.net"
 local Chat = require "online.chat"
+local Voice = require "online.voice"
 local Cosmetics = require "core.cosmetics"
 local Map = require "game.map"
 local Cards = require "game.cards"
@@ -51,9 +52,8 @@ function Lobby:sendInfo(peer)
   local session = active.get()
   if not session.isHost then return end
   local rules = Settings.cardRules(true)
-  local Synergies = require "game.synergies"
   local msgs = { net.encodeMaps(Map.sessionEntries()), net.encodeCards(Cards.sessionEntries()),
-    net.encodeSynergies(Synergies.sessionEntries()), net.encodeRules(rules, Cards.list, Cards.RARITIES) }
+    net.encodeRules(rules, Cards.list, Cards.RARITIES) }
   for _, m in ipairs(session.members) do
     if m.id ~= session.myId() and (not peer or m.id == peer) then
       for _, data in ipairs(msgs) do session.transport:send(m.id, data, true) end
@@ -84,7 +84,7 @@ end
 local function rulesInForce(session)
   if session.isHost then
     local v = Settings.values
-    return { teams = v.teams, mode = v.matchMode, roundsToWin = v.roundsToWin, pickFrom = v.pickFrom, picksPerRound = v.picksPerRound }
+    return { teams = v.teams, teamSize = v.teamSize, mode = v.matchMode, roundsToWin = v.roundsToWin, pickFrom = v.pickFrom, picksPerRound = v.picksPerRound }
   end
   return session.hostRules
 end
@@ -104,26 +104,19 @@ function Lobby.slots(session)
       bot = b.level, color = b.color }
   end
   local r = rulesInForce(session)
-  if r and r.teams then
-    local teams = {}
-    for i, s in ipairs(slots) do
-      s.team = (i - 1) % 2 + 1
-      teams[i] = s.team
-    end
-    for i, idx in ipairs(World.teamColorIndices(teams)) do slots[i].color = idx end
-  else
-    -- Fill in missing / clashing colours with free ones.
-    local used = {}
-    for _, s in ipairs(slots) do
-      if s.color and not used[s.color] then used[s.color] = true else s.color = nil end
-    end
-    for _, s in ipairs(slots) do
-      if not s.color then
-        for k = 1, #World.PALETTE do
-          if not used[k] then s.color, used[k] = k, true break end
-        end
+  local teams = r and r.teams
+  -- Fill in missing colours with free ones. Without teams, colours can't be shared either.
+  local used = {}
+  for _, s in ipairs(slots) do
+    if s.color and (teams or not used[s.color]) then used[s.color] = true else s.color = nil end
+  end
+  for _, s in ipairs(slots) do
+    if not s.color then
+      for k = 1, #World.PALETTE do
+        if not used[k] then s.color, used[k] = k, true break end
       end
     end
+    if teams then s.team = s.color end -- your colour is your team
   end
   return slots
 end
@@ -170,6 +163,8 @@ function Lobby:update(dt)
     local kind = net.kind(msg.data)
     if kind == net.MSG.CHAT then
       Chat.handle(session, msg)
+    elseif kind == net.MSG.VOICE then
+      Voice.receive(session, msg)
     elseif session.isHost then
       if kind == net.MSG.LOBBYHELLO then
         local ok, hat, eyes, mouth, detail = pcall(net.decodeLobbyHello, msg.data)
@@ -196,9 +191,6 @@ function Lobby:update(dt)
       elseif kind == net.MSG.CARDS then
         local ok, entries = pcall(net.decodeCards, msg.data)
         if ok then Cards.setSession(entries) end
-      elseif kind == net.MSG.SYNERGIES then
-        local ok, entries = pcall(net.decodeMaps, msg.data)
-        if ok then require("game.synergies").setSession(entries) end
       elseif kind == net.MSG.RULES then
         local ok, rules = pcall(net.decodeRules, msg.data, Cards.RARITIES)
         if ok then
@@ -223,7 +215,7 @@ function Lobby.rulesText()
   local r = rulesInForce(session)
   if not r then return "" end
   local picks = (r.picksPerRound or 1) > 1 and (r.picksPerRound .. " picks of ") or "pick 1 of "
-  return (Settings.MODE_NAMES[r.mode] or "Elimination") .. (r.teams and ", Teams" or "") .. "  -  first to " ..
+  return (Settings.MODE_NAMES[r.mode] or "Elimination") .. (r.teams and (", Teams of " .. (r.teamSize or 2)) or "") .. "  -  first to " ..
     (r.roundsToWin or session.rounds) .. "  -  " .. picks .. (r.pickFrom or 3) .. " cards"
 end
 
@@ -266,12 +258,23 @@ function Lobby:drawPlayers(session, lx, ly, lw)
       local tags = {}
       if sl.peer == session.hostId then tags[#tags + 1] = "HOST" end
       if sl.peer == me then tags[#tags + 1] = "YOU" end
-      if sl.team then tags[#tags + 1] = World.TEAM_NAMES[sl.team]:upper() end
+      if sl.team then tags[#tags + 1] = World.teamName(sl.team):upper() end
       love.graphics.setColor(c)
-      ui.printFit(table.concat(tags, "  "), app.fonts.small, lx + lw - 210, ry + 16, sl.bot and 140 or 176, "right")
+      local others = not sl.bot and sl.peer ~= me
+      ui.printFit(table.concat(tags, "  "), app.fonts.small, lx + lw - 260, ry + 16, (sl.bot or others) and 136 or 226, "right")
+      if Voice.isSpeaking(sl.peer) then Voice.drawIcon(lx + 72, ry + 40) end
+      if others and Voice.available() and not (session.isWebPeer and session.isWebPeer(sl.peer)) then
+        local muted = Voice.muted[sl.peer]
+        if ui.button(muted and "Unmute" or "Mute", lx + lw - 118, ry + 10, 94, 30, { font = app.fonts.tiny, color = muted and ui.BAD or nil }) then
+          Voice.muted[sl.peer] = not muted or nil
+        end
+      end
       if sl.bot then
         botIndex = botIndex + 1
         local bi = botIndex
+        if session.isHost and ui.button("Colour", lx + lw - 118, ry + 10, 56, 30, { font = app.fonts.tiny }) then
+          session.bots[bi].color = Lobby.nextOpenColor(session, sl.peer, session.bots[bi].color)
+        end
         if session.isHost and ui.button("x", lx + lw - 58, ry + 10, 34, 30, { font = app.fonts.small, back = true }) then
           table.remove(session.bots, bi)
         end
@@ -285,12 +288,51 @@ function Lobby:drawPlayers(session, lx, ly, lw)
   return ly + lh, teams, me
 end
 
-function Lobby:drawColors(session, lx, y, teams, me)
-  if not session.setColor or teams then return end
-  -- The colours everyone actually ends up with.
-  local taken, myColor = {}, nil
+-- How many players a colour can hold under the rules in force.
+local function colorLimit(session)
+  local r = rulesInForce(session)
+  return (r and r.teams) and (r.teamSize or 2) or 1
+end
+
+-- The next colour after `from` that isn't full, leaving out the player `peer` from the count.
+function Lobby.nextOpenColor(session, peer, from)
+  local count, limit = {}, colorLimit(session)
   for _, s in ipairs(Lobby.slots(session)) do
-    if s.peer == me then myColor = s.color elseif s.color then taken[s.color] = true end
+    if s.peer ~= peer and s.color then count[s.color] = (count[s.color] or 0) + 1 end
+  end
+  local c = from or 1
+  for _ = 1, #World.PALETTE do
+    c = c % #World.PALETTE + 1
+    if (count[c] or 0) < limit then return c end
+  end
+  return from
+end
+
+-- Why the host can't start with these teams, or nil.
+function Lobby.teamProblem(session)
+  local r = rulesInForce(session)
+  if not (r and r.teams) then return nil end
+  local count, sides, limit = {}, 0, r.teamSize or 2
+  for _, s in ipairs(Lobby.slots(session)) do
+    if not count[s.color] then sides = sides + 1 end
+    count[s.color] = (count[s.color] or 0) + 1
+    if count[s.color] > limit then return World.teamName(s.color) .. " has too many players" end
+  end
+  if sides < 2 then return "Everyone is on one team" end
+  return nil
+end
+
+function Lobby:drawColors(session, lx, y, teams, me)
+  if not session.setColor then return end
+  -- The colours everyone actually ends up with. A colour is taken once its team is full.
+  local count, taken, myColor, limit = {}, {}, nil, colorLimit(session)
+  for _, s in ipairs(Lobby.slots(session)) do
+    if s.peer == me then
+      myColor = s.color
+    elseif s.color then
+      count[s.color] = (count[s.color] or 0) + 1
+      if count[s.color] >= limit then taken[s.color] = true end
+    end
   end
   local mx, my = app.mouse()
   for k, col in ipairs(World.PALETTE) do
@@ -460,7 +502,9 @@ function Lobby:drawControls(session)
   local y = 620
   if session.isHost then
     local enough = #session.members + #session.bots >= 2
-    if ui.button(enough and "Start Match" or "Need 2+ players", 50, y, 370, 54, { disabled = not enough, color = ui.GOOD }) then
+    local problem = enough and Lobby.teamProblem(session) or nil
+    if problem then app.centered(problem, app.fonts.med, 596, ui.BAD) end
+    if ui.button(enough and "Start Match" or "Need 2+ players", 50, y, 370, 54, { disabled = not enough or problem ~= nil, color = ui.GOOD }) then
       self:start()
     end
   end

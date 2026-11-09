@@ -4,3 +4,4 @@ rarity uncommon
 art skull hit fire
 row add martyr 1
 note +explode violently when you die
+note +also goes off when Phoenix revives you

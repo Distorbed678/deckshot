@@ -4,3 +4,4 @@ rarity uncommon
 art drop skull toxic
 row add poison 0.6
 row mul gunDamage 0.85
+note +also poisons through explosions and shards

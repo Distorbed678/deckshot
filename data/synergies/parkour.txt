@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Parkour
-needs wall_kicker featherweight
-rarity legendary
-row add dashes 1

@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Overheat
-needs overcharge hot_barrel
-rarity legendary
-row mul fireDelay 0.9

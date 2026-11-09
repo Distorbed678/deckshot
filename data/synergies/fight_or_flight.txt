@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Fight or Flight
-needs panic_button adrenaline
-rarity legendary
-row add adrenaline 1
-note +adrenaline is twice as strong

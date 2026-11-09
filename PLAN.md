@@ -1,103 +1,93 @@
-# Deckshot v0.5.1 rework plan
+# Deckshot v0.5.2 plan
 
-Status: **waiting for your review. Nothing in this plan has been implemented yet.** Edit anything here and tell me when to start.
+Status: **implemented, not released.** Name tags show above every player in team matches.
 
-This all ships in v0.5.1, which is still unreleased. The network protocol stays at `"6"`, because no public build has used it yet.
+v0.5.2 also carries the unreleased work already on `main` (card art, rarity flair, Match Recap, controller icons, landing page). The version number goes from 0.6.0 back to 0.5.2. **Nothing gets released until you say so.** I'll commit and push as usual unless you'd rather I didn't.
+
+`session.PROTOCOL` goes from `"6"` to `"7"`, because the rules and lobby data change and voice adds a message. v0.5.2 players won't be able to play online with v0.5.1.
 
 ## Please check these
 
-1. **Own look, not a copy.** I'll build the layouts and mechanics you described: corner HUD, character aiming at cards, pie-shaped progress, cosmetic slots. The art, colours, wording and character designs will be Deckshot's own rather than a match for ROUNDS.
-2. **Confirm key on the card screen.** I read your answer as: local players confirm with their current selection key (fire) or their jump key, and online confirms with your Jump binding, Space by default. A mouse click won't confirm anything.
-3. **Phones keep tapping cards.** They have no left/right keys, so without this they couldn't pick at all. Mouse input is off on every other device.
-4. **Matches get about twice as long.** With 2 sub-round wins per point and "first to 5" points, a match is at least 10 sub-rounds. I suggest lowering the default to first to 3. Tell me if you'd rather keep 5.
-5. **Taller characters.** With the body riding above its legs, characters are about 14 units taller for terrain. The tightest gap on any built-in map is 72 units and a default character will be about 54, so they fit. Cards that make you much bigger may scrape in tight spots.
-6. **Earned cosmetics carry over.** Your current win, kill and card counts will count toward the new achievements, so you start with some unlocked.
+1. **Synergy removal costs 31 bonuses.** 9 of the 40 become natural interactions (table in item 6). The other 31 only added stats, so they go with no replacement.
+2. **Teammates look identical.** Same colour means same team, so teammates can't be told apart by colour. I suggest a small name tag above teammates during team matches.
+3. **Self-damage and bots.** With friendly fire on, bots don't know their own explosions can hurt them, so they'll sometimes blow themselves up. I'd make them avoid firing explosives point-blank, and leave the rest. Friendly fire stays off by default.
+4. **Bullets you've just fired.** With friendly fire on, your own bullet can't hit you for its first 0.15 seconds, or every shot would hit you at the muzzle.
+5. **Combo Artist achievement.** It counts synergies, and achievements unlock cosmetics by list position, so removing it would change who owns what. I suggest replacing it in place with "Deck Builder: finish matches with 5 or more different cards". Progress on the old count is dropped.
+6. **The AppImage adds a menu entry.** The taskbar fix makes the game create a "Deckshot" entry in your applications menu (item 8).
+7. **Max team size tops out at 3.** With 4 players at most, a team of 4 would leave nobody to fight.
+8. **Anyone who installed 0.6.0** during the few minutes it was public won't be offered v0.5.2 automatically, because 0.5.2 looks older. They'd need to download it by hand.
 
 ## Items
 
-### 1. Transition speed
-Every transition goes to the midpoint between the earlier and current values.
+### 1. Voice chat
+Steam and LAN, in lobbies and matches, desktop only.
 
-| Transition | Earlier | Now | New |
-|---|---|---|---|
-| Screen change | 0.35s | 0.6s | 0.47s |
-| Arena slide | 0.55s | 0.85s | 0.7s |
-| Card deal stagger | 0.07s | 0.13s | 0.1s |
-| Card deal time | 0.28s | 0.55s | 0.41s |
-| Card flip | 0.32s | 0.42s | 0.37s |
-| Round-win pause | 1.6s | 2.1s | 1.85s |
-| Map vote result | 1.1s | 1.7s | 1.4s |
+- **Off until enabled.** Settings > Audio gets Voice (Off / Push to talk / Open mic), microphone choice, a live mic level with the open-mic threshold, and voice volume.
+- **Controls:** a rebindable push-to-talk key, V by default, and right stick click on a gamepad.
+- **In use:** a speaking icon beside lobby names and above players in matches, and a mute button per player in the lobby.
+- **How it works:** LÖVE records the mic at 16 kHz, a small codec compresses it about 4:1, and clients send to the host, which forwards to everyone else. Each speaker plays through their own audio stream with a short buffer to smooth out delay. Steam and LAN share this one code path. Voice is dropped rather than resent when the connection falls behind.
+- **Browser players** can't talk or listen. Their lobby row shows no voice icon.
+- **Can't fully test here:** I can run two game copies with synthetic audio over the network, but a real microphone and real speech need you. Please try it with someone before release.
 
-The menu button entrances, round banner and map vote fade-in also go to their midpoints. The splash and match loading screens keep at least 1 second of loading, as you asked.
+### 2. Teams by colour, friendly fire
+- **Colour is team.** Every player's team is their colour. Players with the same colour share points and can't hurt each other unless friendly fire is on. The Red/Blue system and the 2v2 option are removed.
+- **Host settings:** Teams becomes Free-for-all / Teams. Free-for-all is a team limit of 1. Choosing Teams shows **Max team size** (2 or 3).
+- **Lobby:** a colour swatch goes dim when its team is full. The host can change a bot's colour by clicking its row. Start needs at least two colours and no team over the limit.
+- **Names:** banners and the scoreboard say "Orange Team", from the colour's name.
+- **Friendly fire works in every mode.** When on, it covers teammates and yourself: your bullets, explosions, shards and mines can all hit you.
+- Old settings with 2v2 on convert to Teams with a max size of 2.
 
-### 2, 3, 5, 11. Noodle limbs rebuilt
-- **Standing:** the body rides one leg-length above the ground, and the legs visibly hold it up. Terrain collision extends below the body to the feet. Bullets, melee and hazards still only hit the round body. Bots, spawns, edges and the barrier all use the new feet position.
-- **No more stuck feet:** a foot can never trail further than its reach. It steps as soon as it falls behind, and step length follows your speed, so landing and running can't leave a leg behind.
-- **Noodles:** longer, thin, curved limbs that swing and overshoot, with arms and legs about 30% longer.
-- **Firing:** the gun arm kicks back and springs into place, harder for bigger shots. This is cosmetic only.
-- **Squash and stretch removed** from the body.
-- **Jump and land:** the legs tuck up when you jump, and pull up on landing, so impacts read better.
+### 3. Tutorial for every control scheme
+The tutorial opens with the control picker from item 7, and every step shows the right control for what you chose, including icons on a gamepad. Mouse players get an added "aim with the mouse" step, and the mouse step list uses your online key bindings. Gamepad is only offered when one is connected.
 
-### 4. Map vote time
-It uses the same value as the card pick timer. When that's Off, which is always the case in local play, the vote waits until everyone has voted. Bots vote on their own.
+### 4. Saw
+The saw is a spiky outline filled as if it were a convex shape, which leaves parts of it missing. I'll draw it as a fan of triangles from the centre, so it's a complete blade. This also fixes the saws on blade arms, and I'll check other hazards for the same bug.
 
-### 6, 10. Card picking screen
-- The arena is gone, with a dark themed backdrop.
-- A large version of the picker's character stands at the bottom, with their hat, eyes and mouth, and their block circle in the left hand.
-- Cards fan in an arc above the character. The right arm stretches to the selected card and follows it.
-- Selection uses left/right only, with cards still turning over as you reach them. Discard stays on the Down key.
-- The mouse no longer hovers or selects (see items 2 and 3 above for confirm keys and phones).
-- Online, everyone watches the picker's character and arm.
+### 5. Local Play screen
+Rebuilt to match the online lobby:
+- Left: "Players n / 4" with a character preview per row, input device, and a remove button.
+- Below that: colour swatches, plus add buttons for keyboard, gamepad and bots at each difficulty.
+- Right: a panel summarising the match rules.
+- Bottom: Start Match, Settings, Back, in the lobby's positions.
+- Teams follow item 2. Your saved setup carries over.
 
-### 7. In-round HUD
-- **Top left:** a row of points for each player or team. The next point's dot shows sub-round progress as filled pie segments.
-- **Top right:** each player's cards as small boxes with 2-letter initials, in their colour, wrapping as they fill. Hovering one shows the full card.
-- The round timer stays top middle. King of the Hill bars sit under it.
+### 6. Remove synergies
+**Removed:** the system, all 40 files, the Synergies tab in the Library and editor, the card footer line, the Gameplay options, bot scoring and the SYNERGIES network message. Custom synergy files stay on disk but are ignored. The README and landing page stop advertising them.
 
-### 8. Sub-rounds
-- New host setting in Settings > Gameplay: **Wins per point**, 1 to 5, default 2.
-- First player or team to that many sub-round wins gets a point, everyone else picks a card, all progress resets, and the next map starts.
-- Between sub-rounds the same map restarts with no map vote or slide. Health, breakables, hazards and the sudden-death timer all reset.
-- A draw just replays the sub-round. King of the Hill uses sub-rounds too.
-- **Progress overlay, about 1.5 seconds:** each player's circle cut into n segments, with the new segment filling in and a short line such as "Blue is one win away".
+**Added:** effects that simply work together, with no new stats. Two general rules:
+- **A bullet's effects carry into everything it makes.** Poison and frost apply through explosions, bounce blasts, shards, Hydra heads and cluster blasts.
+- **Explosive bullets explode whenever they hit something**, including each bounce and each player they pierce. Bounce and pierce blasts are smaller, about 30% damage, so they stay fair.
 
-### 9. Explosions
-The circle is replaced by chunky cartoon smoke puffs that swell and fade, a bright fiery core, flying debris and bloom. It covers bullets, barrels, gas, mines and explosive triggers, follows the Particles setting, and shows for online clients. Blast damage and radius don't change.
+| Was | Now |
+|---|---|
+| Bouncing Blasts | Explosive + any bounces: every bounce explodes |
+| *(new)* | Explosive + Piercing: an explosion at each player pierced |
+| Toxic Shrapnel | Poison carries into shards |
+| Frozen Field | Frost makes Static Field slow enemies |
+| Guided Ricochet | Homing keeps working after a bounce |
+| Pinball | Split bullets keep their remaining bounces |
+| Booby Trap | Mines use your explosion radius and cluster |
+| Twin Turrets | The Sentry's shots carry your bullet effects |
+| Blaze of Glory | Reviving with Phoenix still sets off Martyr |
+| Meteor | Ground Pound hits harder the farther you fall |
 
-### 12. Achievements and cosmetics
-- About 60 cosmetics in four slots: roughly 20 hats, 15 eyes, 15 mouths and 10 details. Some are free from the start and the rest are earned. All are original designs.
-- **A mouth by default**, which changes with your expression.
-- About 40 achievements that unlock cosmetics: match wins, kills, card and synergy milestones, King of the Hill, block and melee feats, and map variety. Local play, bots and online all count.
-- Earned achievements appear on the match-over screen and the next menu visit, and there's a full list on Customize.
-- Customize is rebuilt with tabs per slot and a live character preview.
+Cards involved get a note saying what they combine with, in place of the old "Synergy:" line. New chain effects stay behind the existing `isChild` and `isCluster` guards so nothing multiplies forever.
 
-### 13. Chat bubbles
-In-match messages also appear in a bubble above the sender for about 4 seconds, following them, with long messages wrapped. They show on every player's screen.
+### 7. Control choice in Practice
+Practice opens a picker: Keyboard, Mouse and keyboard (your online bindings), Gamepad (when connected), Touch (on touch devices). Your last choice is remembered. The same picker starts the tutorial. Mouse aiming and the crosshair will work in local matches for this.
 
-### Your extras
-- **Name tags** above players online.
-- **Reactive expressions:** angry when hurt, grinning on a kill, shocked at low health. These work online using existing data.
-- **Full characters in the lobby** with noodle limbs and an idle wobble.
+### 8. Taskbar icon (AppImage)
+Most likely cause: the game identifies itself as LÖVE, so the desktop shows LÖVE's icon. The fix has two parts:
+- The AppImage launcher sets the game's window class to `deckshot`.
+- When run as an AppImage on Linux, the game installs a `deckshot.desktop` entry and icon in your user folders, and updates the entry if the file moves.
+
+**Needs you to confirm:** I can't see your taskbar from here, so you'd need to check it after a build. Windows already has its icon in the `.exe`.
+
+### 9. Black hole
+A black hole's center (about 40px) deals 20 damage per second to everyone inside, including its owner. Blocking doesn't stop it. Gravity Block's wells count too. Kills credit the hole's owner, and damage is applied only on the host.
 
 ## Order of work
+Small fixes first (4, 9, 8), then Practice and the tutorial (7, 3), teams (2), Local Play (5, which depends on teams), synergies (6), and voice last (1).
 
-1. Transition midpoints and map vote timer.
-2. Standing, noodle limbs, recoil, jump and land.
-3. Sub-rounds, the setting, the overlay and online data.
-4. New HUD.
-5. Card picking screen and key-only input.
-6. Explosions.
-7. Cosmetic slots, mouths, expressions, name tags, lobby characters.
-8. Achievements and the new Customize screen.
-9. Chat bubbles.
-10. What's New notes, `CLAUDE.md` and README updates.
-
-## Checks
-
-- Syntax check on every file.
-- Bot rounds on all 55 maps in both modes with the new standing height and sub-rounds, plus map validation.
-- Loopback and two-process LAN tests covering sub-rounds, new HUD data, explosions, bubbles and cosmetics.
-- The overlap and tight-spacing sweep at all text sizes, including the new screens.
-- Screenshots of the card screen, HUD, overlay and Customize.
-- Browser build test, then local `./build.sh all`.
-- Commit locally. No push or tag until you say so.
+## Checks before calling it done
+Syntax check on every file, bot-vs-bot rounds on all 55 maps in free-for-all and teams, network tests over loopback for the new team and rules data, a real LAN run with two processes for voice with synthetic audio, a headless browser run of the web build, and screenshots of every changed screen. Then the README, `CLAUDE.md` and What's New notes.

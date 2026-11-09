@@ -20,7 +20,7 @@ net.MSG = {
   DISCARD = 10, -- client -> host: discard an owned card instead of picking
   MAPS = 11,    -- host -> clients: the map list (full text for custom / edited maps), zlib
   CARDS = 12,   -- host -> clients: the card list (full text for custom / edited cards), zlib
-  SYNERGIES = 13, -- host -> clients: the synergy list (full text for custom / edited ones), zlib
+  -- 13 was SYNERGIES (removed): never reuse it
   PING = 14,    -- client -> host: a timestamp, echoed back as PONG (round-trip time)
   PONG = 15,
   STREAKS = 16, -- host -> clients: lobby win counts and streaks, by current peer id
@@ -29,6 +29,7 @@ net.MSG = {
   MAPVOTE = 19, -- client -> host: which map on the ballot
   CARDBAN = 20, -- client -> host: card index to ban
   LOBBYHELLO = 21, -- client -> host (entering the lobby): my cosmetics; the host replies with its settings
+  VOICE = 22,   -- voice audio: speaker's peer id (empty from a client), then one encoded frame
 }
 local M = net.MSG
 
@@ -94,6 +95,17 @@ function net.decodeStart(data)
       bot = bot > 0 and bot or nil, hat = hat, eyes = eyes, mouth = mouth, detail = detail }
   end
   return winScore, slots
+end
+
+---------------------------------------------------------------- voice
+function net.encodeVoice(peer, audio)
+  return pack("string", "<Bs1", M.VOICE, peer) .. audio
+end
+
+-- Returns the speaker's peer id and where the audio starts.
+function net.decodeVoice(data)
+  local _, peer, pos = unpack("<Bs1", data)
+  return peer, pos
 end
 
 ---------------------------------------------------------------- chat, votes, bans
@@ -181,14 +193,10 @@ function net.encodeRules(rules, cards, rarities)
   parts[#parts + 1] = pack("string", "<BBBB", rules.startCards or 0, math.min(255, rules.pickTimer or 0),
     rules.allowDiscard and 1 or 0, rules.hazards == false and 0 or 1)
   -- Everything else the host set (sudden death, mode, votes, teams...).
-  parts[#parts + 1] = pack("string", "<HBBBBBBBBBHB", math.min(65535, rules.suddenDeath or 0), rules.barrierClose or 2,
+  parts[#parts + 1] = pack("string", "<HBBBBBBBBBHBB", math.min(65535, rules.suddenDeath or 0), rules.barrierClose or 2,
     rules.barrierBox or 2, rules.barrierDamage or 2, rules.mode == "koth" and 1 or 0, rules.mapVote and 1 or 0,
     rules.mapVoteCount or 3, rules.cardBans and 1 or 0, rules.teams and 1 or 0, rules.friendlyFire and 1 or 0,
-    math.min(65535, rules.roundsToWin or 5), rules.subRounds or 1)
-  -- Synergies: on/off, then one byte per synergy (1 = turned off).
-  local syn = require "game.synergies"
-  parts[#parts + 1] = pack("string", "<BH", rules.synergies == false and 0 or 1, #syn.list)
-  for i = 1, #syn.list do parts[#parts + 1] = string.char((rules.synergyOff and rules.synergyOff[i]) and 1 or 0) end
+    math.min(65535, rules.roundsToWin or 5), rules.subRounds or 1, rules.teamSize or 2)
   -- The map pool: one byte per map (1 = turned off). Used to show clients the host's pool.
   local Map = require "game.map"
   parts[#parts + 1] = pack("string", "<H", #Map.list)
@@ -217,17 +225,9 @@ function net.decodeRules(data, rarities)
   rules.hazards = hazards == 1
   local mode, vote, bans, teams, ff
   rules.suddenDeath, rules.barrierClose, rules.barrierBox, rules.barrierDamage, mode, vote, rules.mapVoteCount, bans,
-    teams, ff, rules.roundsToWin, rules.subRounds, pos = unpack("<HBBBBBBBBBHB", data, pos)
+    teams, ff, rules.roundsToWin, rules.subRounds, rules.teamSize, pos = unpack("<HBBBBBBBBBHBB", data, pos)
   rules.mode, rules.mapVote, rules.cardBans = mode == 1 and "koth" or "elim", vote == 1, bans == 1
   rules.teams, rules.friendlyFire = teams == 1, ff == 1
-  local synOn, nsyn
-  synOn, nsyn, pos = unpack("<BH", data, pos)
-  rules.synergies = synOn == 1
-  rules.synergyOff = {}
-  for i = 1, nsyn do
-    if data:byte(pos + i - 1) == 1 then rules.synergyOff[i] = true end
-  end
-  pos = pos + nsyn
   rules.maps = {}
   if pos + 1 <= #data then
     local nmaps
@@ -260,7 +260,6 @@ end
 
 function net.encodeMaps(entries) return encodeEntries(M.MAPS, entries) end
 function net.encodeCards(entries) return encodeEntries(M.CARDS, entries) end
-function net.encodeSynergies(entries) return encodeEntries(M.SYNERGIES, entries) end
 
 function net.decodeMaps(data)
   local raw = love.data.decompress("string", "zlib", data:sub(2))

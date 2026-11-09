@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Trigger Discipline
-needs quick_hands big_mag
-rarity legendary
-row add ammo 2

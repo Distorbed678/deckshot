@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Thunderclap
-needs echo buckshot
-rarity legendary
-row mul gunDamage 1.1

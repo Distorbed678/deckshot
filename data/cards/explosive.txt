@@ -5,3 +5,4 @@ art burst fire
 row add explosion 70
 row mul fireDelay 1.33
 note +bullets explode
+note +bounces and piercing shots explode too

@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Booby Trap
-needs sticky_mines explosive
-rarity legendary
-row add sticky 1
-note +mines trigger and blast 40% wider

@@ -1,10 +1,9 @@
--- Card Library (Settings > Gameplay): every card and synergy, your statistics for them, and the
+-- Card Library (Settings > Gameplay): every card, your statistics for them, and the
 -- pool options (rarity, on / off). Opened read-only by a client, it shows the host's content.
 local app = require "core.app"
 local ui = require "core.ui"
 local Settings = require "core.settings"
 local Cards = require "game.cards"
-local Synergies = require "game.synergies"
 local Profile = require "core.profile"
 local hud = require "gfx.hud"
 
@@ -60,11 +59,6 @@ function Screen:visibleCards()
   return list
 end
 
-function Screen:synOff(s)
-  if self.readOnly then return (self.rules.synergyOff and self.rules.synergyOff[s.index]) or self.rules.synergies == false end
-  return Settings.values.synergies[s.id] or not Settings.values.synergiesOn
-end
-
 local function toggle(c) Settings.setCard(c, Settings.cardRarity(c), not Settings.cardEnabled(c)) end
 
 function Screen:keypressed(key)
@@ -111,13 +105,8 @@ end
 function Screen:drawHeader()
   love.graphics.setColor(1, 1, 1)
   ui.printFit("CARD LIBRARY", app.fonts.big, GRID_X, 22, 288, "left")
-  local tabs = { { "cards", "Cards (" .. #Cards.list .. ")" }, { "synergies", "Synergies (" .. #Synergies.list .. ")" } }
-  for i, t in ipairs(tabs) do
-    if ui.button(t[2], 340 + (i - 1) * 216, 24, 208, 40, { color = self.tab == t[1] and ui.ACCENT or nil, font = app.fonts.med, viewOnly = true })
-      and self.tab ~= t[1] then
-      self.tab, self.page = t[1], 1
-    end
-  end
+  love.graphics.setColor(1, 1, 1, 0.6)
+  ui.printFit(#Cards.list .. " cards", app.fonts.med, 340, 34, 208, "left")
 end
 
 function Screen:drawCards()
@@ -219,65 +208,11 @@ function Screen:drawCards()
     px, y + 2, pw, "center")
 
   local warn = warning(self)
-  local syns = Synergies.forCard(c, {})
   local ty = GRID_Y + ROWS * (TILE_H + TILE_GAP) + 4
   love.graphics.setFont(app.fonts.small)
   if warn then
     love.graphics.setColor(ui.BAD)
     love.graphics.printf(warn, GRID_X, ty, 760, "left")
-  elseif #syns > 0 then
-    local names = {}
-    for _, syn in ipairs(syns) do names[#names + 1] = syn.name .. " (with " .. Synergies.partners(syn, c) .. ")" end
-    love.graphics.setColor(ui.GOLD)
-    love.graphics.printf("Synergies: " .. table.concat(names, "; "), GRID_X, ty, 760, "left")
-  end
-end
-
-local function needsText(s)
-  local names = {}
-  for _, id in ipairs(s.needs) do names[#names + 1] = Cards.byId[id] and Cards.byId[id].name or id end
-  return table.concat(names, " + ")
-end
-
-function Screen:drawSynergies()
-  local v = Settings.values
-  local list = Synergies.list
-  local pages = math.max(1, math.ceil(#list / SYN_PER_PAGE))
-  self.page = math.max(1, math.min(pages, self.page))
-  local on = self.readOnly and (self.rules.synergies ~= false) or (not self.readOnly and v.synergiesOn)
-  if ui.button(on and "Synergies: ON" or "Synergies: OFF", GRID_X, 80, 220, 34,
-    { font = app.fonts.med, color = on and ui.GOOD or ui.BAD }) then
-    v.synergiesOn = not v.synergiesOn
-  end
-  local cols, bw, bh = 3, 384, 66
-  for k = 1, SYN_PER_PAGE do
-    local s = list[(self.page - 1) * SYN_PER_PAGE + k]
-    if not s then break end
-    local col, row = (k - 1) % cols, math.floor((k - 1) / cols)
-    local x, y = 40 + col * (bw + 10), 126 + row * (bh + 6)
-    local off = self:synOff(s)
-    if ui.button("", x, y, bw, bh) then v.synergies[s.id] = not v.synergies[s.id] or nil end
-    love.graphics.setColor(off and { 1, 1, 1, 0.35 } or { 1, 0.82, 0.35 })
-    ui.printFit(s.name, app.fonts.med, x + 12, y + 6, bw - 70, "left")
-    love.graphics.setColor(1, 1, 1, off and 0.3 or 0.6)
-    ui.printFit(needsText(s), app.fonts.tiny, x + 12, y + 28, bw - 24, "left")
-    love.graphics.setColor(0.5, 1, 0.5, off and 0.3 or 0.8)
-    ui.printFit(table.concat(s.lines, ", "), app.fonts.tiny, x + 12, y + 46, bw - 24, "left")
-    if off then
-      love.graphics.setFont(app.fonts.small)
-      love.graphics.setColor(1, 0.45, 0.45)
-      love.graphics.printf("OFF", x, y + 6, bw - 12, "right")
-    end
-  end
-  local y = 636
-  if ui.button("<", app.W / 2 - 130, y, 50, 36, { disabled = self.page <= 1, viewOnly = true }) then self.page = self.page - 1 end
-  love.graphics.setFont(app.fonts.med)
-  love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Page " .. self.page .. " / " .. pages, app.W / 2 - 80, y + 8, 160, "center")
-  if ui.button(">", app.W / 2 + 80, y, 50, 36, { disabled = self.page >= pages, viewOnly = true }) then self.page = self.page + 1 end
-  if ui.button("All On", 270, 80, 140, 34, { font = app.fonts.med }) then v.synergies = {} end
-  if ui.button("All Off", 420, 80, 140, 34, { font = app.fonts.med }) then
-    for _, s in ipairs(list) do v.synergies[s.id] = true end
   end
 end
 
@@ -287,7 +222,7 @@ function Screen:draw()
   ui.panel(20, 10, app.W - 40, app.H - 20)
   ui.readOnly = self.readOnly
   self:drawHeader()
-  if self.tab == "cards" then self:drawCards() else self:drawSynergies() end
+  self:drawCards()
   ui.readOnly = false
   if self.readOnly then
     love.graphics.setFont(app.fonts.small)

@@ -4,4 +4,5 @@ rarity rare
 art fork sky
 row add split 1
 note +bullets split into 3 on their first wall hit
+note +split bullets keep your remaining bounces
 stack splits again on 1 more wall hit per copy

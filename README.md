@@ -21,14 +21,15 @@
 ## Why you'll keep saying "one more round"
 
 - **150 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
-- **40 hidden synergies.** The right pair unlocks a bonus: Explosive + Bouncy makes every bounce explode.
+- **Cards that really combine.** Explosive + Bouncy makes every bounce explode. Poison spreads through your blasts and shards. Nothing is scripted as a special pair.
 - **Losers get stronger.** Win 2 sub-rounds to take a point, then everyone else picks a card, so no match is over until it's over.
 - **55 hand-tuned arenas** with saws, lasers, crushers, acid, ropes and breakable everything.
-- **Elimination or King of the Hill**, free-for-all or 2v2, with a sudden-death barrier that ends the stalling.
+- **Elimination or King of the Hill**, free-for-all or teams picked by colour, with a sudden-death barrier that ends the stalling.
 - **Vote on the next map, ban the card you hate, chat with your friends.**
 - **A recap after every match** with everyone's stats, builds and awards, saved as an image to show off.
 - **Unlock about 60 hats, eyes, mouths and details** through 44 achievements.
-- **Make your own** maps, cards and synergies in the built-in editors, then share them with a code.
+- **Voice chat** over Steam and LAN, with push-to-talk or open mic.
+- **Make your own** maps and cards in the built-in editors, then share them with a code.
 
 <table>
   <tr>
@@ -84,13 +85,17 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
 - Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.
-- **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
+- **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online, and **V** (or clicking the right stick) is push-to-talk when voice chat is on. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
 - **Touch:** drag on the left half to move (push up to jump), drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
 - **Card picks:** left/right (or hover) to turn cards over and choose, fire (or click / A) to take, down to discard a card instead.
 
 ## Play with friends
 
 **Same computer:** Local Play → Versus. 2 to 4 players on keyboard, gamepads or touch, with bots in any empty seat.
+
+**Teams:** turn Teams on in Settings → Gameplay and choose a max team size. Players who pick the same colour are on the same team and share points.
+
+**Voice chat** works over Steam and LAN on the desktop versions. It stays off until you choose Push to talk or Open mic in Settings → Audio.
 
 <details>
 <summary><b>Over the internet (Steam)</b></summary>
@@ -205,18 +210,17 @@ deckshot/
 │                        bots), touch, settings, profile (card stats), achievements, cosmetics, glyphs
 │                        (controller icons), qr, version, updater, webkeyboard, platform, bit
 ├── game/                world (authoritative simulation), player, body (drawn limbs and gun), bullet, objects
-│                        (hazards, breakables), cards + carddata + stats + triggers + synergies (data-driven
+│                        (hazards, breakables), cards + carddata + stats + triggers (data-driven
 │                        cards), map, bot
 ├── gfx/                 fx (particles), sfx (synthesized sounds), music, atmosphere (map backgrounds), logo,
 │                        bloom, hud, cardart (card medallions and foil), recap (end-of-match page)
-├── online/              net (message codec), chat, snapshot, session (Steam lobby), steam (library loader),
+├── online/              net (message codec), chat, voice, snapshot, session (Steam lobby), steam (library loader),
 │                        lan (LAN host/client/discovery), webbridge (browser LAN), active, presence
 ├── screens/             splash, menu, whatsnew, update, confirm, localmenu, localsetup, match, practice,
 │                        customize, editor_hub, editor_map, editor_cards, howtoplay, credits, settings,
-│                        library (cards and synergies), maps, touchlayout, online, lan, lobby, reconnect
+│                        library, maps, touchlayout, online, lan, lobby, reconnect
 ├── data/maps/           the built-in maps (map editor files)
 ├── data/cards/          the built-in cards (card editor files)
-├── data/synergies/      the built-in synergies
 ├── lib/windows|linux/   Steam libraries
 ├── web/                 the browser version's page and manifest
 ├── site/                the landing page on GitHub Pages
@@ -235,7 +239,7 @@ deckshot/
 - **Host-authoritative.** The host runs the only simulation. Clients send their input every frame (unreliable, with sequence numbers) and render what the host sends back on proxy objects that reuse the same `draw()` code.
 - **Client prediction:** your own player is simulated locally right away. Snapshots carry the last input the host applied; the client resets to the host's state, replays newer inputs and blends small corrections. Other players are drawn about 70 ms behind, between real snapshots.
 - **Snapshots** go out about 30 times a second: players, bullets, map objects, effects, the barrier, the current card pick, scoreboard stats, and recorded particle, sound and damage-number events. They're compact binary (`love.data.pack`), lz4-compressed when large.
-- **Reliable messages** cover match start (slots, colours, teams, bots), the map, card and synergy lists (full text for custom or edited ones), rules, roster, toasts, the kill feed, votes, discards, lobby streaks and return-to-lobby.
+- **Reliable messages** cover match start (slots, colours, teams, bots), the map and card lists (full text for custom or edited ones), rules, roster, toasts, the kill feed, votes, discards, lobby streaks and return-to-lobby.
 - **Versioning:** `session.PROTOCOL` is stored in the lobby data (and sent in the LAN hello), and mismatched peers are refused.
 - **Transports:** Steam uses NetworkingMessages. LAN uses one TCP connection per client to the host (`online/lan.lua`): desktop clients send length-prefixed frames, and browser clients use a WebSocket on the same port, which also serves the browser version over HTTP. In the browser, `online/webbridge.lua` talks to the page's WebSocket code through `print` and a file in the in-memory filesystem, since love.js has no sockets.
 
@@ -257,11 +261,11 @@ Everything is saved in the game's save folder:
 
 | File | What's in it |
 |---|---|
-| `settings.txt` | settings as `key=value` lines, key bindings (`bind.<scheme>.<action>=<key>`), card pool (`card.<id>=<rarity>,<on|off>`), map and synergy pools |
+| `settings.txt` | settings as `key=value` lines, key bindings (`bind.<scheme>.<action>=<key>`), card pool (`card.<id>=<rarity>,<on|off>`), and the map pool |
 | `profile.txt` | statistics per card, and lifetime counts for achievements |
 | `recaps/` | match recaps saved as images |
-| `user/custom_maps/`, `user/custom_cards/`, `user/custom_synergies/` | things you made in the editors |
-| `user/maps/`, `user/cards/`, `user/synergies/` | your edits to built-in ones (delete a file, or use Reset, to undo) |
+| `user/custom_maps/`, `user/custom_cards/` | things you made in the editors |
+| `user/maps/`, `user/cards/` | your edits to built-in ones (delete a file, or use Reset, to undo) |
 | `crash.txt` | the last crash report |
 
 Settings from the old "Rounds Clone" save folder are copied over the first time Deckshot starts.

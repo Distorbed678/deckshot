@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Defense Grid
-needs orbiters sentry
-rarity legendary
-row add orbs 1

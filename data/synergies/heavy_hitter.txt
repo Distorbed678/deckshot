@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Heavy Hitter
-needs bat brass_knuckles
-rarity legendary
-row mul meleeKnockback 1.2

@@ -27,7 +27,7 @@ end
 
 local RULES = {
   { "Win rounds", "Last player (or team) standing wins the round. First to the target score wins the match." },
-  { "Lose, then pick", "Everyone who lost the round picks an upgrade card. Cards are dealt face down: hover one to turn it over. Every card stacks, and some pairs unlock synergies." },
+  { "Lose, then pick", "Everyone who lost the round picks an upgrade card. Cards are dealt face down: hover one to turn it over. Every card stacks, and cards work together: explosive bullets that bounce explode at every bounce." },
   { "Block", "Blocking stops bullets (they bounce back at the shooter), hazards and the arena edges. It has a cooldown, so time it." },
   { "Melee", "Tap for a quick light hit, hold to charge a heavy hit that lunges forward. If the other player blocks your melee, you're stunned: the harder the hit, the longer the stun." },
   { "Movement", "Double jump and air dash are built in. Wall slide and wall jump; press down + jump to drop through thin platforms. Hold down in the air to fall faster." },

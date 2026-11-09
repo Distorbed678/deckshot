@@ -3,9 +3,17 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.6.0",
+  VERSION = "0.5.2",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Teams are picked by colour now: the same colour is the same team, and the host sets the max team size.",
+    "Friendly fire works in every mode and lets your own bullets and blasts hurt you.",
+    "Voice chat for Steam and LAN. It's off until you turn it on in Settings > Audio.",
+    "Synergies are gone. Cards combine on their own: explosive bullets explode at every bounce, poison spreads through blasts.",
+    "Local Play has a new lobby-style screen.",
+    "Practice and the tutorial let you choose keyboard, mouse or gamepad controls.",
+    "The center of a black hole now hurts anyone inside it.",
+    "Fixed: saws are full blades again. Linux: the taskbar shows Deckshot's icon.",
     "Every card has its own art now.",
     "Rare, epic and legendary cards shimmer, and flash with a bigger sound when they turn over.",
     "Match Recap at the end of a match: everyone's stats, builds and awards, saved as an image.",

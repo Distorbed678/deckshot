@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Fast Hands
-needs second_clip quickdraw
-rarity legendary
-row add quickdraw 1
-note +your first shot after a reload deals +50% more

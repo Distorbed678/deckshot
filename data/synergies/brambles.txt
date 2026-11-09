@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Brambles
-needs thorns frostback
-rarity legendary
-row add thorns 0.15
-note +thorns reflect 15% more damage

@@ -127,7 +127,8 @@ end
 function RUN.shockwave(p, q)
   fx.ring(p.x, p.y, q.radius, p.color)
   fx.addShake(5)
-  for _, e in ipairs(enemiesNear(p, p.x, p.y, q.radius)) do e:hit(q.damage, e.x - p.x, e.y - p.y, 650, p) end
+  local damage = q.damage * (1 + (p.landImpact or 0))
+  for _, e in ipairs(enemiesNear(p, p.x, p.y, q.radius)) do e:hit(damage, e.x - p.x, e.y - p.y, 650, p) end
   for _, b in ipairs(p.game.bullets) do
     if b.owner ~= p and not b.laser and (b.x - p.x) ^ 2 + (b.y - p.y) ^ 2 < q.radius ^ 2 then b.dead = true end
   end

@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Frozen Field
-needs frost static_field
-rarity legendary
-row add static 4
-note +your static field deals 4 more damage per second

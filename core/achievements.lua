@@ -7,7 +7,7 @@ local Ach = { pending = {} }
 function Ach.wording(text, n)
   if n ~= 1 then return text end
   return (text:gsub(" matches$", " match"):gsub(" rounds$", " round"):gsub(" kills$", " kill"):gsub(" cards$", " card")
-    :gsub(" synergies in", " synergy in"))
+    :gsub(" matches with", " match with"))
 end
 
 local function tier(stat, name, text, counts)
@@ -26,7 +26,7 @@ tier("matches", "Regular", "Play %d matches", { 1, 10, 50 })
 tier("blocks", "Wall", "Block %d attacks", { 25, 100, 500 })
 tier("meleeKills", "Brawler", "Get %d melee kills", { 5, 25, 100 })
 tier("maps", "Tourist", "Play on %d different maps", { 10, 25, 55 })
-tier("synergies", "Combo Artist", "Finish matches with %d synergies in total", { 1, 10 })
+tier("decks", "Deck Builder", "Finish %d matches with at least 5 different cards in your deck", { 1, 10 })
 tier("peakCards", "Stacked", "Hold %d cards in one match", { 10, 15 })
 tier("flawless", "Untouched", "Win %d rounds without taking damage", { 1, 5 })
 tier("sudden", "Clutch", "Win %d round during sudden death", { 1 })

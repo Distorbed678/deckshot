@@ -65,6 +65,7 @@ end
 
 function love.load(args)
   setIcon()
+  require("core.desktopentry").install()
   love.keyboard.setKeyRepeat(false)
   Settings.load()
   Settings.apply()
@@ -104,6 +105,7 @@ function love.update(dt)
   require("gfx.music").update(dt)
   require("core.webkeyboard").update()
   app.update(dt)
+  require("online.voice").update()
   lan.flush()
 end
 

@@ -26,6 +26,7 @@ local Chat = require "online.chat"
 local Cosmetics = require "core.cosmetics"
 local Glyphs = require "core.glyphs"
 local Recap = require "gfx.recap"
+local Voice = require "online.voice"
 
 local Match = {}
 Match.__index = Match
@@ -80,6 +81,7 @@ function Match.localInput(kind)
   local binds = Settings.values.binds
   if kind == "p1" or kind == "p2" then return Input.keys(binds[kind]) end
   if kind == "touch" then return Input.touch() end
+  if kind == "mouse" then return Input.mouse(binds.online) end
   local pad = kind:match("^pad(%d)$")
   if pad then return Input.pad(Input.pads()[tonumber(pad)]) end
   local bot = kind:match("^bot(%d)$")
@@ -99,6 +101,7 @@ function Match.newLocal(winScore, opts)
   rules.teams = opts.teams and true or false
   if opts.practice then
     rules.practice, rules.startCards, rules.suddenDeath = true, 0, 0
+    rules.friendlyFire = false
     rules.mapVote, rules.cardBans, rules.mode, rules.subRounds = false, false, "elim", 1
     m.practice = { total = 0, hits = {}, last = 0, quiet = 0, prevHp = nil }
   end
@@ -130,13 +133,7 @@ function Match.newLocal(winScore, opts)
     defs[i] = { name = name, input = inp, team = sl.team, bot = bot and tonumber(bot) or nil }
     if i == 1 and not bot then defs[i].hat, defs[i].eyes, defs[i].mouth, defs[i].detail = Cosmetics.mine() end
   end
-  if rules.teams then
-    local teams = {}
-    for i, sl in ipairs(setup) do teams[i] = sl.team or ((i - 1) % 2 + 1) end
-    World.setSlotColors(World.teamColorIndices(teams))
-  else
-    World.setSlotColors(colors)
-  end
+  World.setSlotColors(colors)
   m.world = World.new(defs, winScore, rules)
   m:hookWorld()
   fx.recorder = nil
@@ -178,7 +175,6 @@ function Match.newHost(slots, winScore, transport, opts)
   m:hookWorld()
   m:broadcast(net.encodeMaps(Map.sessionEntries()), true)
   m:broadcast(net.encodeCards(Cards.sessionEntries()), true)
-  m:broadcast(net.encodeSynergies(require("game.synergies").sessionEntries()), true)
   m:broadcastRules()
   m.snapTimer = 0
   fx.recorder = {}
@@ -205,6 +201,7 @@ function Match.newClient(slots, mySlot, winScore, transport, hostPeer, pending, 
   m.proxies = {}
   for i, s in ipairs(slots) do
     m.proxies[i] = m:newProxy(i, s.name)
+    m.proxies[i].team = s.team
     m.proxies[i].hat, m.proxies[i].eyes, m.proxies[i].mouth, m.proxies[i].detail = s.hat, s.eyes, s.mouth, s.detail
   end
   m.bulletViews, m.bulletList, m.wellList = {}, {}, {}
@@ -227,7 +224,6 @@ function Match:leave()
   if self.role == "client" then -- drop the host's session map and card lists
     Map.loadAll()
     Cards.loadAll()
-    require("game.synergies").loadAll()
   end
   fx.recorder = nil
   fx.clear()
@@ -747,10 +743,7 @@ function Match:clientNetwork()
   for _, msg in ipairs(msgs) do
     if msg.from == self.hostPeer then
       local kind = net.kind(msg.data)
-      if kind == net.MSG.SYNERGIES then
-        local ok, entries = pcall(net.decodeMaps, msg.data)
-        if ok then require("game.synergies").setSession(entries) end
-      elseif kind == net.MSG.CARDS then
+      if kind == net.MSG.CARDS then
         local ok, entries = pcall(net.decodeCards, msg.data)
         if ok then Cards.setSession(entries) end
       elseif kind == net.MSG.MAPS then
@@ -793,6 +786,8 @@ function Match:clientNetwork()
         active.get().hostRules = rules
       elseif kind == net.MSG.CHAT then
         Chat.handle(active.get(), msg)
+      elseif kind == net.MSG.VOICE then
+        Voice.receive(active.get(), msg)
       elseif kind == net.MSG.TOAST then
         self:showToast(net.decodeToast(msg.data))
       elseif kind == net.MSG.TOLOBBY then
@@ -850,6 +845,8 @@ function Match:hostNetwork(dt)
         self.world:discard(info.slot, pos, serial)
       elseif kind == net.MSG.CHAT then
         Chat.handle(active.get(), msg)
+      elseif kind == net.MSG.VOICE then
+        Voice.receive(active.get(), msg)
       elseif kind == net.MSG.MAPVOTE then
         local b = net.decodeByte(msg.data)
         self.world:castMapVote(info.slot, b % 128, b >= 128)
@@ -894,13 +891,12 @@ function Match:hostNetwork(dt)
   end
 end
 
--- Everything a newcomer needs to follow the match: the slots, maps, cards, synergies, rules, roster.
+-- Everything a newcomer needs to follow the match: the slots, maps, cards, rules, roster.
 function Match:sendSetup(peer)
   local t = self.transport
   t:send(peer, net.encodeStart(self.world.winScore, self.slots), true)
   t:send(peer, net.encodeMaps(Map.sessionEntries()), true)
   t:send(peer, net.encodeCards(Cards.sessionEntries()), true)
-  t:send(peer, net.encodeSynergies(require("game.synergies").sessionEntries()), true)
   t:send(peer, net.encodeRules(self.world.rules, Cards.list, Cards.RARITIES), true)
   t:send(peer, net.encodeRoster(self.world.players), true)
 end
@@ -965,6 +961,11 @@ end
 
 ---------------------------------------------------------------- update
 -- Does anyone on this machine play with touch controls?
+function Match:usesMouseAim()
+  for _, inp in ipairs(self.inputs or {}) do if inp.kind == "mouse" then return true end end
+  return false
+end
+
 function Match:usesTouch()
   if self.role == "local" then
     for _, inp in ipairs(self.inputs) do if inp.kind == "touch" then return true end end
@@ -1144,8 +1145,9 @@ function Match:update(dt, isTop)
   local mx, my = app.mouse()
   mx, my = mx / Map.VIEW, my / Map.VIEW
   if self.role == "local" then
-    for _, inp in ipairs(self.inputs) do
-      if inp.kind ~= "bot" then Input.poll(inp, suppressed) end
+    for i, inp in ipairs(self.inputs) do
+      local p = inp.kind == "mouse" and self.world.players[i] or nil
+      if inp.kind ~= "bot" then Input.poll(inp, suppressed, p and p.x, p and p.y, mx, my) end
     end
     if not self.paused and not self.loading then self.world:update(dt) end
     self:syncPick(dt)
@@ -1178,7 +1180,7 @@ function Match:update(dt, isTop)
     self:clientInterpolate(dt)
   end
 
-  if self.role ~= "local" then
+  if self.role ~= "local" or self:usesMouseAim() then
     local st = self:status().state
     if st ~= "matchOver" then self.pendingVote = nil end
     local playing = isTop and not self.paused and (st == "countdown" or st == "playing" or st == "roundOver")
@@ -1375,6 +1377,7 @@ end
 ---------------------------------------------------------------- first-run tutorial
 local TUTORIAL = {
   { id = "move", text = "Move left and right", key = function(n, b) return n(b.left) .. " / " .. n(b.right) end, pad = "{ls} Left stick", touch = "Drag on the left side" },
+  { id = "aim", text = "Aim all around you", only = { mouse = true, pad = true }, key = function() return "Move the mouse" end, pad = "{rs} Right stick", touch = "" },
   { id = "jump", text = "Jump", key = function(n, b) return n(b.up) end, pad = "{a}", touch = "Jump button" },
   { id = "double", text = "Jump again in the air", key = function(n, b) return n(b.up) .. " twice" end, pad = "{a} twice", touch = "Jump button twice" },
   { id = "fire", text = "Shoot", key = function(n, b) return n(b.fire) end, pad = "{rt}", touch = "Drag on the right side" },
@@ -1384,6 +1387,13 @@ local TUTORIAL = {
   { id = "hit", text = "Land a shot on the dummy", key = function() return "" end, pad = "", touch = "" },
 }
 
+-- The mouse scheme names jump and movement a little differently from the keyboard ones.
+local function tutorialBinds(inp)
+  local b = inp.controls or Settings.values.binds.p1
+  if inp.kind ~= "mouse" then return b end
+  return setmetatable({ up = b.jump }, { __index = b })
+end
+
 function Match:updateTutorial()
   local tu = self.tutorial
   if not tu or tu.done then return end
@@ -1391,12 +1401,18 @@ function Match:updateTutorial()
   local me = w and w.players[1]
   if not me or w.state ~= "playing" then return end
   local inp = me.input
-  local step = TUTORIAL[tu.step]
+  if not tu.steps then
+    tu.steps = {}
+    for _, s in ipairs(TUTORIAL) do
+      if not s.only or s.only[inp.kind] then tu.steps[#tu.steps + 1] = s end
+    end
+  end
+  local step = tu.steps[tu.step]
   if not step then
     tu.done = true
     return
   end
-  tu.base = tu.base or { x = me.x, jump = inp.jumpCount or 0, shots = me.st.shots or 0, block = inp.blockCount or 0,
+  tu.base = tu.base or { aim = inp.aim or 0, x = me.x, jump = inp.jumpCount or 0, shots = me.st.shots or 0, block = inp.blockCount or 0,
     dash = inp.dashCount or 0, melee = inp.meleeCount or 0, dmg = me.st.dmg or 0 }
   local b, ok = tu.base, false
   if me.onGround then tu.airJumps = 0 end
@@ -1404,7 +1420,11 @@ function Match:updateTutorial()
     if not me.onGround then tu.airJumps = (tu.airJumps or 0) + 1 end
     tu.lastJump = inp.jumpCount or 0
   end
-  if step.id == "move" then ok = math.abs(me.x - b.x) > 120
+  if step.id == "aim" then
+    tu.aimTravel = (tu.aimTravel or 0) + math.abs(math.atan2(math.sin((inp.aim or 0) - b.aim), math.cos((inp.aim or 0) - b.aim)))
+    b.aim = inp.aim or 0
+    ok = tu.aimTravel > 3
+  elseif step.id == "move" then ok = math.abs(me.x - b.x) > 120
   elseif step.id == "jump" then ok = (inp.jumpCount or 0) > b.jump
   elseif step.id == "double" then ok = (tu.airJumps or 0) >= 1
   elseif step.id == "fire" then ok = (me.st.shots or 0) > b.shots
@@ -1415,7 +1435,7 @@ function Match:updateTutorial()
   if ok then
     tu.step, tu.base = tu.step + 1, nil
     sfx.ui("uiClick")
-    if not TUTORIAL[tu.step] then tu.done = true end
+    if not tu.steps[tu.step] then tu.done = true end
   end
 end
 
@@ -1433,16 +1453,17 @@ function Match:drawTutorial()
     end
     return
   end
-  local step = TUTORIAL[tu.step]
+  local step = tu.steps and tu.steps[tu.step]
+  if not step then return end
   local me = self.world.players[1]
   local kind = me.input.kind
   local hint
   if kind == "pad" then hint = step.pad
   elseif kind == "touch" then hint = step.touch
-  else hint = step.key(Input.keyName, me.input.controls or Settings.values.binds.p1) end
+  else hint = step.key(Input.keyName, tutorialBinds(me.input)) end
   love.graphics.setFont(app.fonts.tiny)
   love.graphics.setColor(1, 1, 1, 0.5)
-  love.graphics.print("Step " .. tu.step .. " of " .. #TUTORIAL, x + 18, y + 12)
+  love.graphics.print("Step " .. tu.step .. " of " .. #tu.steps, x + 18, y + 12)
   love.graphics.setColor(1, 1, 1)
   ui.printFit(step.text, app.fonts.title, x + 20, y + 28, w - 160, "left")
   love.graphics.setColor(ui.GOLD)
@@ -1734,7 +1755,11 @@ function Match:mousepressed(x, y, button)
     end
     return
   end
-  if self.role ~= "local" then Input.mousepressed(self.myInput, button) end
+  if self.role ~= "local" then
+    Input.mousepressed(self.myInput, button)
+  else
+    for _, inp in ipairs(self.inputs) do Input.mousepressed(inp, button) end
+  end
 end
 
 ---------------------------------------------------------------- drawing
@@ -1876,7 +1901,11 @@ function Match:recordRound(st)
         Profile.bump("matches")
         if st.winner and (p == st.winner or (st.winner.team and p.team == st.winner.team)) then Profile.bump("wins") end
         Profile.record("peakCards", #p.cards)
-        Profile.bump("synergies", #require("game.synergies").active(p.cards, Cards.rules))
+        local different, seenCards = 0, {}
+        for _, c in ipairs(p.cards) do
+          if not seenCards[c] then seenCards[c], different = true, different + 1 end
+        end
+        if different >= 5 then Profile.bump("decks") end
         local blocks = p.st and p.st.blocks or 0
         self.countedBlocks = self.countedBlocks or {}
         if blocks > (self.countedBlocks[i] or 0) then
@@ -2391,7 +2420,7 @@ function Match:drawSubRound(st)
   for _, p in ipairs(sides) do
     local fresh = st.winner and (p == st.winner or (st.winner.team and p.team == st.winner.team))
     hud.drawPie(x, 300, r * k, need, p.subWins or 0, p.color, k, fresh and ease((t - 0.2) / 0.45) or nil)
-    local who = (p.team and World.TEAM_NAMES[p.team]) or p.name or "Player"
+    local who = (p.team and World.teamName(p.team)) or p.name or "Player"
     if (p.subWins or 0) >= need then
       point = who .. " takes the point!"
     elseif (p.subWins or 0) == need - 1 and need > 1 then
@@ -2620,7 +2649,12 @@ function Match:draw()
 
   local objs, effects, barrier = self:sceneObjects()
   local slideX = self:mapOffset()
-  require("game.body").showNames = self.role ~= "local"
+  -- Teammates share a colour, so team matches name everyone.
+  require("game.body").showNames = self.role ~= "local" or (self.world and self.world.rules.teams) or false
+  require("game.body").speakingSlot = self.role ~= "local" and function(p)
+    local sl = self.slots and self.slots[p.slot or 0]
+    return sl and Voice.isSpeaking(sl.peer)
+  end or nil
   if not self.mapHidden then
   love.graphics.push()
   love.graphics.translate(sx + slideX, sy)
@@ -2743,9 +2777,9 @@ function Match:draw()
 
   if self.paused then
     self:drawPause()
-  elseif self.role ~= "local" and (st.state == "countdown" or st.state == "playing" or st.state == "roundOver") then
+  elseif (self.role ~= "local" or self:usesMouseAim()) and (st.state == "countdown" or st.state == "playing" or st.state == "roundOver") then
     local mx, my = app.mouse()
-    local me = players[self.mySlot]
+    local me = players[self.mySlot or 1]
     hud.drawCrosshair(mx, my, me and me.color or { 1, 1, 1 })
   end
 end

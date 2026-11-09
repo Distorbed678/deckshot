@@ -3,7 +3,6 @@ local fx = require "gfx.fx"
 local Bullet = require "game.bullet"
 local sfx = require "gfx.sfx"
 local Triggers = require "game.triggers"
-local Synergies = require "game.synergies"
 local CardData = require "game.carddata"
 local Cosmetics = require "core.cosmetics"
 local Body = require "game.body"
@@ -84,17 +83,6 @@ function Player:recompute()
     card.apply(s, copies[card])
     for _, rule in ipairs(card.triggers or {}) do
       self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
-    end
-  end
-  -- Synergies: each full set of a synergy's cards applies its bonus once more.
-  local rules = (self.game and self.game.rules) or require("game.cards").rules
-  self.synergies = Synergies.active(self.cards, rules)
-  for _, a in ipairs(self.synergies) do
-    for n = 1, a.sets do
-      CardData.applyRows(a.syn.def, s, n)
-      for _, rule in ipairs(a.syn.triggers or {}) do
-        self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
-      end
     end
   end
   s.maxHp = math.max(10, s.maxHp)
@@ -556,7 +544,11 @@ function Player:landed(fallSpeed)
     fx.spray(self.x - self.r * 0.6, self.y + self.r + self.leg, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
     fx.spray(self.x + self.r * 0.6, self.y + self.r + self.leg, 0, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
     self:emitSound("land", 0.35 + 0.65 * k, 1.1 - 0.3 * k)
-    if fallSpeed > 600 then self:trigger("land") end
+    if fallSpeed > 600 then
+      self.landImpact = math.min(1.5, (fallSpeed - 600) / 900) -- landing shockwaves hit harder from higher up
+      self:trigger("land")
+      self.landImpact = nil
+    end
   end
   self.landSquash = math.min(0.35, fallSpeed / 3000)
 end
@@ -665,6 +657,7 @@ function Player:updateStatic(dt)
     local reach = STATIC_RADIUS + e.r
     if dx * dx + dy * dy < reach * reach and e.invuln <= 0 and not e:isBlocking() then
       e.hp = e.hp - s.static * dt
+      if s.frost > 0 then e.slowTimer = math.max(e.slowTimer, s.frost) end
       if e.hp <= 0 then e:die() end
     end
   end
@@ -1233,7 +1226,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
   if self.dead then return false end
   if source and source ~= self then self.lastAttacker = source end
   self.lastHitKind = kind
-  if self:isBlocking() then
+  if self:isBlocking() and kind ~= "blackhole" then
     fx.burst(self.x, self.y, { 1, 1, 1 }, 8, 200, 3)
     self:emitSound("block")
     self:blocked()
@@ -1258,7 +1251,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
     self.hp = self.hp - amount
   end
   if s.spite > 0 then self.spiteReady = true end
-  if source and source ~= self and not source.dead then
+  if source and source ~= self and not source.dead and kind ~= "blackhole" then -- a black hole's owner isn't touching you
     if s.frostback > 0 then source.slowTimer = math.max(source.slowTimer, s.frostback) end
     if s.thorns > 0 and source.invuln <= 0 then
       source.hp = source.hp - taken * s.thorns
@@ -1319,6 +1312,7 @@ function Player:die(outOfBounds)
   -- Phoenix: come back instead of dying.
   if self.livesLeft > 0 then
     self.livesLeft = self.livesLeft - 1
+    self:martyrBlast()
     self.hp = self.stats.maxHp * 0.5
     self.poisonTimer = 0
     self.decay = {}
@@ -1345,15 +1339,19 @@ function Player:die(outOfBounds)
   self:emitSound("death")
   self:emitSound("gibs")
 
-  if self.stats.martyr > 0 then
-    local radius = 200
-    fx.explosion(self.x, self.y, radius, self.color)
-    fx.addShake(18)
-    for _, e in ipairs(self.game:enemiesOf(self)) do
-      local dx, dy = e.x - self.x, e.y - self.y
-      if math.sqrt(dx * dx + dy * dy) < radius + e.r then
-        e:hit(60 * self.stats.martyr, dx, dy, 800, self)
-      end
+  self:martyrBlast()
+end
+
+-- Martyr: a blast whenever you go down, even if Phoenix brings you back.
+function Player:martyrBlast()
+  if self.stats.martyr <= 0 then return end
+  local radius = 200
+  fx.explosion(self.x, self.y, radius, self.color)
+  fx.addShake(18)
+  for _, e in ipairs(self.game:enemiesOf(self)) do
+    local dx, dy = e.x - self.x, e.y - self.y
+    if math.sqrt(dx * dx + dy * dy) < radius + e.r then
+      e:hit(60 * self.stats.martyr, dx, dy, 800, self)
     end
   end
 end
@@ -1540,6 +1538,9 @@ function Player:draw()
     love.graphics.setFont(font)
     love.graphics.setColor(1, 1, 1, 0.8)
     love.graphics.printf(self.name or "", self.x - 90, py - 8 - font:getHeight(), 180, "center")
+    if Body.speakingSlot and Body.speakingSlot(self) then
+      require("online.voice").drawIcon(self.x + font:getWidth(self.name or "") / 2 + 14, py - 8 - font:getHeight() / 2)
+    end
   end
 end
 

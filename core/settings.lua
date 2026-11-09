@@ -27,6 +27,7 @@ Settings.START_CARDS = { min = 0, max = 5 }
 Settings.TEXT_SIZES = { { "Small", 0.9 }, { "Normal", 1 }, { "Large", 1.15 } }
 Settings.PICK_TIMER_OPTIONS = { 0, 15, 20, 30, 45, 60, 90, 120 }
 Settings.SUB_ROUNDS = { min = 1, max = 5 }
+Settings.TEAM_SIZE = { min = 2, max = 3 }
 Settings.SUDDEN_TIMES = { 0, 60, 90, 120, 180, 240, 300, 420, 600 } -- seconds; 0 = off
 Settings.BARRIER_CLOSE_NAMES = { "Slow (40s)", "Normal (20s)", "Fast (10s)" }
 Settings.BARRIER_BOX_NAMES = { "Small", "Medium", "Large" }
@@ -42,18 +43,18 @@ Settings.BIND_SCHEMES = {
   { id = "p2", name = "Player 2 (local)", group = "keyboard",
     actions = { "left", "right", "up", "down", "fire", "block", "dash", "melee", "discard" } },
   { id = "online", name = "Online", group = "online",
-    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "discard", "scoreboard", "chat" } },
+    actions = { "left", "right", "jump", "jump2", "down", "fire", "block", "dash", "melee", "discard", "scoreboard", "chat", "voice" } },
 }
 Settings.ACTION_NAMES = {
   left = "Left", right = "Right", up = "Up / Jump", down = "Down", fire = "Fire", block = "Block",
-  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)", chat = "Chat", discard = "Discard",
+  jump = "Jump", jump2 = "Jump (alt)", dash = "Dash", scoreboard = "Scoreboard", melee = "Melee (hold)", chat = "Chat", voice = "Push to talk", discard = "Discard",
 }
 Settings.DEFAULT_BINDS = {
   p1 = { left = "a", right = "d", up = "w", down = "s", fire = "space", block = "lshift", dash = "e", melee = "q", discard = "c" },
   p2 = { left = "left", right = "right", up = "up", down = "down", fire = "rctrl", block = "rshift",
     dash = "/", melee = ".", discard = "," },
   online = { left = "a", right = "d", jump = "space", jump2 = "w", down = "s", fire = "mouse1", block = "mouse2",
-    dash = "lshift", melee = "q", discard = "c", scoreboard = "tab", chat = "return" },
+    dash = "lshift", melee = "q", discard = "c", scoreboard = "tab", chat = "return", voice = "v" },
 }
 -- Keys that can't be bound (menu / fullscreen toggle).
 Settings.RESERVED_KEYS = { escape = true, f11 = true }
@@ -86,15 +87,16 @@ local defaults = {
   mapVote = true,        -- players vote for the next map
   mapVoteCount = 3,      -- maps on the ballot
   cardBans = false,      -- everyone bans a card before the match
-  synergiesOn = true,    -- card synergies (individual ones can be turned off)
   teams = false,         -- 2v2 teams (local setup / host)
-  friendlyFire = false,  -- teams: bullets and explosions hurt teammates
+  teamSize = 2,          -- with teams on: the most players who can share a colour
+  friendlyFire = false,  -- your bullets and blasts can hurt you and your teammates
   localSetup = "p1:1:1;p2:2:2;off:3:1;off:4:2", -- local play slots: kind:colour:team
   playerColor = 1,       -- your colour in online lobbies
   touchControls = "auto", -- auto (on after the first touch) / on / off
   touchLayout = "",      -- custom touch button positions (core/touch.lua)
   touchOpacity = 0.5,
   mobileDefaults = false, -- lighter effects were applied for a touch device
+  practiceControls = "p1", -- last choice on the practice / tutorial control picker
   padOnline = false,     -- play online with the first gamepad instead of mouse + keys
   clientToken = "",      -- random id, so a LAN host can give you your slot back after a disconnect
   lobbyVisibility = "public", -- Steam lobbies: public (listed), friends, code (unlisted)
@@ -113,6 +115,10 @@ local defaults = {
   volMaster = 8,         -- volumes in steps of 0..10
   volSfx = 10,
   volUi = 8,
+  volVoice = 8,
+  voiceMode = "off",     -- "off" (no microphone, and you hear nobody), "push" or "open"
+  voiceThreshold = 3,    -- open mic: how loud counts as talking (index into Voice.THRESHOLDS)
+  voiceDevice = "",      -- microphone name; empty or unknown means the first one
   volMusic = 7,
   muteUnfocused = true,
 }
@@ -132,7 +138,6 @@ for k, v in pairs(defaults) do Settings.values[k] = v end
 Settings.values.binds = copyBinds(Settings.DEFAULT_BINDS)
 Settings.values.cards = {} -- card id -> { rarity = id or nil, disabled = bool }
 Settings.values.maps = {}  -- map id -> true when the map is turned off
-Settings.values.synergies = {} -- synergy id -> true when turned off
 
 local function clamp(v, lo, hi)
   return math.max(lo, math.min(hi, v))
@@ -169,7 +174,6 @@ function Settings.load()
     local scheme, action, b = line:match("^bind%.([%w_]+)%.([%w_]+)=(.*)$")
     local cardId, cardVal = line:match("^card%.([%w_]+)=(.*)$")
     local mapId, mapVal = line:match("^map%.([%w_]+)=(.*)$")
-    local synId, synVal = line:match("^synergy%.([%w_]+)=(.*)$")
     local k, val = line:match("^([%w_]+)=(.*)$")
     if scheme then
       if v.binds[scheme] and Settings.DEFAULT_BINDS[scheme][action] and validBinding(b) then
@@ -266,6 +270,7 @@ function Settings.load()
   v.barrierBox = clamp(math.floor(v.barrierBox), 1, 3)
   v.barrierDamage = clamp(math.floor(v.barrierDamage), 1, 3)
   v.subRounds = clamp(math.floor(v.subRounds), Settings.SUB_ROUNDS.min, Settings.SUB_ROUNDS.max)
+  v.teamSize = clamp(math.floor(tonumber(v.teamSize) or 2), Settings.TEAM_SIZE.min, Settings.TEAM_SIZE.max)
   v.mapVoteCount = clamp(math.floor(v.mapVoteCount), Settings.MAP_VOTE_COUNT.min, Settings.MAP_VOTE_COUNT.max)
   v.volMusic = clamp(math.floor(v.volMusic), 0, 10)
   if not Settings.MODE_NAMES[v.matchMode] then v.matchMode = "elim" end
@@ -286,9 +291,6 @@ function Settings.save()
   end
   for id in pairs(v.maps) do
     lines[#lines + 1] = "map." .. id .. "=off"
-  end
-  for id in pairs(v.synergies) do
-    lines[#lines + 1] = "synergy." .. id .. "=off"
   end
   for id, e in pairs(v.cards) do
     if e.rarity or e.disabled then
@@ -406,7 +408,7 @@ function Settings.resetGameplay()
   local v = Settings.values
   v.roundsToWin = defaults.roundsToWin
   v.subRounds = defaults.subRounds
-  v.matchMode, v.teams, v.friendlyFire = defaults.matchMode, defaults.teams, defaults.friendlyFire
+  v.matchMode, v.teams, v.friendlyFire, v.teamSize = defaults.matchMode, defaults.teams, defaults.friendlyFire, defaults.teamSize
   v.suddenDeath, v.barrierClose = defaults.suddenDeath, defaults.barrierClose
   v.barrierBox, v.barrierDamage = defaults.barrierBox, defaults.barrierDamage
   v.mapVote, v.mapVoteCount, v.cardBans = defaults.mapVote, defaults.mapVoteCount, defaults.cardBans
@@ -416,8 +418,6 @@ function Settings.resetGameplay()
   v.pickTimer = defaults.pickTimer
   v.allowDiscard = defaults.allowDiscard
   v.hazards = defaults.hazards
-  v.synergiesOn = defaults.synergiesOn
-  v.synergies = {}
   for _, r in ipairs(Cards.RARITIES) do v["weight_" .. r.id] = defaults["weight_" .. r.id] end
   v.cards = {}
   v.maps = {}
@@ -446,14 +446,11 @@ function Settings.cardRules(online)
   local v = Settings.values
   local rules = { pickFrom = v.pickFrom, picksPerRound = v.picksPerRound, weights = {}, rarity = {}, disabled = {},
     startCards = v.startCards, pickTimer = online and v.pickTimer or 0, allowDiscard = v.allowDiscard,
-    hazards = v.hazards, synergies = v.synergiesOn, synergyOff = {},
-    teams = v.teams, friendlyFire = v.friendlyFire, roundsToWin = v.roundsToWin,
+    hazards = v.hazards,
+    teams = v.teams, teamSize = v.teamSize, friendlyFire = v.friendlyFire, roundsToWin = v.roundsToWin,
     suddenDeath = v.suddenDeath, barrierClose = v.barrierClose, barrierBox = v.barrierBox,
     barrierDamage = v.barrierDamage, mode = v.matchMode, mapVote = v.mapVote, mapVoteCount = v.mapVoteCount,
     cardBans = v.cardBans, subRounds = v.subRounds }
-  for _, syn in ipairs(require("game.synergies").list) do
-    if v.synergies[syn.id] then rules.synergyOff[syn.index] = true end
-  end
   for i, r in ipairs(Cards.RARITIES) do rules.weights[i] = v["weight_" .. r.id] end
   for _, c in ipairs(Cards.list) do
     rules.rarity[c.index] = Settings.cardRarity(c)

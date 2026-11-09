@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Guided Ricochet
-needs homing ricochet_seeker
-rarity legendary
-row add seek 2
-note +bounced bullets home in harder

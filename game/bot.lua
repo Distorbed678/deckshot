@@ -347,6 +347,8 @@ function Bot.update(p, w, dt)
       if b.lob then inp.aim = b.lob + b.noise * 0.5 end
     end
     if (clear or b.lob or b.blind > 4) and p.ammo > 0 and love.math.random() < L.fireHold then inp.fire = true end
+    -- With friendly fire on, don't blow yourself up at point-blank range.
+    if w.rules.friendlyFire and s.explosion > 0 and dist < s.explosion * (s.explosionSize or 1) * 1.3 then inp.fire = false end
 
     -- Melee up close
     if dist < p.r + t.p.r + s.meleeRange * 0.9 and p.meleeCd <= 0 then
@@ -400,18 +402,11 @@ function Bot.update(p, w, dt)
 end
 
 ---------------------------------------------------------------- card picks
--- Score a card for a bot: rarity, plus a bonus when it completes a synergy (hard bots care most).
+-- Score a card for a bot: mostly rarity.
 function Bot.scoreCard(p, card, difficulty)
   local rarityValue = { common = 1, uncommon = 2, rare = 3, epic = 4, legendary = 5 }
   local score = (rarityValue[card.rarity] or 1) * 10 + love.math.random() * (difficulty == 1 and 30 or 10)
   if card.special then score = score - 15 end
-  local Synergies = require "game.synergies"
-  local copies = {}
-  for _, c in ipairs(p.cards) do copies[c.id] = (copies[c.id] or 0) + 1 end
-  copies[card.id] = (copies[card.id] or 0) + 1
-  for _, syn in ipairs(Synergies.forCard(card, Cards.rules)) do
-    if Synergies.sets(syn, copies) > 0 then score = score + 8 * (difficulty or 2) end
-  end
   return score
 end
 

@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Perfect Counter
-needs riposte parry
-rarity legendary
-row add riposte 1
-note +riposte deals +25% more damage

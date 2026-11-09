@@ -384,7 +384,12 @@ T.saw = {
       pts[#pts + 1] = o.y + math.sin(ang) * rr
     end
     love.graphics.setColor(0.78, 0.8, 0.86)
-    love.graphics.polygon("fill", pts)
+    -- The outline is spiky (not convex), so fill it as triangles from the centre.
+    local n = #pts
+    for i = 1, n, 2 do
+      local j = (i + 1) % n + 1
+      love.graphics.polygon("fill", o.x, o.y, pts[i], pts[i + 1], pts[j], pts[j + 1])
+    end
     love.graphics.setColor(0.45, 0.47, 0.52)
     love.graphics.circle("fill", o.x, o.y, o.r * 0.55)
     love.graphics.setColor(0.25, 0.26, 0.3)
@@ -1289,7 +1294,7 @@ function Objects.update(world, dt)
       fx.addShake(4)
       sfx.play("laserFire", e.x, 0.8, 1.6)
       for _, p in ipairs(world.players) do
-        if not p.dead and p ~= e.owner and (not e.owner or world:isEnemy(e.owner, p)) and circleHitsPlayer(e.x, e.y, e.radius, p) then
+        if not p.dead and (not e.owner or world:canHurt(e.owner, p)) and circleHitsPlayer(e.x, e.y, e.radius, p) then
           p:hit(e.damage, p.x - e.x, -1, 300, e.owner, "lightning")
         end
       end

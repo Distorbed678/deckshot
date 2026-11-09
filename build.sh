@@ -79,6 +79,8 @@ build_linux() {
   copy_web "$appdir"
   sed -i "s|^#FUSE_PATH=\"\$APPDIR/my_game.love\"|FUSE_PATH=\"\$APPDIR/$NAME.love\"|" "$appdir/AppRun"
   grep -q "^FUSE_PATH=" "$appdir/AppRun" || die "could not set FUSE_PATH in AppRun"
+  # The window's class ties it to our desktop entry; without this the taskbar shows LÖVE's icon.
+  sed -i '1a export SDL_VIDEO_X11_WMCLASS=deckshot SDL_VIDEO_WAYLAND_WMCLASS=deckshot' "$appdir/AppRun"
 
   # Our icon instead of LÖVE's.
   rm -f "$appdir"/love.svg "$appdir"/love.png "$appdir"/.DirIcon
@@ -91,6 +93,7 @@ Name=$TITLE
 Comment=2D duel game: lose a round, pick a card
 Exec=$NAME
 Icon=$NAME
+StartupWMClass=deckshot
 Type=Application
 Categories=Game;
 Terminal=false

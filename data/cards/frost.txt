@@ -4,3 +4,4 @@ rarity uncommon
 art snow ice
 row add frost 2
 note +hits slow the enemy by 50% for 2s
+note +slows through explosions, and through Static Field

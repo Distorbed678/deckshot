@@ -719,6 +719,12 @@ function lan.transport:send(peer, data, reliable)
   end
 end
 
+-- Browser clients can't use voice, so the host doesn't send it to them.
+function lan.isWebPeer(peer)
+  local c = lan.byPeer and lan.byPeer[peer]
+  return c ~= nil and c.mode == "ws"
+end
+
 function lan.transport:receive()
   return lan.popMessages()
 end

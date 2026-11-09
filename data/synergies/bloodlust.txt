@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Bloodlust
-needs vampire vampiric_fists
-rarity legendary
-row mul meleeDamage 1.15

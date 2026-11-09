@@ -15,12 +15,11 @@ function Menu:enter()
   love.mouse.setVisible(true)
   require("gfx.music").play("menu")
   require("online.chat").reset()
-  -- Back from an online session: drop the host's map, card and synergy lists.
+  -- Back from an online session: drop the host's map and card lists.
   local Map = require "game.map"
   if Map.session then
     Map.loadAll()
     require("game.cards").loadAll()
-    require("game.synergies").loadAll()
     require("game.cards").applyRules(Settings.cardRules())
   end
   require("online.active").get().hostRules = nil

@@ -1,6 +1,0 @@
-deckshot-synergy 1
-name Mirror Guard
-needs parry reflector
-rarity legendary
-row add reflect 1
-note +blocked bullets come back as 1 more bullet

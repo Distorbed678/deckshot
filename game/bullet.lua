@@ -27,6 +27,12 @@ Bullet.CRIT_COLOR = CRIT_COLOR
 local nextId = 0
 
 -- Stasis Field radius for a number of copies (+35% per extra copy).
+-- Can this blast hurt p? (Clients' stub worlds have no rules: only enemies.)
+local function hurts(game, owner, p)
+  if game.canHurt then return game:canHurt(owner, p) end
+  return p ~= owner
+end
+
 function Bullet.stasisRadius(copies)
   return 160 * (1 + 0.35 * math.max(0, copies - 1))
 end
@@ -104,7 +110,7 @@ function Bullet:spawnChild(game, x, y, ang, speed, damage, skip)
   c.isChild = true
   c.laser = false
   c.bounces = 0
-  c.explosion, c.poison, c.homing, c.seek = 0, 0, 0, 0
+  c.explosion, c.homing, c.seek = 0, 0, 0 -- poison and frost carry over
   c.splitsLeft, c.sticky, c.blackhole, c.pierce = 0, 0, 0, 0
   c.shrapnel, c.cluster, c.hydra = 0, 0, 0
   if skip then c.hitSet = { [skip] = true } end
@@ -296,9 +302,9 @@ function Bullet:step(dt, game)
   end
 
   for _, p in ipairs(game.players) do
-    -- A bullet can only hit its own shooter after it has bounced.
+    -- A bullet can only hit its own shooter after it has bounced, or with friendly fire once it's clear of the gun.
     if not p.dead and not (self.hitSet and self.hitSet[p])
-        and (p ~= self.owner or (self.bounced and self.age > 0.15))
+        and (p ~= self.owner or ((self.bounced or (game.rules and game.rules.friendlyFire)) and self.age > 0.15))
         and (p == self.owner or not game.isEnemy or game:isEnemy(self.owner, p)) then
       local dx, dy = p.x - self.x, p.y - self.y
       local reach = p.r + r
@@ -344,19 +350,8 @@ function Bullet:bounce(game, normal)
     return false
   end
   if not self.laser then sfx.play("bounce", self.x, 0.5) end
-  -- Bouncing Blasts (synergy): every bounce makes a small explosion.
-  local be = self.owner.stats and self.owner.stats.bounceExplode or 0
-  if be > 0 and not self.isChild and not self.laser then
-    local r = 45 * (1 + 0.3 * (be - 1)) * (self.owner.stats.explosionSize or 1)
-    fx.explosion(self.x, self.y, r, self.color)
-    sfx.play("explosionSmall", self.x, 0.5)
-    for _, p in ipairs(game.players) do
-      if p ~= self.owner and not p.dead and (not game.isEnemy or game:isEnemy(self.owner, p))
-          and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
-        p:hit(self:currentDamage() * 0.3, p.x - self.x, p.y - self.y, 300, self.owner, "explosion")
-      end
-    end
-  end
+  -- Explosive bullets explode whenever they hit something.
+  if self.explosion > 0 and not self.mine then self:smallBlast(game) end
   if self.bounceDamage > 0 then self.damage = self.damage * (1 + self.bounceDamage) end
   return true
 end
@@ -373,7 +368,7 @@ function Bullet:spawnFragments(game)
     f.shrapnel, f.cluster, f.hydra = 0, 0, 0
     f.damage = self.damage * 0.5
     f.r = math.max(2.5, self.r * 0.7)
-    f.bounces = 0
+    f.bounces = math.max(0, self.bounces) -- split bullets keep what's left
     f.bounced = true
     f.color = self.color
     f.laser = self.laser
@@ -392,6 +387,25 @@ function Bullet:becomeMine()
   self.trigger = MINE_TRIGGER * mult
   self.explosion = math.max(self.explosion, MINE_BLAST) * mult
   self.r = math.max(self.r, 6)
+end
+
+-- Poison and frost go through everything a bullet makes: explosions, shards, Hydra heads.
+function Bullet:applyEffects(p, dmg)
+  if self.poison > 0 then p:poisonFor(dmg * self.poison, 3) end
+  if self.frost > 0 then p.slowTimer = math.max(p.slowTimer, self.frost) end
+end
+
+-- The smaller blast of an explosive bullet on each bounce and each player it pierces.
+function Bullet:smallBlast(game)
+  local r = math.max(45, self.explosion * 0.6)
+  fx.explosion(self.x, self.y, r, self.color)
+  sfx.play("explosionSmall", self.x, 0.5)
+  local dmg = self:currentDamage() * 0.3
+  for _, p in ipairs(game.players) do
+    if not p.dead and hurts(game, self.owner, p) and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2 then
+      if p:hit(dmg, p.x - self.x, p.y - self.y, 300, self.owner, "explosion") ~= false then self:applyEffects(p, dmg) end
+    end
+  end
 end
 
 function Bullet:hitPlayer(p, game)
@@ -440,8 +454,7 @@ function Bullet:hitPlayer(p, game)
     if not self.fromTrigger and not self.isChild and o.trigger then o:trigger("hit", { target = p }) end
     if (os.bloodPact or 0) > 0 and not o.dead and o.heal then o:heal(10 * os.bloodPact) end
     if self.lifesteal > 0 then o:heal(dmg * self.lifesteal) end
-    if self.poison > 0 then p:poisonFor(dmg * self.poison, 3) end
-    if self.frost > 0 then p.slowTimer = math.max(p.slowTimer, self.frost) end
+    self:applyEffects(p, dmg)
     if self.scavenger > 0 and not o.dead and o ~= p then
       o.ammo = math.min(o.stats.ammo, o.ammo + self.scavenger)
       o.reloadTimer = 0
@@ -472,6 +485,7 @@ function Bullet:hitPlayer(p, game)
 
   -- Piercing Rounds / Railgun: keep going through this player.
   if self.pierce > 0 then
+    if self.explosion > 0 then self:smallBlast(game) end
     self.pierce = self.pierce - 1
     self.hitSet = self.hitSet or {}
     self.hitSet[p] = true
@@ -511,11 +525,11 @@ function Bullet:explode(game, mult)
   local dmg = self:currentDamage() * (mult or 0.5)
   if game.objects then objects().explosion(game, self.x, self.y, self.explosion, dmg * 2, self.owner) end
   for _, p in ipairs(game.players) do
-    if p ~= self.owner and not p.dead and (not game.isEnemy or game:isEnemy(self.owner, p)) then
+    if not p.dead and hurts(game, self.owner, p) then
       local dx, dy = p.x - self.x, p.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
       if d < self.explosion + p.r then
-        p:hit(dmg, dx, dy, self.knockback * 1.5, self.owner)
+        if p:hit(dmg, dx, dy, self.knockback * 1.5, self.owner) ~= false then self:applyEffects(p, dmg) end
       end
     end
   end

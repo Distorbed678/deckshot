@@ -190,6 +190,7 @@ local function volumeText(v)
 end
 
 function Screen:drawAudio(x, y, w)
+  local y0 = y
   local v = Settings.values
   local h, gap = 44, 52
   local colW = (w - 30) / 2
@@ -207,6 +208,61 @@ function Screen:drawAudio(x, y, w)
   end
   local d = ui.cycler("Mute in background", v.muteUnfocused and "On" or "Off", x, y, colW, h)
   if d ~= 0 then v.muteUnfocused = not v.muteUnfocused end
+  self:drawVoice(x + colW + 30, y0, colW, h, gap)
+end
+
+local VOICE_MODES = { "off", "push", "open" }
+local VOICE_NAMES = { off = "Off", push = "Push to talk", open = "Open mic" }
+
+-- Voice chat: right-hand column of the Audio tab.
+function Screen:drawVoice(x, y, w, h, gap)
+  local Voice = require "online.voice"
+  local v = Settings.values
+  if not Voice.available() then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.6)
+    love.graphics.printf("Voice chat needs the desktop version.", x, y + 8, w, "left")
+    return
+  end
+  local idx = indexOf(VOICE_MODES, v.voiceMode)
+  local d = ui.cycler("Voice chat", VOICE_NAMES[v.voiceMode] or "Off", x, y, w, h)
+  if d ~= 0 then v.voiceMode = VOICE_MODES[cycle(idx, #VOICE_MODES, d)] end
+  y = y + gap
+  d = ui.cycler("Voice volume", volumeText(v.volVoice), x, y, w, h)
+  if d ~= 0 then v.volVoice = math.max(0, math.min(10, v.volVoice + d)) end
+  y = y + gap
+  local mics = Voice.devices()
+  local current = 1
+  for i, m in ipairs(mics) do if m:getName() == v.voiceDevice then current = i end end
+  d = ui.cycler("Microphone", mics[current] and mics[current]:getName() or "None found", x, y, w, h)
+  if d ~= 0 and #mics > 0 then v.voiceDevice = mics[cycle(current, #mics, d)]:getName() end
+  y = y + gap
+  if v.voiceMode == "open" then
+    d = ui.cycler("Open mic level", Voice.THRESHOLD_NAMES[v.voiceThreshold] or "Normal", x, y, w, h)
+    if d ~= 0 then v.voiceThreshold = cycle(v.voiceThreshold, #Voice.THRESHOLDS, d) end
+  elseif v.voiceMode == "push" then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.7)
+    ui.printFit("Hold " .. Input.keyName(v.binds.online.voice) .. " to talk (or click the right stick)", app.fonts.med, x, y + 10, w, "left")
+  end
+  y = y + gap
+  if v.voiceMode ~= "off" then
+    Voice.monitorT = love.timer.getTime() -- keeps the mic open for the meter while this tab is showing
+    love.graphics.setColor(1, 1, 1, 0.12)
+    love.graphics.rectangle("fill", x, y + 8, w, 14, 4, 4)
+    local k = math.min(1, math.sqrt(Voice.level) * 1.6)
+    love.graphics.setColor(ui.GOOD)
+    love.graphics.rectangle("fill", x, y + 8, w * k, 14, 4, 4)
+    if v.voiceMode == "open" then
+      local t = math.min(1, math.sqrt(Voice.THRESHOLDS[v.voiceThreshold] or 0.04) * 1.6)
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.rectangle("fill", x + w * t - 1, y + 4, 2, 22)
+    end
+  else
+    love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(1, 1, 1, 0.55)
+    love.graphics.printf("With voice off, your microphone is never used and you won't hear other players.", x, y + 4, w, "left")
+  end
 end
 
 -- Browser build: the page owns the window, so only the effects options apply.
@@ -380,7 +436,7 @@ end
 
 -- The gameplay values to show: this machine's settings, or for a client the host's.
 local function viewOfRules(r)
-  local v = { roundsToWin = r.roundsToWin, matchMode = r.mode, teams = r.teams, friendlyFire = r.friendlyFire, pickFrom = r.pickFrom,
+  local v = { roundsToWin = r.roundsToWin, matchMode = r.mode, teams = r.teams, teamSize = r.teamSize, friendlyFire = r.friendlyFire, pickFrom = r.pickFrom,
     picksPerRound = r.picksPerRound, startCards = r.startCards, pickTimer = r.pickTimer, allowDiscard = r.allowDiscard,
     mapVote = r.mapVote, mapVoteCount = r.mapVoteCount, cardBans = r.cardBans, hazards = r.hazards, subRounds = r.subRounds,
     suddenDeath = r.suddenDeath, barrierClose = r.barrierClose, barrierBox = r.barrierBox, barrierDamage = r.barrierDamage }
@@ -413,7 +469,7 @@ function Screen:drawGameplay(x, y, w, viewH)
   local v = client and viewOfRules(rules) or Settings.values
   local h, gap, head = 38, 44, 42
   local colW = (w - 50) / 2
-  local contentH = head + 14 * gap
+  local contentH = head + 15 * gap
   local top = y
   if client then
     love.graphics.setFont(app.fonts.med)
@@ -433,10 +489,16 @@ function Screen:drawGameplay(x, y, w, viewH)
   d = ui.cycler("Mode", modeName, lx, ly, colW, h)
   if d ~= 0 then v.matchMode = Settings.MODES[cycle(indexOf(Settings.MODES, v.matchMode), #Settings.MODES, d)] end
   ly = ly + gap
-  d = ui.cycler("Teams", v.teams and "2v2" or "Free-for-all", lx, ly, colW, h)
+  d = ui.cycler("Teams", v.teams and "Teams" or "Free-for-all", lx, ly, colW, h)
   if d ~= 0 then v.teams = not v.teams end
   ly = ly + gap
-  d = ui.cycler("Friendly fire", v.friendlyFire and "On" or "Off", lx, ly, colW, h, { disabled = not v.teams })
+  if v.teams then
+    local ts = Settings.TEAM_SIZE
+    d = ui.cycler("Max team size", tostring(v.teamSize or ts.min), lx, ly, colW, h)
+    if d ~= 0 then v.teamSize = ts.min + cycle((v.teamSize or ts.min) - ts.min + 1, ts.max - ts.min + 1, d) - 1 end
+    ly = ly + gap
+  end
+  d = ui.cycler("Friendly fire", v.friendlyFire and "On" or "Off", lx, ly, colW, h)
   if d ~= 0 then v.friendlyFire = not v.friendlyFire end
   ly = ly + gap
   d = ui.cycler("Rounds to win", tostring(v.roundsToWin), lx, ly, colW, h)

@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Sonic Boom
-needs shockwave blitz
-rarity legendary
-trigger dash shockwave damage=10 radius=140

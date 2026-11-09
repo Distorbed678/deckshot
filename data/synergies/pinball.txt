@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Pinball
-needs splitter mayhem
-rarity legendary
-row add bounces 2

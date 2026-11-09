@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Long Shot
-needs sniper railgun
-rarity legendary
-row mul gunDamage 1.15

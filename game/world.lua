@@ -27,9 +27,8 @@ World.PALETTE = {
   { 0.75, 0.5, 0.3 },  -- brown
 }
 World.PALETTE_NAMES = { "Orange", "Blue", "Green", "Pink", "Red", "Cyan", "Yellow", "Purple", "White", "Lime", "Navy", "Brown" }
--- Teams mode: team 1 gets warm colours, team 2 cool ones.
-World.TEAM_COLORS = { { 5, 1, 7, 12 }, { 2, 6, 11, 8 } }
-World.TEAM_NAMES = { "Red Team", "Blue Team" }
+-- A team is a colour: players who pick the same colour are on the same team.
+function World.teamName(team) return (World.PALETTE_NAMES[team] or "Unknown") .. " Team" end
 
 -- The colour of each slot this match (World.setSlotColors); used everywhere players are drawn.
 World.COLORS = { World.PALETTE[1], World.PALETTE[2], World.PALETTE[3], World.PALETTE[4] }
@@ -50,15 +49,6 @@ function World.setSlotColors(indices)
   end
 end
 
--- Palette indices for a teams match: each team's players get that team's colours in order.
-function World.teamColorIndices(teams)
-  local out, count = {}, { 0, 0 }
-  for i, t in ipairs(teams) do
-    count[t] = count[t] + 1
-    out[i] = World.TEAM_COLORS[t][count[t]]
-  end
-  return out
-end
 World.CONTINUE_ROUNDS = 3
 World.COUNTDOWN, World.INTRO_TIME = 2.4, 1.4
 World.SUB_ROUND_TIME = 1.5
@@ -99,7 +89,7 @@ function World.new(defs, winScore, rules)
     p.slot = i
     p.name = d.name
     p.peer = d.peer
-    p.team = (w.rules.teams and (d.team or ((i - 1) % 2 + 1))) or nil
+    p.team = (w.rules.teams and (d.team or i)) or nil
     p.isBot = d.bot
     p.hat, p.eyes, p.mouth, p.detail = d.hat, d.eyes, d.mouth, d.detail
     p.subWins = 0
@@ -123,10 +113,31 @@ function World:addBullet(b)
 end
 
 -- Can a hurt b? (Teammates can't, unless friendly fire is on.)
+-- The center of a black hole hurts everyone in it, its owner too, in small ticks.
+local WELL_CORE, WELL_TICK, WELL_DPS = 40, 0.25, 20
+function World:wellDamage(w, dt)
+  if self.state ~= "playing" then return end
+  w.tick = (w.tick or WELL_TICK) - dt
+  if w.tick > 0 then return end
+  w.tick = w.tick + WELL_TICK
+  for _, p in ipairs(self.players) do
+    local dx, dy = p.x - w.x, p.y - w.y
+    if not p.dead and dx * dx + dy * dy < WELL_CORE * WELL_CORE then
+      p:hit(WELL_DPS * WELL_TICK, 0, 0, 0, w.owner, "blackhole")
+    end
+  end
+end
+
 function World:isEnemy(a, b)
   if a == b then return false end
   if self.rules.teams and a.team and b.team and a.team == b.team then return self.rules.friendlyFire == true end
   return true
+end
+
+-- Can `owner`'s bullets and blasts hurt p? Friendly fire also means you can hurt yourself.
+function World:canHurt(owner, p)
+  if p == owner then return self.rules.friendlyFire == true end
+  return self:isEnemy(owner, p)
 end
 
 -- Living, connected players p can hurt.
@@ -257,7 +268,7 @@ function World:announceMatchPoint()
   local names = {}
   for _, p in ipairs(self.players) do
     if not p.disconnected and p.score == self.winScore - 1 then
-      names[#names + 1] = (self.rules.teams and p.team) and World.TEAM_NAMES[p.team] or (p.name or "Player")
+      names[#names + 1] = (self.rules.teams and p.team) and World.teamName(p.team) or (p.name or "Player")
     end
   end
   if #names == 0 then return end
@@ -542,6 +553,7 @@ function World:update(dt)
     for i = #self.wells, 1, -1 do
       local w = self.wells[i]
       w.t = w.t - sdt
+      self:wellDamage(w, sdt)
       if w.t <= 0 then table.remove(self.wells, i) end
     end
     if self.state == "playing" then
@@ -800,15 +812,7 @@ function World:choose(slot, optionIndex, serial)
   elseif card.special == "shrine" then
     self:toast(Cards.shrine(p), 5)
   else
-    local before = {}
-    for _, a in ipairs(p.synergies or {}) do before[a.syn] = a.sets end
     p:addCard(card)
-    for _, a in ipairs(p.synergies or {}) do
-      if (before[a.syn] or 0) < a.sets then
-        self:toast("SYNERGY! " .. (p.name or "Player") .. " unlocked " .. a.syn.name, 5)
-        sfx.play("revealLegendary")
-      end
-    end
   end
   self:emit("roster")
   self:nextPick()

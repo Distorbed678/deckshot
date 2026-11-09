@@ -1,5 +1,0 @@
-deckshot-synergy 1
-name Wrecking Crew
-needs demolition bomb_squad
-rarity legendary
-row mul objectDamage 1.5

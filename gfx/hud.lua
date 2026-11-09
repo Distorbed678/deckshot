@@ -349,7 +349,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     local _, sw = app.fonts.small:getWrap("Stacking: " .. card.stack, w - 28)
     stackH = #sw * app.fonts.small:getHeight() + 6
   end
-  local showStack, showSynergy = card.stack ~= nil, #require("game.synergies").forCard(card, Cards.rules) > 0
+  local showStack = card.stack ~= nil
   local font, gap
   local scale = 1
   local function textHeight(s)
@@ -360,7 +360,7 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     end
     return total
   end
-  local function room() return h - 100 - (showSynergy and 56 or 40) - (showStack and stackH or 0) end
+  local function room() return h - 100 - 40 - (showStack and stackH or 0) end
   local function fits()
     for _, f in ipairs({ { app.fonts.med, 10 }, { app.fonts.small, 6 }, { app.fonts.tiny, 3 } }) do
       font, gap = f[1], f[2]
@@ -368,17 +368,14 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     end
     return false
   end
-  -- A very wordy card on a narrow slot gives up the extras (the library still shows them), then shrinks.
+  -- A very wordy card on a narrow slot gives up its stacking line (the library still shows it), then shrinks.
   if not fits() then
     showStack = false
     if not fits() then
-      showSynergy = false
-      if not fits() then
-        while scale > 0.5 and textHeight(scale) > room() do scale = scale - 0.04 end
-      end
+      while scale > 0.5 and textHeight(scale) > room() do scale = scale - 0.04 end
     end
   end
-  local bottomGap = showSynergy and 56 or 40
+  local bottomGap = 40
   love.graphics.setFont(font)
   local ly = y + 100
   for i, line in ipairs(card.lines) do
@@ -408,17 +405,6 @@ function hud.drawCard(card, x, y, w, h, selected, ownerColor, rarityId)
     local _, wrapped = sf:getWrap("Stacking: " .. card.stack, w - 28)
     love.graphics.setColor(1, 1, 1, 0.5)
     love.graphics.printf("Stacking: " .. card.stack, x + 14, y + h - bottomGap - #wrapped * sf:getHeight(), w - 28, "center")
-  end
-
-  -- Synergies this card is part of.
-  local syns = require("game.synergies").forCard(card, Cards.rules)
-  if showSynergy and #syns > 0 then
-    local names = {}
-    for k = 1, math.min(2, #syns) do names[#names + 1] = require("game.synergies").partners(syns[k], card) end
-    local text = "Synergy: " .. table.concat(names, ", ") .. (#syns > 2 and (" +" .. (#syns - 2)) or "")
-    love.graphics.setFont(app.fonts.tiny)
-    love.graphics.setColor(1, 0.82, 0.35, 0.85)
-    love.graphics.printf(text, x + 10, y + h - 50, w - 20, "center")
   end
 
   local label = rarity.name:upper()
