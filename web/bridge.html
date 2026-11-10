@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deckshot bridge</title>
+<style>
+  body { margin: 0; background: #14141c; color: #e8e8f0; font: 16px/1.5 system-ui, sans-serif; display: flex; min-height: 100vh; align-items: center; justify-content: center; }
+  main { max-width: 560px; padding: 24px; text-align: center; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  #room { font-size: 44px; font-weight: 700; letter-spacing: 6px; color: #ffd966; margin: 10px 0; }
+  #status { font-size: 18px; margin: 14px 0; }
+  .ok { color: #66ff88; } .bad { color: #ff8866; } .wait { color: #ffd966; }
+  p { color: #a8a8b8; margin: 8px 0; }
+  code { color: #8ed8ff; word-break: break-all; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Deckshot internet bridge</h1>
+  <div id="room"></div>
+  <div id="status" class="wait">Starting…</div>
+  <p><b>Keep this tab open while you play.</b> It passes your friends' connections to the game on this computer.</p>
+  <p>Friends open <code id="link"></code></p>
+  <p id="players"></p>
+</main>
+<script src="peerjs.min.js"></script>
+<script>
+// The desktop game can't speak WebRTC, but this page can. Each friend who connects peer-to-peer
+// gets a WebSocket to the game's own LAN server on this computer, and messages are passed both
+// ways. To the game they look like any browser player on the local network.
+(function () {
+  var q = new URLSearchParams(location.search);
+  var room = (q.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  var play = q.get("play") || "";
+  var statusEl = document.getElementById("status"), playersEl = document.getElementById("players");
+  var state = "starting", count = 0;
+  document.getElementById("room").textContent = room;
+  document.getElementById("link").textContent = play + "?room=" + room;
+
+  function show(text, cls, s) {
+    statusEl.textContent = text; statusEl.className = cls; state = s;
+    report();
+  }
+  // Tells the game how the bridge is doing, for its lobby screen.
+  function report() {
+    fetch("/bridgeping?s=" + state + "&n=" + count, { cache: "no-store" }).catch(function () {
+      statusEl.textContent = "The game isn't hosting any more. You can close this tab."; statusEl.className = "bad";
+    });
+  }
+  setInterval(report, 2000);
+
+  if (!room || typeof Peer === "undefined") { show("This page was opened without a room code.", "bad", "error"); return; }
+
+  var CHUNK = 15000; // data channel messages are kept small; bigger ones are sent in parts
+  function sendChunked(conn, buf) {
+    var bytes = new Uint8Array(buf);
+    if (bytes.length <= CHUNK) {
+      var one = new Uint8Array(bytes.length + 1); one[0] = 0; one.set(bytes, 1); conn.send(one.buffer); return;
+    }
+    for (var pos = 0; pos < bytes.length; pos += CHUNK) {
+      var end = Math.min(bytes.length, pos + CHUNK), part = new Uint8Array(end - pos + 1);
+      part[0] = end === bytes.length ? 2 : 1; part.set(bytes.subarray(pos, end), 1); conn.send(part.buffer);
+    }
+  }
+
+  var peer = new Peer("deckshot-" + room, { debug: 1 });
+  peer.on("open", function () { show("Ready. Waiting for friends…", "ok", "ready"); });
+  peer.on("disconnected", function () {
+    // Only the matchmaking link dropped; players already connected stay connected.
+    if (!peer.destroyed) { show("Reconnecting to the matchmaking service…", "wait", "ready"); peer.reconnect(); }
+  });
+  peer.on("error", function (err) {
+    if (err.type === "unavailable-id") show("This room code is already in use. Host again for a new one.", "bad", "error");
+    else if (err.type === "network" || err.type === "server-error" || err.type === "socket-error") show("Can't reach the matchmaking service. Use the tunnel link instead.", "bad", "error");
+    else if (err.type !== "peer-unavailable") show("Bridge problem: " + err.type, "bad", "error");
+  });
+
+  peer.on("connection", function (conn) {
+    var ws = new WebSocket("ws://" + location.host + "/lan");
+    ws.binaryType = "arraybuffer";
+    var waiting = [], parts = [], open = false, done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      if (open) { count--; playersEl.textContent = count + " connected through this bridge"; report(); }
+      try { ws.close(); } catch (e) {}
+      try { conn.close(); } catch (e) {}
+    }
+    function toGame(bytes) { if (ws.readyState === 1) ws.send(bytes); else waiting.push(bytes); }
+    conn.on("open", function () { open = true; count++; playersEl.textContent = count + " connected through this bridge"; report(); });
+    conn.on("data", function (data) {
+      var bytes = new Uint8Array(data), flag = bytes[0], body = bytes.subarray(1);
+      if (flag === 0) { toGame(body); return; }
+      parts.push(body);
+      if (flag === 2) {
+        var size = 0; parts.forEach(function (p) { size += p.length; });
+        var whole = new Uint8Array(size), pos = 0;
+        parts.forEach(function (p) { whole.set(p, pos); pos += p.length; });
+        parts = []; toGame(whole);
+      }
+    });
+    conn.on("close", finish);
+    conn.on("error", finish);
+    ws.onopen = function () { waiting.forEach(function (b) { ws.send(b); }); waiting = []; };
+    ws.onmessage = function (e) { if (conn.open) sendChunked(conn, e.data); };
+    ws.onclose = finish;
+    ws.onerror = finish;
+  });
+})();
+</script>
+</body>
+</html>

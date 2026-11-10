@@ -58,6 +58,8 @@ local WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 local CTL = { HELLO = 200, WELCOME = 201, REJECT = 202, MEMBERS = 203, PING = 204, COLOR = 205 }
 lan.CTL = CTL
 
+lan.PLAY_URL = "https://distorbed678.github.io/deckshot/play/" -- the public browser build (GitHub Pages)
+
 local function now() return love.timer.getTime() end
 local function push(ev) lan.events[#lan.events + 1] = ev end
 
@@ -325,7 +327,12 @@ local function handshake(c)
   local headers = {}
   for k, v in request:gmatch("\r\n([^:\r\n]+):[ \t]*([^\r\n]*)") do headers[k:lower()] = v end
   local key = headers["sec-websocket-key"]
-  if path == "/lan" and key and (headers.upgrade or ""):lower() == "websocket" then
+  if path:match("^/bridgeping") then
+    -- The internet bridge page (web/bridge.html) reporting in: its state and how many it carries.
+    lan.bridge = { seen = now(), state = path:match("[?&]s=(%a+)") or "ready", peers = tonumber(path:match("[?&]n=(%d+)")) or 0 }
+    c.mode, c.closeWhenSent = "http", true
+    c:write("HTTP/1.1 204 No Content\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n")
+  elseif path == "/lan" and key and (headers.upgrade or ""):lower() == "websocket" then
     local accept = love.data.encode("string", "base64", love.data.hash("sha1", key .. WS_GUID))
     c:write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" ..
       "Sec-WebSocket-Accept: " .. accept .. "\r\n\r\n")
@@ -599,6 +606,15 @@ function lan.host(rounds, rules)
   local ip = lan.ipList[1] or "127.0.0.1"
   lan.code = port == lan.PORT and ip or (ip .. ":" .. port)
   lan.url = "http://" .. ip .. ":" .. port
+  -- Internet play: a room code friends type into the public page; the bridge page answers to it.
+  local letters, code = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", ""
+  for _ = 1, 6 do
+    local i = love.math.random(#letters)
+    code = code .. letters:sub(i, i)
+  end
+  lan.room, lan.bridge = code, nil
+  lan.inviteUrl = lan.PLAY_URL .. "?room=" .. code
+  lan.bridgeUrl = "http://localhost:" .. port .. "/bridge.html?room=" .. code .. "&play=" .. lan.PLAY_URL
   if rules then lan.publishRules(rules) end
   if lan.onEntered then lan.onEntered() end
 end
@@ -643,6 +659,8 @@ function lan.join(address)
 end
 
 function lan.leave()
+  if lan.isHost then require("online.tunnel").stop() end
+  lan.room, lan.bridge, lan.inviteUrl, lan.bridgeUrl = nil, nil, nil, nil
   lan.streaks, lan.bots = nil, nil -- win streaks and bots belong to this lobby only
   if lan.conn then lan.conn:close() end
   lan.conn = nil

@@ -146,6 +146,7 @@ build_web() {
     || die "love.js failed"
   cp "$ROOT/web/index.html" "$DIST/web/index.html"
   cp "$ROOT/web/manifest.json" "$DIST/web/manifest.json"
+  cp "$ROOT/web/bridge.html" "$ROOT/web/peerjs.min.js" "$DIST/web/" # internet play: the bridge page and PeerJS
   rm -rf "$DIST/web/theme"
   touch "$DIST/web/.nojekyll"
   [ -f "$DIST/web/love.wasm" ] && [ -f "$DIST/web/game.data" ] || die "web build is incomplete"
@@ -170,7 +171,8 @@ build_site() {
 copy_web() {
   if [ -f "$DIST/web/index.html" ]; then
     mkdir -p "$1/web"
-    cp "$DIST/web/index.html" "$DIST/web/game.js" "$DIST/web/game.data" "$DIST/web/love.js" "$DIST/web/love.wasm" "$1/web/"
+    cp "$DIST/web/index.html" "$DIST/web/game.js" "$DIST/web/game.data" "$DIST/web/love.js" "$DIST/web/love.wasm" \
+      "$DIST/web/bridge.html" "$DIST/web/peerjs.min.js" "$1/web/"
   else
     log "No dist/web: this package's LAN host won't serve the browser version"
   fi

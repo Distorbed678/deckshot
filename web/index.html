@@ -164,8 +164,69 @@
     // then [u32 length][bytes] per message. States: 0 idle, 1 connecting, 2 open, 3 closed,
     // 4 unavailable. LAN games are joined on the desktop host that served this page, directly or
     // through an https tunnel (which needs wss://). GitHub Pages has no host behind it.
+    // With ?room=CODE in the address the page joins over the internet instead: a peer-to-peer
+    // WebRTC connection (through PeerJS) to the bridge page the host's game opened (web/bridge.html).
     var lan = { ws: null, state: 0, detail: "", queue: [], firstSeq: 1, ping: null };
-    var lanAvailable = !/\.github\.io$/.test(location.hostname);
+    var room = (new URLSearchParams(location.search).get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    var lanAvailable = !!room || !/\.github\.io$/.test(location.hostname);
+    if (room) { var pj = document.createElement("script"); pj.src = "peerjs.min.js"; document.head.appendChild(pj); }
+
+    // A peer-to-peer connection that looks like a WebSocket to the code below. Messages travel as
+    // [flag][bytes]: flag 0 = whole message, 1 = a part with more to come, 2 = the last part.
+    function rtcSocket() {
+      var sock = { readyState: 0, onopen: null, onmessage: null, onclose: null }, CHUNK = 15000;
+      var peer = null, conn = null, parts = [], closed = false, timer = null;
+      function fail(detail) {
+        if (closed) return;
+        closed = true; sock.readyState = 3;
+        if (timer) clearTimeout(timer);
+        if (detail) sock.detail = detail;
+        try { if (peer) peer.destroy(); } catch (e) {}
+        if (sock.onclose) sock.onclose();
+      }
+      sock.send = function (bytes) {
+        if (!conn || !conn.open) return;
+        bytes = new Uint8Array(bytes);
+        for (var pos = 0; pos < bytes.length || pos === 0; pos += CHUNK) {
+          var end = Math.min(bytes.length, pos + CHUNK), part = new Uint8Array(end - pos + 1);
+          part[0] = bytes.length <= CHUNK ? 0 : (end === bytes.length ? 2 : 1);
+          part.set(bytes.subarray(pos, end), 1);
+          conn.send(part.buffer);
+          if (end === bytes.length) break;
+        }
+      };
+      sock.close = function () { closed = true; sock.readyState = 3; if (timer) clearTimeout(timer); try { if (peer) peer.destroy(); } catch (e) {} };
+      function start() {
+        if (closed) return;
+        if (typeof Peer === "undefined") { setTimeout(start, 200); return; } // the library is still loading
+        peer = new Peer({ debug: 1 });
+        peer.on("open", function () {
+          conn = peer.connect("deckshot-" + room, { reliable: true, serialization: "raw" });
+          conn.on("open", function () { sock.readyState = 1; if (timer) clearTimeout(timer); if (sock.onopen) sock.onopen(); });
+          conn.on("data", function (data) {
+            var bytes = new Uint8Array(data), flag = bytes[0], body = bytes.subarray(1);
+            if (flag === 0) { if (sock.onmessage) sock.onmessage({ data: body }); return; }
+            parts.push(body);
+            if (flag === 2) {
+              var size = 0; parts.forEach(function (p) { size += p.length; });
+              var whole = new Uint8Array(size), at = 0;
+              parts.forEach(function (p) { whole.set(p, at); at += p.length; });
+              parts = [];
+              if (sock.onmessage) sock.onmessage({ data: whole });
+            }
+          });
+          conn.on("close", function () { fail(); });
+          conn.on("error", function () { fail(); });
+        });
+        peer.on("error", function (err) {
+          if (err.type === "peer-unavailable") fail("No game found for room " + room + ". The host has to press Invite and keep its bridge tab open.");
+          else if (sock.readyState !== 1) fail("Couldn't reach the matchmaking service. Ask the host for a tunnel link.");
+        });
+        timer = setTimeout(function () { fail("Couldn't connect directly to the host. Ask them for a tunnel link instead."); }, 20000);
+      }
+      start();
+      return sock;
+    }
     var LAN_PING = 204; // keeps the host from timing us out while this tab is in the background
 
     function lanReset(state, detail) {
@@ -179,7 +240,7 @@
       lanReset(1, "");
       lan.firstSeq = 1;
       if (!lanAvailable) { lan.state = 4; lan.detail = "This page can't join LAN games"; return; }
-      var ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/lan");
+      var ws = room ? rtcSocket() : new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/lan");
       ws.binaryType = "arraybuffer";
       ws.onopen = function () {
         lan.state = 2;
@@ -187,7 +248,7 @@
       };
       ws.onmessage = function (e) { lan.queue.push(new Uint8Array(e.data)); };
       ws.onclose = function () {
-        lan.detail = lan.state === 1 ? "Couldn't connect to the host at " + location.host : "Lost the connection to the host";
+        lan.detail = ws.detail || (lan.state === 1 ? "Couldn't connect to the host at " + location.host : "Lost the connection to the host");
         lan.state = 3;
         if (lan.ping) clearInterval(lan.ping);
       };
@@ -224,7 +285,7 @@
       var parts = line.split(" ");
       var cmd = parts[1];
       if (cmd === "info") {
-        if (!lan.ws) { lan.state = lanAvailable ? 0 : 4; lan.detail = lanAvailable ? location.host : "This page can't join LAN games"; }
+        if (!lan.ws) { lan.state = lanAvailable ? 0 : 4; lan.detail = room ? "room " + room : (lanAvailable ? location.host : "This page can't join LAN games"); }
       } else if (cmd === "open") {
         lanOpen();
       } else if (cmd === "sync") {

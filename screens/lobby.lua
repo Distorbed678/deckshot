@@ -1,5 +1,6 @@
 -- The lobby (Steam or LAN, whichever online/active.lua holds): members, how others can join
 -- (Steam: lobby code and invites; LAN: the host's address), chat, and the host's Start button.
+local platform = require "core.platform"
 local app = require "core.app"
 local ui = require "core.ui"
 local active = require "online.active"
@@ -400,6 +401,18 @@ function Lobby:drawLanInfo(session, rx, ry, rw, rh)
   end
   local tw = session.isHost and rw - 196 or rw - 40
   local tx = rx + 20
+  if session.isHost and not platform.web then
+    -- Hosts choose what the panel shows: joining on this network, or over the internet.
+    local half = (rw - 30) / 2
+    if ui.button("This network", rx + 10, ry + 8, half, 30, { font = app.fonts.small, color = not self.internet and ui.ACCENT or nil }) then
+      self.internet = false
+    end
+    if ui.button("Internet", rx + 20 + half, ry + 8, half, 30, { font = app.fonts.small, color = self.internet and ui.ACCENT or nil }) then
+      self.internet = true
+    end
+    ry, rh = ry + 34, rh - 34
+    if self.internet then return self:drawInternetInfo(session, rx, ry, rw, rh, copyButton) end
+  end
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.6)
   love.graphics.printf(session.isHost and "Your address on this network" or "Connected to the host at", tx, ry + 12, tw, "center")
@@ -407,14 +420,14 @@ function Lobby:drawLanInfo(session, rx, ry, rw, rh)
   ui.printFit(session.code or "?", app.fonts.big, tx, ry + 32, tw, "center")
   if not session.isHost then return end
 
-  copyButton("Copy Address", "addr", session.code or "", tx + 40, ry + 86, tw - 80)
+  copyButton("Copy Address", "addr", session.code or "", tx + 40, ry + 80, tw - 80)
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.6)
-  love.graphics.printf("Phones, tablets and browsers: scan the code or open", tx, ry + 132, tw, "center")
+  love.graphics.printf("Phones, tablets and browsers: scan the code or open", tx, ry + 118, tw, "center")
   if session.webDir() then
     love.graphics.setColor(0.55, 0.85, 1)
-    ui.printFit(session.url or "", app.fonts.title, tx, ry + 154, tw, "center")
-    copyButton("Copy Browser Link", "url", session.url or "", tx + 40, ry + 196, tw - 80)
+    ui.printFit(session.url or "", app.fonts.title, tx, ry + 138, tw, "center")
+    copyButton("Copy Browser Link", "url", session.url or "", tx + 40, ry + 176, tw - 80)
     if self.qrUrl ~= session.url then
       self.qrUrl = session.url
       self.qrM, self.qrN = require("core.qr").encode(session.url or "")
@@ -431,6 +444,94 @@ function Lobby:drawLanInfo(session, rx, ry, rw, rh)
   if #others > 0 then
     love.graphics.setColor(1, 1, 1, 0.35)
     ui.printFit("Other addresses of this computer: " .. table.concat(others, ", "), app.fonts.tiny, tx, ry + rh - 24, rw - 40, "center")
+  end
+end
+
+-- Friends who aren't on this network: a direct peer-to-peer link (through a bridge page in the
+-- host's browser) or a Cloudflare tunnel link. Both lead to the browser version of the game.
+function Lobby:drawInternetInfo(session, rx, ry, rw, rh, copyButton)
+  local Tunnel = require "online.tunnel"
+  Tunnel.update()
+  local tx, colW = rx + 16, rw - 196
+  local small = app.fonts.small
+  local function label(text, y, color)
+    love.graphics.setFont(small)
+    love.graphics.setColor(color or { 1, 1, 1, 0.6 })
+    love.graphics.printf(text, tx, y, colW, "left")
+  end
+  local function link(text, y)
+    love.graphics.setColor(0.55, 0.85, 1)
+    ui.printFit(text, app.fonts.med, tx, y, colW, "left")
+  end
+  if not session.webDir() then
+    love.graphics.setColor(ui.BAD)
+    love.graphics.setFont(small)
+    love.graphics.printf("The browser version's files weren't found, so internet invites can't work.", tx, ry + 60, rw - 32, "center")
+    return
+  end
+
+  -- Direct link
+  local y = ry + 10
+  local bridge = session.bridge
+  local alive = bridge and love.timer.getTime() - bridge.seen < 90
+  label("Direct link (fastest, works for most players)", y)
+  if not self.bridgeOpened and not alive then
+    if ui.button("Open the bridge in my browser", tx, y + 22, colW, 34, { font = small, color = { 0.4, 1, 0.5 } }) then
+      love.system.openURL(session.bridgeUrl)
+      self.bridgeOpened = true
+      self.qrPick = "direct"
+    end
+  else
+    link(session.inviteUrl or "", y + 22)
+    local status, color = "Waiting for the bridge page to open...", ui.GOLD
+    if alive and bridge.state == "ready" then
+      status, color = "Bridge ready (" .. bridge.peers .. " connected). Keep that browser tab open.", { 0.4, 1, 0.5 }
+    elseif alive then
+      status, color = "The bridge page reports a problem. Use the tunnel link.", ui.BAD
+    end
+    label(status, y + 46, color)
+    copyButton("Copy Link", "direct", session.inviteUrl or "", tx, y + 68, colW / 2 - 4)
+    if ui.button("Reopen bridge", tx + colW / 2 + 4, y + 68, colW / 2 - 4, 34, { font = small }) then
+      love.system.openURL(session.bridgeUrl)
+    end
+  end
+
+  -- Tunnel link
+  y = ry + 120
+  label("Tunnel link (slower, works for everyone)", y)
+  if not Tunnel.available() then
+    label("Not available on this computer.", y + 24, ui.BAD)
+  elseif Tunnel.state == "off" or Tunnel.state == "failed" then
+    local size = Tunnel.downloadSize()
+    if ui.button(size and ("Start a tunnel (downloads " .. size .. " MB once)") or "Start a tunnel", tx, y + 22, colW, 34, { font = small }) then
+      Tunnel.start(session.port)
+      self.qrPick = "tunnel"
+    end
+    if Tunnel.state == "failed" then label(Tunnel.error or "The tunnel failed.", y + 60, ui.BAD) end
+  elseif Tunnel.state == "downloading" then
+    label(("Downloading cloudflared... %d%%"):format((Tunnel.progress or 0) * 100), y + 28, ui.GOLD)
+  elseif Tunnel.state == "starting" then
+    label("Starting the tunnel...", y + 28, ui.GOLD)
+  else
+    link(Tunnel.url or "", y + 22)
+    copyButton("Copy Link", "tunnel", Tunnel.url or "", tx, y + 48, colW / 2 - 4)
+    if ui.button("Stop tunnel", tx + colW / 2 + 4, y + 48, colW / 2 - 4, 34, { font = small }) then Tunnel.stop() end
+  end
+
+  -- The QR code shows whichever link was started last (and is still there).
+  local url
+  if self.qrPick == "tunnel" and Tunnel.url then url = Tunnel.url
+  elseif self.bridgeOpened or alive then url = session.inviteUrl
+  elseif Tunnel.url then url = Tunnel.url end
+  if url then
+    if self.qrUrl ~= url then
+      self.qrUrl = url
+      self.qrM, self.qrN = require("core.qr").encode(url)
+    end
+    if self.qrM then require("core.qr").draw(self.qrM, self.qrN, rx + rw - 168, ry + 14, 152) end
+    love.graphics.setFont(app.fonts.tiny)
+    love.graphics.setColor(1, 1, 1, 0.5)
+    love.graphics.printf(url == Tunnel.url and "tunnel link" or "direct link", rx + rw - 168, ry + 170, 152, "center")
   end
 end
 

@@ -43,12 +43,12 @@ jobs:
           set -euo pipefail
           cd dist
           ./Deckshot-x86_64.AppImage --appimage-extract > /dev/null
-          for f in Deckshot.love libsteam_api.so luasteam.so web/index.html web/love.wasm web/game.data; do
+          for f in Deckshot.love libsteam_api.so luasteam.so web/index.html web/love.wasm web/game.data web/bridge.html web/peerjs.min.js; do
             test -s "squashfs-root/$f" || { echo "AppImage is missing $f"; exit 1; }
           done
           grep -q '^FUSE_PATH=' squashfs-root/AppRun
           files="$(unzip -Z1 Deckshot-windows-x64.zip)"
-          for f in Deckshot.exe steam_api64.dll luasteam.dll web/index.html web/love.wasm web/game.data; do
+          for f in Deckshot.exe steam_api64.dll luasteam.dll web/index.html web/love.wasm web/game.data web/bridge.html web/peerjs.min.js; do
             grep -qx "Deckshot/$f" <<< "$files" || { echo "Windows zip is missing $f"; exit 1; }
           done
           rm -rf squashfs-root

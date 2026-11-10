@@ -76,14 +76,16 @@ function Lan:drawWeb(busy)
   if self.webAvailable then
     love.graphics.setFont(app.fonts.med)
     love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.printf("This page comes from the game hosted at", x, y + 30, w, "center")
+    local byRoom = (self.webHost or ""):match("^room ")
+    love.graphics.printf(byRoom and "Joining a friend's game over the internet" or "This page comes from the game hosted at", x, y + 30, w, "center")
     love.graphics.setFont(app.fonts.big)
     love.graphics.setColor(1, 0.85, 0.4)
     love.graphics.printf(self.webHost or "?", x, y + 60, w, "center")
     if ui.button("Join Game", x + 170, y + 130, w - 340, 58, { disabled = busy, color = { 0.4, 1, 0.5 } }) then
       self:join()
     end
-    note("The host has to be in its lobby (not in a match) for you to join.", y + 210, 0.45, x, w)
+    note(byRoom and "The host has to be in its lobby, with its bridge tab open, for you to join."
+      or "The host has to be in its lobby (not in a match) for you to join.", y + 210, 0.45, x, w)
   else
     love.graphics.setFont(app.fonts.title)
     love.graphics.setColor(1, 0.6, 0.45)

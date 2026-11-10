@@ -243,6 +243,7 @@ if not platform.web then
 end
 
 function love.quit()
+  if not platform.web then require("online.tunnel").stop() end
   session.leave()
   lan.leave()
   steam.shutdown()

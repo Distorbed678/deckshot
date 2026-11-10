@@ -3,9 +3,14 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.6.0",
+  VERSION = "0.6.1",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Play with friends anywhere, for free: the LAN lobby has an Internet tab with two kinds of invite link.",
+    "Direct link: friends open the game's web page with your room code and connect to you peer-to-peer.",
+    "Tunnel link: one button sets up a Cloudflare tunnel for you (a one-time download), for connections the direct link can't reach.",
+    "Invite links take friends straight to the join screen.",
+    "Fixed: the Video settings tab scrolls, so its options no longer run under the Back button.",
     "A whole new deck: 116 new cards, built around one strong upside and a small cost, with many more block cards.",
     "50 new maps: clean arenas, moving platforms, breakable lattices, hanging structures, stacked towers and hazard rooms.",
     "Ramps: blocks can be sloped (Edit Object > Ramp). You never slide on them, and ten of the new maps are built around them.",

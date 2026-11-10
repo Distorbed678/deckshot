@@ -55,6 +55,7 @@ function Screen:close()
 end
 
 function Screen:wheelmoved(_, dy)
+  if self.tab == 1 and self.videoScroll then ui.wheel(self.videoScroll, dy) end
   if self.tab == 3 and self.controlsScroll then ui.wheel(self.controlsScroll, dy) end
   if self.tab == 4 and self.scroll then ui.wheel(self.scroll, dy) end
 end
@@ -190,7 +191,9 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
   if not platform.web then
     d = ui.cycler("Check for updates", v.checkUpdates and "On" or "Off", rx, ry, colW, h)
     if d ~= 0 then v.checkUpdates = not v.checkUpdates end
+    ry = ry + gap
   end
+  return ry -- where the column ends, for the tab's scroll height
 end
 
 local function volumeText(v)
@@ -274,23 +277,35 @@ function Screen:drawVoice(x, y, w, h, gap)
 end
 
 -- Browser build: the page owns the window, so only the effects options apply.
-function Screen:drawVideoWeb(x, y, w)
+-- The Video tab scrolls: its right column is longer than the panel. The height is measured as
+-- it's drawn and used on the next frame.
+function Screen:beginVideoScroll(x, y, w, viewH)
+  self.videoScroll = self.videoScroll or { y = 0 }
+  return ui.beginScroll(self.videoScroll, x - 8, y, w + 16 - 8, viewH, (self.videoH or viewH) + 8)
+end
+
+function Screen:drawVideoWeb(x, y, w, viewH)
   local h, gap = 40, 46
   local colW = (w - 30) / 2
-  self:drawGraphics(x, y, colW, h, gap)
+  local top = self:beginVideoScroll(x, y, w, viewH)
+  y = top
+  self.videoH = self:drawGraphics(x, y, colW, h, gap) - top
   love.graphics.setFont(app.fonts.med)
   love.graphics.setColor(1, 1, 1, 0.6)
   love.graphics.printf("You're playing in the browser.\n\nUse the Fullscreen button under the game, or your " ..
     "browser's fullscreen (F11), for a bigger view. Window size, resolution and VSync are set by the browser.",
     x + colW + 30, y + 8, colW, "left")
+  ui.endScroll(self.videoScroll)
 end
 
-function Screen:drawVideo(x, y, w)
-  if platform.web then return self:drawVideoWeb(x, y, w) end
+function Screen:drawVideo(x, y, w, viewH)
+  if platform.web then return self:drawVideoWeb(x, y, w, viewH) end
   local v = Settings.values
   local h, gap = 40, 46
   local colW = (w - 30) / 2
   local d
+  local top = self:beginVideoScroll(x, y, w, viewH)
+  y = top
 
   -- Display (pending until Apply). Follow outside changes such as F11 while nothing is edited.
   if not self.displayEdited then self:syncDisplay() end
@@ -357,13 +372,15 @@ function Screen:drawVideo(x, y, w)
     self:applyDisplay()
   end
 
-  self:drawGraphics(x + colW + 30, y, colW, h, gap)
+  local rightEnd = self:drawGraphics(x + colW + 30, y, colW, h, gap)
 
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.45)
   love.graphics.printf("Window mode, monitor, resolution and VSync change when you press Apply. " ..
     "Unapplied changes are discarded on Back.",
     x, y + 6 * gap + 4, colW, "center")
+  self.videoH = math.max(rightEnd, y + 6 * gap + 4 + 44) - top
+  ui.endScroll(self.videoScroll)
 end
 
 ---------------------------------------------------------------- controls
@@ -647,7 +664,7 @@ function Screen:draw()
   local cx, cy, cw = px + 40, py + 134, pw - 80
   local viewH = ph - 134 - 76
   if self.tab == 1 then
-    self:drawVideo(cx, cy, cw)
+    self:drawVideo(cx, cy, cw, viewH)
   elseif self.tab == 2 then
     self:drawAudio(cx, cy, cw)
   elseif self.tab == 3 then

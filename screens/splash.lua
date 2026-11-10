@@ -31,6 +31,11 @@ function Splash:update(dt)
       self.done = true
       app.instant()
       app.switch(require("screens.menu").new())
+      -- Opened from an invite link (?room=CODE): go straight to the join screen.
+      if require("core.platform").web then
+        local ok, _, host = pcall(require("online.webbridge").info)
+        if ok and type(host) == "string" and host:match("^room ") then app.switch(require("screens.lan").new()) end
+      end
       app.fadeFrom(0.5)
     end
   end

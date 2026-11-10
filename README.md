@@ -146,11 +146,13 @@ Notes:
 
 Friends on other networks can join from any browser, with no port forwarding and nothing for them to install. Everyone needs the same version as the host.
 
-1. The host installs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and presses **Online Play → LAN → Host LAN Game**.
-2. The host runs `cloudflared tunnel --url http://localhost:27960` (use the port the lobby shows) and sends friends the `https://….trycloudflare.com` link it prints. The link changes every time.
-3. Friends open the link and choose **Online Play → LAN → Join Game**.
+The host presses **Online Play → LAN → Host LAN Game**, opens the **Internet** tab in the lobby and picks one of two free ways to invite people. Both give a link (and a QR code) that friends open in a browser.
 
-Traffic goes through Cloudflare, so expect more delay than on a real LAN. Browser players can't use voice chat.
+**Direct link (fastest).** Press **Open the bridge in my browser** and keep that tab open. Friends open `https://distorbed678.github.io/deckshot/play/?room=CODE` and press **Join Game**. Players connect to each other directly (WebRTC), so there is little extra delay. It works for most connections; a few strict routers and mobile networks can't connect this way.
+
+**Tunnel link (works for everyone).** Press **Start a tunnel**. The first time, the game downloads Cloudflare's `cloudflared` (40 to 55 MB, checked against its SHA-256) into its save folder; if you already have `cloudflared` installed, that one is used. Friends open the `https://….trycloudflare.com` link and choose **Online Play → LAN → Join Game**. The link changes every time, and the tunnel stops when you leave the lobby.
+
+Tunnel traffic goes through Cloudflare, so expect more delay than on a real LAN. The direct link relies on PeerJS's free public service to introduce players to each other. Browser players can't use voice chat.
 
 </details>
 
@@ -163,6 +165,7 @@ This project's source code is released under the [MIT License](LICENSE).
 Bundled third-party components keep their own licenses:
 - [LÖVE](https://love2d.org/) (included in the packaged builds) is under the zlib license.
 - [luasteam](https://github.com/uspgamedev/luasteam) is under the MIT license.
+- [PeerJS](https://peerjs.com/) (`web/peerjs.min.js`, used for the direct internet link) is under the MIT license.
 - The Steamworks API libraries (`steam_api64.dll`, `libsteam_api.so`) are Valve redistributables covered by the [Steamworks SDK Access Agreement](https://partner.steamgames.com/documentation/sdk_access_agreement).
 
 ROUNDS is a trademark of Landfall Games. This is an unofficial fan project.
