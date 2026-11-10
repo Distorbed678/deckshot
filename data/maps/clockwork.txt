@@ -15,4 +15,4 @@ obj block h=18 id=6 material=metal parent=4 w=120 x=886 y=441
 obj arm count=2 id=7 length=120 spin=-1.8 x=768 y=330
 obj saw damage=25 id=8 parent=7 r=24 x=888 y=330
 obj saw damage=25 id=9 parent=7 r=24 x=648 y=330
-oneway 660 580 216 14
+oneway 660 588 216 14

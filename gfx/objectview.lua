@@ -172,25 +172,28 @@ local function drawFlame(o)
   g.pop()
 end
 
+local ropeRun = {} -- reused every frame (no tables built while drawing)
 local function drawRope(o)
   if not o.alive then return end
   white()
   local pts = o.pts
+  local run, n = ropeRun, 0
   if pts and #pts >= 2 then
-    local run = {}
-    local function flush()
-      Assets.strip("rope", run, 5, 16)
-      run = {}
-    end
     for _, p in ipairs(pts) do
-      if p[3] then flush() end
-      run[#run + 1] = p[1]
-      run[#run + 1] = p[2]
+      if p[3] and n > 0 then
+        for i = #run, n + 1, -1 do run[i] = nil end
+        Assets.strip("rope", run, 5, 16)
+        n = 0
+      end
+      run[n + 1], run[n + 2] = p[1], p[2]
+      n = n + 2
     end
-    flush()
   else
-    Assets.strip("rope", { o.x, o.y, o.x2 or o.x, o.y2 or o.y }, 5, 16)
+    run[1], run[2], run[3], run[4] = o.x, o.y, o.x2 or o.x, o.y2 or o.y
+    n = 4
   end
+  for i = #run, n + 1, -1 do run[i] = nil end
+  Assets.strip("rope", run, 5, 16)
   if not o.heldFrom then
     white()
     Assets.center("bolt_steel", o.x, o.y, 12, 12)

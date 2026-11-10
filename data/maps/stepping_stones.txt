@@ -13,6 +13,6 @@ obj block back=5 crumble=true delay=0.8 h=18 id=3 material=stone w=132 x=522 y=5
 obj block back=5 crumble=true delay=0.8 h=18 id=4 material=stone w=132 x=702 y=600
 obj block back=5 crumble=true delay=0.8 h=18 id=5 material=stone w=132 x=882 y=530
 obj block back=5 crumble=true delay=0.8 h=18 id=6 material=stone w=132 x=1062 y=600
-oneway 400 360 180 14
-oneway 956 360 180 14
+oneway 400 364 180 14
+oneway 956 364 180 14
 oneway 672 250 192 14

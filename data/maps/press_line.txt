@@ -11,7 +11,7 @@ obj crusher damage=60 h=60 id=1 phase=0 travel=540 w=120 wait=2 x=432 y=132
 obj crusher damage=60 h=60 id=2 phase=0.9 travel=540 w=120 wait=2 x=708 y=132
 obj crusher damage=60 h=60 id=3 phase=1.8 travel=540 w=120 wait=2 x=984 y=132
 obj block conveyor=true h=20 id=4 material=metal speed=110 w=720 x=408 y=736
-oneway 144 560 150 14
-oneway 1242 560 150 14
-oneway 580 420 110 14
-oneway 846 420 110 14
+oneway 144 568 150 14
+oneway 1242 568 150 14
+oneway 580 600 110 14
+oneway 846 600 110 14

@@ -10,8 +10,8 @@ rect 1110 700 330 164
 obj fan dir=up force=3600 h=644 id=1 w=240 x=648 y=220
 obj fan dir=right force=2600 h=110 id=2 w=400 x=100 y=250
 obj fan dir=left force=2600 h=110 id=3 w=400 x=1036 y=250
-oneway 450 500 170 14
-oneway 916 500 170 14
+oneway 450 532 170 14
+oneway 916 532 170 14
 obj block h=24 id=4 material=ice w=216 x=660 y=180
 oneway 170 480 170 14
 oneway 1196 480 170 14

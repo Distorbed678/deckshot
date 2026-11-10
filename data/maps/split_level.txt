@@ -14,4 +14,4 @@ obj block h=6 id=3 material=ice w=192 x=672 y=750
 oneway 648 500 240 14
 oneway 240 420 190 14
 oneway 1106 420 190 14
-oneway 672 300 192 14
+oneway 672 320 192 14

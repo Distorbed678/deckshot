@@ -480,6 +480,75 @@ function Match:newProxy(slot, name)
   }, Player)
 end
 
+-- Object positions over time on a client, in a small ring of reused entries.
+local OBJ_HISTORY = 8
+local function pushObjectState(o, t, x, y, rot, pts)
+  local h = o.hist
+  if not h then h = { n = 0 }; o.hist = h end
+  local last = h.n > 0 and h[(h.n - 1) % OBJ_HISTORY + 1] or nil
+  if not x then
+    if not last then return end
+    x, y, rot, pts = last.x, last.y, last.rot, last.pts
+  end
+  -- A jump (a new round) or a rope changing shape starts over instead of sliding there.
+  if last and ((x - last.x) ^ 2 + (y - last.y) ^ 2 > 22500 or (pts and last.pts and #pts ~= #last.pts)
+      or ((pts == nil) ~= (last.pts == nil))) then
+    h.n = 0
+    last = nil
+  end
+  h.n = h.n + 1
+  local e = h[(h.n - 1) % OBJ_HISTORY + 1]
+  if not e then e = {}; h[(h.n - 1) % OBJ_HISTORY + 1] = e end
+  e.t, e.x, e.y, e.rot, e.pts = t, x, y, rot, pts
+end
+
+-- Puts every object where it was at renderT (the moment other players are drawn at).
+local function lerpAngle(a, b, f) return a + ((b - a + math.pi) % (math.pi * 2) - math.pi) * f end
+function Match:interpolateObjects(renderT, dt)
+  local ease = math.min(1, dt * 22)
+  for _, o in ipairs(self.objViews or {}) do
+    local h = o.hist
+    if h and h.n > 0 then
+      -- For your own predicted player: eased towards the newest snapshot (see predictFrame).
+      local newest = h[(h.n - 1) % OBJ_HISTORY + 1]
+      if not o.predX or h.n == 1 then
+        o.predX, o.predY, o.predRot = newest.x, newest.y, newest.rot
+      else
+        o.predX, o.predY = o.predX + (newest.x - o.predX) * ease, o.predY + (newest.y - o.predY) * ease
+        if newest.rot and o.predRot then o.predRot = lerpAngle(o.predRot, newest.rot, ease) else o.predRot = newest.rot end
+      end
+      local count = math.min(h.n, OBJ_HISTORY)
+      local a, b
+      for k = h.n - count + 1, h.n do
+        local e = h[(k - 1) % OBJ_HISTORY + 1]
+        if e.t <= renderT then a = e else b = e break end
+      end
+      local f = 0
+      if a and b then f = (renderT - a.t) / math.max(0.001, b.t - a.t) end
+      a = a or b
+      b = b or a
+      o.x, o.y = a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f
+      if a.rot and b.rot then o.rot = lerpAngle(a.rot, b.rot, f) else o.rot = b.rot end
+      if b.pts then
+        local out = o.drawPts
+        if not out then out = {}; o.drawPts = out end
+        local pa, pb = a.pts or b.pts, b.pts
+        if #pa ~= #pb then pa = pb end
+        for k = 1, #pb do
+          local q = out[k]
+          if not q then q = {}; out[k] = q end
+          local p0, p1 = pa[k], pb[k]
+          q[1], q[2], q[3] = p0[1] + (p1[1] - p0[1]) * f, p0[2] + (p1[2] - p0[2]) * f, p1[3]
+        end
+        for k = #out, #pb + 1, -1 do out[k] = nil end
+        o.pts = out
+      else
+        o.pts = nil
+      end
+    end
+  end
+end
+
 function Match:applySnapshot(v)
   local now = love.timer.getTime()
   -- Unreliable packets can arrive out of order: an older snapshot would drag everything back.
@@ -591,16 +660,14 @@ function Match:applySnapshot(v)
     local o = self.objViews[i]
     if o and not ov.same then
       o.alive, o.s, o.anchored = ov.alive, ov.s, ov.anchored or nil
-      if ov.rot then
-        -- Loose objects ease towards each snapshot, unless they've jumped (a new round).
-        if not o.rot or (ov.x - o.x) ^ 2 + (ov.y - o.y) ^ 2 > 22500 then o.x, o.y, o.rot = ov.x, ov.y, ov.rot end
-        o.tx, o.ty, o.trot = ov.x, ov.y, ov.rot
-      else
-        o.x, o.y, o.rot, o.tx = ov.x, ov.y, nil, nil
-      end
-      if o.type == "rope" then o.pts = ov.pts else o.a = ov.a end
+      -- Where it is goes into a timed history, drawn at the same moment as the other players
+      -- (Match:interpolateObjects), so things that move stay in step with whoever rides them.
+      pushObjectState(o, stamp, ov.x, ov.y, ov.rot, o.type == "rope" and ov.pts or nil)
+      if o.type ~= "rope" then o.a = ov.a end
       o.burning = ov.burning or nil
       if o.maxHp then o.hp = ov.hp * o.maxHp end
+    elseif o and o.hist then
+      pushObjectState(o, stamp) -- unchanged: it stayed where it was
     end
   end
   view.effects = v.effects
@@ -733,9 +800,21 @@ end
 function Match:predictFrame(pr, dt, frozen)
   local w = pr.game
   w.physics.actors[1] = pr
+  -- Your own player lives in the present, so it collides with the newest positions we have,
+  -- not the slightly older ones everything is drawn at.
+  local objs = self.objViews or {}
+  for _, o in ipairs(objs) do
+    if o.predX then
+      o.drawX, o.drawY, o.drawRot = o.x, o.y, o.rot
+      o.x, o.y, o.rot = o.predX, o.predY, o.predRot
+    end
+  end
   pr:update(dt, frozen)
   Physics.step(w, dt)
   pr:afterStep(dt)
+  for _, o in ipairs(objs) do
+    if o.drawX then o.x, o.y, o.rot, o.drawX, o.drawY, o.drawRot = o.drawX, o.drawY, o.drawRot, nil, nil, nil end
+  end
 end
 
 function Match:predictStep(dt, frozen)
@@ -931,6 +1010,7 @@ function Match:clientInterpolate(dt)
   cur = cur + (target - cur) * math.min(1, dt * (target > cur and 8 or 0.6))
   self.interpDelay = cur
   local renderT = now - cur
+  self:interpolateObjects(renderT, dt)
   for i, p in ipairs(self.proxies) do
     local h = p.hist
     if i == self.mySlot and self.pred then
@@ -1423,6 +1503,7 @@ function Match:update(dt, isTop)
   elseif self.role == "host" then
     local me = self.world.players[1]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
+    self.myInput.typing = self.chatOpen or nil -- shows a "..." bubble over you (see drawBubbles)
     if not self.loading then self.world:update(dt) end
     self:syncPick(dt)
     if self.recording then self.recording.clock = self.recording.clock + dt end
@@ -1438,6 +1519,7 @@ function Match:update(dt, isTop)
     end
     local me = self.proxies[self.mySlot]
     Input.poll(self.myInput, suppressed, me.x, me.y, mx, my)
+    self.myInput.typing = self.chatOpen or nil -- goes to the host in INPUT
     self:syncPick(dt)
     -- Round-trip time, measured with PING / PONG and reported to the host in INPUT.
     self.pingTimer = (self.pingTimer or 0) - dt
@@ -1597,8 +1679,30 @@ end
 
 ---------------------------------------------------------------- chat
 -- Speech bubbles above whoever just said something.
+-- A "..." bubble over anyone typing in the chat (unless they're already saying something).
+local function drawTyping(p, said)
+  local typing = p.typing or (p.input and p.input.typing)
+  if not typing or p.dead or said then return end
+  local bw, h = 46, 24
+  local cx, top = p.x * Map.VIEW, (p.y - p.r - 62) * Map.VIEW - h
+  local bx = math.max(6, math.min(app.W - bw - 6, cx - bw / 2))
+  local by = math.max(4, top)
+  love.graphics.setColor(0.96, 0.96, 0.98, 0.9)
+  love.graphics.rectangle("fill", bx, by, bw, h, 8, 8)
+  love.graphics.polygon("fill", cx - 6, by + h - 1, cx + 6, by + h - 1, cx, by + h + 8)
+  local t = love.timer.getTime()
+  for i = 1, 3 do
+    local bounce = math.max(0, math.sin(t * 7 - i * 0.9)) * 3
+    love.graphics.setColor(0.1, 0.1, 0.13, 0.45 + 0.4 * bounce / 3)
+    love.graphics.circle("fill", bx + bw / 2 + (i - 2) * 11, by + h / 2 - bounce, 3.5)
+  end
+end
+
 function Match:drawBubbles(players)
   local dt = love.timer.getDelta()
+  if self.role ~= "local" then
+    for _, p in ipairs(players) do drawTyping(p, self.bubbles and self.bubbles[p.name]) end
+  end
   local font = app.fonts.small
   for name, b in pairs(self.bubbles or {}) do
     b.t = b.t - dt
@@ -1633,8 +1737,7 @@ function Match:drawChat(st)
   local session = active.get()
   local x, y, w = 16, app.H - 62, 430
   if self.chatOpen then
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle("fill", x - 8, y - 190, w + 16, 234, 8, 8)
+    ui.panel(x - 8, y - 190, w + 16, 234, 0.85)
     Chat.draw(x, y - 4, w, 11)
     if self.chatFresh then
       ui.text = ""
@@ -1664,9 +1767,6 @@ local TUTORIAL = {
   { id = "dash", text = "Dash", key = function(n, b) return n(b.dash) end, pad = "{b}", touch = "Dash button" },
   { id = "melee", text = "Melee: tap, or hold for a heavy hit", key = function(n, b) return n(b.melee) end, pad = "{x}", touch = "Melee button" },
   { id = "hit", text = "Land a shot on the dummy", key = function() return "" end, pad = "", touch = "" },
-  { id = "shove", text = "Walk into the crate and shove it. Most things in the arena are physical", key = function() return "Bullets and blasts move things too" end, pad = "Bullets and blasts move things too", touch = "Bullets and blasts move things too" },
-  { id = "rope", text = "Shoot the rope until it snaps. Ropes take a few hits", key = function() return "The crate hanging from it will drop" end, pad = "The crate hanging from it will drop", touch = "The crate hanging from it will drop" },
-  { id = "wall", text = "Break the brick wall", key = function() return "Look for cracks: damaged things are close to breaking" end, pad = "Look for cracks: damaged things are close to breaking", touch = "Look for cracks: damaged things are close to breaking" },
   { id = "cover", info = true, text = "Walls block blasts and presence effects", key = function() return "Their circles bend around cover, so stay behind something solid" end, pad = "Their circles bend around cover, so stay behind something solid", touch = "Their circles bend around cover, so stay behind something solid" },
   { id = "cards", info = true, text = "Lose a round and you pick a card", key = function() return "Cards stack. The more you lose, the stronger you get" end, pad = "Cards stack. The more you lose, the stronger you get", touch = "Cards stack. The more you lose, the stronger you get" },
 }
@@ -1713,12 +1813,6 @@ function Match:updateTutorial()
   elseif step.id == "fall" then
     if not me.onGround and me.fallJump then tu.fellOff = true end
     ok = tu.fellOff and not me.fallJump and not me.onGround and me.vy < 0
-  elseif step.id == "shove" then
-    local c = w.objects[1]
-    b.crateX = b.crateX or c.x
-    ok = c.alive and math.abs(c.x - b.crateX) > 40
-  elseif step.id == "rope" then ok = w.objects[2].rope == nil
-  elseif step.id == "wall" then ok = not w.objects[4].alive
   elseif step.info then ok = tu.nextPressed
   elseif step.id == "fire" then ok = (me.st.shots or 0) > b.shots
   elseif step.id == "block" then ok = (inp.blockCount or 0) > b.block
@@ -2669,7 +2763,7 @@ function Match:drawVotes(y)
       table.insert(text, World.VOTE_NAMES[v])
     end
   end
-  love.graphics.setFont(app.fonts.med)
+  love.graphics.setFont(app.fonts.small)
   if #text == 0 then
     love.graphics.setColor(1, 1, 1, 0.45)
     love.graphics.printf("No votes yet", 0, y, app.W, "center")
@@ -2772,12 +2866,12 @@ function Match:drawPodium(st)
     if a.score ~= b.score then return a.score > b.score end
     return (a.slot or a.id or 0) < (b.slot or b.id or 0)
   end)
-  local heights = { 130, 104, 84, 68 }
+  local heights = { 112, 92, 76, 64 }
   local order = { { 3, 1, 2, 4 }, { 2, 1, 3 }, { 1, 2 } }
   local slots = #ranked == 4 and order[1] or #ranked == 3 and order[2] or order[3]
   local colW = 180
   local x0 = (app.W - #slots * colW) / 2
-  local baseY = 312
+  local baseY = 318
   for i, rank in ipairs(slots) do
     local p = ranked[rank]
     if p then
@@ -2814,84 +2908,117 @@ function Match:drawPodium(st)
       end
       seen[c] = seen[c] + 1
     end
-    local parts = {}
-    for i, c in ipairs(names) do
-      if i > 14 then
-        parts[#parts + 1] = "+" .. (#names - 14) .. " more"
+    -- One line: as many cards as fit, then how many more.
+    local font = app.fonts.small
+    local maxW = app.W - 320
+    local text, shown = "Final build: ", 0
+    for k, c in ipairs(names) do
+      local part = c.name .. (seen[c] > 1 and (" x" .. seen[c]) or "")
+      local nextText = text .. (k > 1 and ", " or "") .. part
+      local rest = #names - k
+      if font:getWidth(nextText .. (rest > 0 and ("  +" .. rest .. " more") or "")) > maxW and shown > 0 then
+        text = text .. "  +" .. (#names - shown) .. " more"
         break
       end
-      parts[#parts + 1] = c.name .. (seen[c] > 1 and (" x" .. seen[c]) or "")
+      text, shown = nextText, k
     end
-    love.graphics.setFont(app.fonts.small)
-    love.graphics.setColor(1, 1, 1, 0.65)
-    love.graphics.printf("Final build: " .. table.concat(parts, ", "), 100, 322, app.W - 200, "center")
+    love.graphics.setFont(font)
+    love.graphics.setColor(1, 1, 1, 0.55)
+    love.graphics.printf(text, 160, baseY + 12, app.W - 320, "center")
   end
 end
 
 function Match:drawMatchOver(st)
-  love.graphics.setColor(0, 0, 0, 0.72)
+  love.graphics.setColor(0.04, 0.04, 0.06, 0.86)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local winner = st.winner
   if winner then
     love.graphics.setColor(winner.color)
-    ui.printFit((winner.name or "Player"):upper() .. " WINS!", app.fonts.huge, 80, 8, app.W - 160, "center")
+    ui.printFit((winner.name or "Player"):upper() .. " WINS!", app.fonts.huge, 80, 18, app.W - 160, "center")
   end
   self:drawPodium(st)
-  require("core.achievements").draw(500)
+  require("core.achievements").draw(app.H - 146) -- toasts in the bottom right corner
 
-  local x, w, h = app.W / 2 - 280, 560, 52
+  -- Two big choices on one row, everything else smaller underneath.
+  local gap = 16
+  local bigW, bigH, bigY = 320, 58, 380
+  local bigX = app.W / 2 - bigW - gap / 2
+  local smallY, smallH = 478, 42
   local nextScore = st.winScore + World.CONTINUE_ROUNDS
-  local continueText = "Continue  (+" .. World.CONTINUE_ROUNDS .. " rounds, first to " .. nextScore .. ")"
+  local continueText = "Continue"
+  local continueSub = "+" .. World.CONTINUE_ROUNDS .. " rounds, first to " .. nextScore
+
+  local function caption(text, cx, y, color)
+    love.graphics.setFont(app.fonts.small)
+    love.graphics.setColor(color or { 1, 1, 1, 0.55 })
+    love.graphics.printf(text, cx - bigW / 2, y, bigW, "center")
+  end
+  -- A row of equal small buttons, centred; returns which one was pressed.
+  local function smallRow(labels, colors)
+    local w = math.min(200, (bigW * 2 + gap - (#labels - 1) * 12) / #labels)
+    local x = app.W / 2 - (#labels * w + (#labels - 1) * 12) / 2
+    local pressed
+    for k, label in ipairs(labels) do
+      local disabled = label == "Replay saved"
+      if ui.button(label, x + (k - 1) * (w + 12), smallY, w, smallH,
+          { font = app.fonts.small, color = colors and colors[k], disabled = disabled }) then
+        pressed = label
+      end
+    end
+    return pressed
+  end
 
   if self.role == "client" and self.mySlot == 0 then
-    app.centered("You're watching - you'll play in the next match", app.fonts.med, 370, { 1, 1, 1, 0.7 })
-    if ui.button("Match Recap", x, 410, w, h) then self:openRecap() end
+    app.centered("You're watching - you'll play in the next match", app.fonts.med, bigY + 6, { 1, 1, 1, 0.7 })
+    if smallRow({ "Scoreboard", "Match Recap" }, { nil, ui.ACCENT }) == "Match Recap" then self:openRecap() end
     return
   end
+
+  local tally = World.tally(self:votes())
+  local function votesText(n)
+    if self.role == "local" then return nil end
+    return n == 0 and "no votes" or (n .. (n == 1 and " vote" or " votes"))
+  end
+
   if self.role == "client" then
     -- Players vote; the host sees the tally and decides.
     local mine = self:votes()[self.mySlot] or self.pendingVote
     local me = self:players()[self.mySlot]
-    local function voteButton(label, choice, y)
+    app.centered("Vote for what's next - the host decides", app.fonts.small, bigY - 28, { 1, 1, 1, 0.6 })
+    local function voteButton(label, choice, x)
       local chosen = mine == choice
-      if ui.button((chosen and "> " or "") .. label, x, y, w, h, { color = chosen and me and me.color or nil }) then
+      if ui.button((chosen and "> " or "") .. label, x, bigY, bigW, bigH, { color = chosen and me and me.color or nil }) then
         self.pendingVote = choice
         self.transport:send(self.hostPeer, net.encodeVote(choice), true)
       end
     end
-    app.centered("Vote for what's next - the host decides", app.fonts.med, 335, { 1, 1, 1, 0.7 })
-    voteButton(continueText, World.VOTE_CONTINUE, 370)
-    voteButton("New Match", World.VOTE_NEW, 432)
-    self:drawVotes(498)
-    if ui.button("Match Recap", x, 540, w, h) then self:openRecap() end
+    voteButton(continueText, World.VOTE_CONTINUE, bigX)
+    voteButton("New Match", World.VOTE_NEW, bigX + bigW + gap)
+    caption(continueSub .. "  -  " .. votesText(tally[World.VOTE_CONTINUE]), bigX + bigW / 2, bigY + bigH + 6)
+    caption(votesText(tally[World.VOTE_NEW]), bigX + bigW * 1.5 + gap, bigY + bigH + 6)
+    local pressed = smallRow({ "Scoreboard", "Match Recap" }, { nil, ui.ACCENT })
+    if pressed == "Scoreboard" then self.showScores = not self.showScores
+    elseif pressed == "Match Recap" then self:openRecap() end
     return
   end
   self.pendingVote = nil
 
-  local tally = World.tally(self:votes())
-  local function withVotes(label, n)
-    if self.role == "local" or n == 0 then return label end
-    return label .. "   -   " .. n .. (n == 1 and " vote" or " votes")
-  end
-  if ui.button(withVotes(continueText, tally[World.VOTE_CONTINUE]), x, 370, w, h) then
-    self.world:continueMatch()
-  end
-  if ui.button(withVotes("New Match", tally[World.VOTE_NEW]), x, 432, w, h) then self:newMatch() end
-  local third = (w - 20) / 3
-  if self.role == "host" then
-    if ui.button("Back to Lobby", x, 494, third, h) then self:backToLobby() end
-  else
-    if ui.button("Main Menu", x, 494, third, h) then app.switch(require("screens.menu").new()) end
-  end
-  if ui.button("Scoreboard", x + third + 10, 494, third, h) then self.showScores = not self.showScores end
-  if ui.button("Match Recap", x + (third + 10) * 2, 494, third, h, { color = ui.ACCENT }) then self:openRecap() end
-  if self.recording and not platform.web then
-    local label = self.replaySaved and "Replay saved" or "Save Replay"
-    if ui.button(label, x, 548, w, 40, { font = app.fonts.med, disabled = self.replaySaved }) then
-      self.replaySaved = Replay.save(self.recording, "Match") ~= nil
-    end
-  end
-  if self.role == "host" then self:drawVotes(568) end
+  if ui.button(continueText, bigX, bigY, bigW, bigH, { color = ui.ACCENT }) then self.world:continueMatch() end
+  if ui.button("New Match", bigX + bigW + gap, bigY, bigW, bigH) then self:newMatch() end
+  local cv, nv = votesText(tally[World.VOTE_CONTINUE]), votesText(tally[World.VOTE_NEW])
+  caption(continueSub .. (cv and ("  -  " .. cv) or ""), bigX + bigW / 2, bigY + bigH + 6)
+  if nv then caption(nv, bigX + bigW * 1.5 + gap, bigY + bigH + 6) end
+
+  local labels = { self.role == "host" and "Back to Lobby" or "Main Menu", "Scoreboard", "Match Recap" }
+  local colors = { nil, nil, ui.ACCENT }
+  if self.recording and not platform.web then labels[4] = self.replaySaved and "Replay saved" or "Save Replay" end
+  local pressed = smallRow(labels, colors)
+  if pressed == "Back to Lobby" then self:backToLobby()
+  elseif pressed == "Main Menu" then app.switch(require("screens.menu").new())
+  elseif pressed == "Scoreboard" then self.showScores = not self.showScores
+  elseif pressed == "Match Recap" then self:openRecap()
+  elseif pressed == "Save Replay" then self.replaySaved = Replay.save(self.recording, "Match") ~= nil end
+  if self.role == "host" then self:drawVotes(smallY + smallH + 22) end
 end
 
 function Match:openRecap()

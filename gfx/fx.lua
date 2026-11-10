@@ -178,22 +178,11 @@ function fx.number(x, y, amount, key, crit)
     drift = (love.math.random() - 0.5) * 30 })
 end
 
--- A small directional camera nudge (shooting recoil). Follows the shake setting.
-function fx.kick(dx, dy)
-  record({ 9, dx, dy })
-  fx.kickX = fx.kickX + dx * fx.shakeScale
-  fx.kickY = fx.kickY + dy * fx.shakeScale
-end
+-- The camera never shakes or kicks (removed in 0.6.2). These stay so callers and the
+-- event codes (3 shake, 9 kick) keep working; they do nothing and aren't recorded.
+function fx.kick() end
 
--- Current camera offset from shake and kicks.
-function fx.offset()
-  local sx, sy = fx.kickX, fx.kickY
-  if fx.shake > 0 then
-    sx = sx + (love.math.random() - 0.5) * fx.shake * 2
-    sy = sy + (love.math.random() - 0.5) * fx.shake * 2
-  end
-  return sx, sy
-end
+function fx.offset() return 0, 0 end
 
 function fx.setLosWorld(world)
   fx.losWorld = world
@@ -236,10 +225,7 @@ function fx.ring(x, y, radius, color)
   table.insert(fx.rings, { x = x, y = y, r = radius, life = 0.25, max = 0.25, color = color, reaches = fx.fan(x, y, radius) })
 end
 
-function fx.addShake(amount)
-  record({ 3, amount })
-  fx.shake = math.max(fx.shake, amount * fx.shakeScale)
-end
+function fx.addShake() end
 
 function fx.clear()
   record({ 4 })

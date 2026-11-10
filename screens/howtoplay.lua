@@ -30,7 +30,7 @@ local RULES = {
   { "Lose, then pick", "Everyone who lost the round picks an upgrade card. Cards are dealt face down: hover one to turn it over. Every card stacks, and cards work together: explosive bullets that bounce explode at every bounce." },
   { "Block", "Blocking stops bullets (they bounce back at the shooter), hazards and the arena edges. It has a cooldown, so time it." },
   { "Melee", "Tap for a quick light hit, hold to charge a heavy hit that lunges forward. If the other player blocks your melee, you're stunned: the harder the hit, the longer the stun." },
-  { "Movement", "Double jump and air dash are built in. Wall slide and wall jump; press down + jump to drop through thin platforms. Hold down in the air to fall faster." },
+  { "Movement", "Walk off a ledge and you can still jump once in mid-air. Air dash is built in. Wall slide and wall jump; press down + jump to drop through thin platforms." },
   { "King of the Hill", "An optional mode: stand alone in the moving zone to score, and first to the target wins the round. You respawn after a few seconds." },
   { "The arena", "The screen's left, right and bottom edges hurt and throw you back in; the top is open. Saws, spikes, lasers and fire hurt; crates, barrels and ropes break. When the round timer runs out, a red barrier closes in from every side." },
 }
@@ -70,7 +70,7 @@ function Screen:draw()
   elseif self.page == 2 then
     local function scheme(s)
       return {
-        { "Move", name(s.left) .. " / " .. name(s.right) }, { "Jump", name(s.up) .. " (hold for higher)" },
+        { "Move", name(s.left) .. " / " .. name(s.right) }, { "Jump", name(s.up) },
         { "Aim", "faces where you move; hold " .. name(s.up) .. " / " .. name(s.down) .. " to aim up / down" },
         { "Fire", name(s.fire) }, { "Block", name(s.block) }, { "Dash", name(s.dash) },
         { "Melee", name(s.melee) .. " (hold for heavy)" },
@@ -99,10 +99,10 @@ function Screen:draw()
     kv({ { "Move", name(o.left) .. " / " .. name(o.right) }, { "Jump", name(o.jump) .. " or " .. name(o.jump2) },
       { "Aim", "the mouse" }, { "Fire", name(o.fire) }, { "Block", name(o.block) },
       { "Dash", name(o.dash) .. " (toward the mouse, or the way you move)" }, { "Melee", name(o.melee) .. " (hold for heavy)" },
-      { "Fast fall / drop", name(o.down) .. "  (+ jump on a thin platform)" },
+      { "Drop through", name(o.down) .. " + jump on a thin platform" },
       { "Scoreboard", name(o.scoreboard) }, { "Chat", name(o.chat) }, { "Menu", "Esc" } }, x, y, w)
   elseif self.page == 4 then
-    kv({ { "Move", "{ls}  (down: fast fall / drop)" }, { "Aim", "{rs}" }, { "Fire", "{rt}" },
+    kv({ { "Move", "{ls}  (down + {a}: drop through)" }, { "Aim", "{rs}" }, { "Fire", "{rt}" },
       { "Block", "{lt}  or  {rb}" }, { "Jump", "{a}" }, { "Dash", "{b}  or  {lb}" },
       { "Melee", "{x}  (hold for heavy)" }, { "Discard a card", "{y}" }, { "Scoreboard", "{back}" }, { "Pause", "{start}" },
       { "Menus", "{dpad}  and  {a},  {b} to go back" } }, x, y, w)

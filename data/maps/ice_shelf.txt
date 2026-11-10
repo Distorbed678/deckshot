@@ -19,5 +19,5 @@ obj block h=18 hp=20 id=9 material=glass w=108 x=1092 y=640
 obj block h=30 id=10 material=ice w=180 x=420 y=450
 obj block h=30 id=11 material=ice w=180 x=936 y=450
 oneway 660 310 216 14
-oneway 170 440 150 14
-oneway 1216 440 150 14
+oneway 170 472 150 14
+oneway 1216 472 150 14

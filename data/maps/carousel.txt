@@ -9,6 +9,6 @@ rect 144 756 1248 48
 obj arm count=2 force=4 id=1 length=270 spin=0.7 x=768 y=430
 obj block h=18 id=2 material=metal parent=1 w=144 x=966 y=421
 obj block h=18 id=3 material=metal parent=1 w=144 x=426 y=421
-oneway 150 560 170 14
-oneway 1216 560 170 14
-oneway 684 180 168 14
+oneway 150 588 170 14
+oneway 1216 588 170 14
+oneway 684 256 168 14

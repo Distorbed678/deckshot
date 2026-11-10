@@ -934,20 +934,14 @@ function Objects.rebuildSolids(world)
   world.solids = solids
 end
 
--- Drawing lives in gfx/objectview.lua, except this easing of client positions.
--- Clients get positions at snapshot rate; this eases loose objects between them.
+-- Drawing lives in gfx/objectview.lua. On clients, positions are interpolated by
+-- Match:interpolateObjects; this only spins things whose spin is purely visual.
 function Objects.smooth(list, dt)
-  local k = math.min(1, dt * 22)
   for _, o in ipairs(list) do
     -- Purely visual spinning, so it needn't come over the network.
     if o.type == "saw" then o.a = (o.a + dt * 12) % (math.pi * 2)
     elseif o.type == "fan" then o.a = (o.a + dt * 20) % (math.pi * 2)
     elseif o.conveyor then o.a = (o.a + (o.speed or 0) * dt) % 20 end
-    if o.tx then
-      o.x, o.y = o.x + (o.tx - o.x) * k, o.y + (o.ty - o.y) * k
-      local diff = (o.trot - o.rot + math.pi) % (math.pi * 2) - math.pi
-      o.rot = o.rot + diff * k
-    end
   end
 end
 

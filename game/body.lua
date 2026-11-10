@@ -45,6 +45,7 @@ end
 function Body.update(p, dt)
   local b = p.body
   if not b or math.abs(p.x - b.lastX) + math.abs(p.y - b.lastY) > 260 then
+    if b and b.rig then b.rig.world:destroy() end -- a jump in position: start the limbs afresh
     reset(p)
     b = p.body
   end
@@ -142,6 +143,9 @@ function Body.update(p, dt)
     spring(l.knee, (hipX + f.x) / 2 + l.side * r * 0.42, (hipY + f.y) / 2 - r * 0.05, 240, 10, bvx, bvy, dt)
   end
   b.view = Limbs.update(p, b, dt)
+  -- A long reach (the card picker pointing at the chosen card) is further than the jointed
+  -- arm goes, so that arm follows the spring hand instead.
+  if p.armReach then b.view.gun, b.view.gunE = b.gun, b.gunE end
 end
 
 
@@ -281,6 +285,7 @@ end
 -- aimY, facing, hat, eyes, mouth, detail; optional gunTarget.
 function Body.drawFigure(f, dt)
   f.onGround = true
+  f.offWorld = true -- drawn on the interface, so its limbs don't touch the arena
   f.vx, f.vy = 0, 0
   Body.update(f, dt)
   Body.drawLegs(f, 1)

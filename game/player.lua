@@ -17,9 +17,9 @@ local MOVE = {
   airAccel = 3900, airDecel = 2600,
   overDecelGround = 2400, overDecelAir = 900, -- above max speed (knockback, dash, launches)
   lockAccel = 600,                            -- while knocked back
-  gravity = 2400, apexGravityMul = 0.5, apexThreshold = 90, fallGravityMul = 1.5,
-  maxFall = 900, fastFallMax = 1400, fastFallMul = 2,
-  jumpCut = 0.45, coyote = 0.1, jumpBuffer = 0.12,
+  gravity = 2400, apexGravityMul = 0.5, apexThreshold = 90, fallGravityMul = 1.2,
+  maxFall = 900,
+  coyote = 0.1, jumpBuffer = 0.12,
   wallSlide = 160, wallCoyote = 0.08,
   cornerCeiling = 8, cornerLedge = 6,
   dashTime = 0.14, dashKeep = 0.6, dropTime = 0.25,
@@ -196,7 +196,7 @@ function Player:spawn(x, y, facing, game)
   self.seenMelee = self.input.meleeCount or 0
   self.jumpWasHeld = self.input.jumpHeld
   self.jumpBuffer = 0
-  self.jumping = false       -- rising from our own jump (release cuts it short)
+  self.jumping = false       -- rising from our own jump
   self.wallCoyote, self.lastWallDir = 0, 0
   self.groundOneway = false  -- standing on a one-way platform
   self.dropTimer = 0         -- falling through one-way platforms
@@ -593,19 +593,15 @@ function Player:runPhysics(dt, dir, speed, acting)
   local effort = accel
   if self.pushing and self.pushing.mass then effort = accel / (1 + self.pushing.mass * 1.2) end
 
-  -- Gravity: light near the apex while jump is held, heavier when falling.
+  -- Gravity: light near the apex of a jump, a little heavier when falling. Every jump is a
+  -- full one, however briefly jump is pressed.
   local g = MOVE.gravity * s.gravityMul
-  if math.abs(self.vy) < MOVE.apexThreshold and inp.jumpHeld and acting then
+  if math.abs(self.vy) < MOVE.apexThreshold and not self.onGround and acting then
     g = g * MOVE.apexGravityMul
   elseif self.vy > 0 then
     g = g * MOVE.fallGravityMul
   end
   local maxFall = MOVE.maxFall
-  local fastFall = acting and inp.down and not self.onGround and self.vy > -MOVE.apexThreshold
-  if fastFall then
-    g = g * MOVE.fastFallMul
-    maxFall = MOVE.fastFallMax
-  end
   -- Gravity comes from the body's gravity scale; capping the fall speed just lowers the scale.
   local nextVy
   if self.vy < maxFall then
@@ -952,11 +948,8 @@ function Player:jumpPressed(fromBuffer)
   end
 end
 
--- Releasing jump early cuts the jump short (variable jump height).
-function Player:jumpReleased()
-  if not self.dead and self.jumping and self.vy < 0 then self.vy = self.vy * MOVE.jumpCut end
-  self.jumping = false
-end
+-- Releasing jump doesn't change the jump (there's no variable jump height).
+function Player:jumpReleased() end
 
 -- 8-way dash: held direction keys, else the aim (mouse / stick), else facing.
 function Player:dashPressed()

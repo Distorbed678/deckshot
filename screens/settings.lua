@@ -145,13 +145,6 @@ function Screen:drawGraphics(rx, ry, colW, h, gap)
   end
   ry = ry + gap
 
-  d = ui.cycler("Screen shake", Settings.SHAKE_LEVELS[v.shake][1], rx, ry, colW, h)
-  if d ~= 0 then
-    v.shake = cycle(v.shake, #Settings.SHAKE_LEVELS, d)
-    Settings.applyEffects()
-  end
-  ry = ry + gap
-
   d = ui.cycler("Particles", Settings.PARTICLE_LEVELS[v.particles][1], rx, ry, colW, h)
   if d ~= 0 then
     v.particles = cycle(v.particles, #Settings.PARTICLE_LEVELS, d)

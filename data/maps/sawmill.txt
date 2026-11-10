@@ -11,8 +11,8 @@ obj saw damage=25 id=2 parent=1 r=26 x=480 y=732
 obj arm count=2 id=3 length=150 spin=1.6 x=768 y=400
 obj saw damage=25 id=4 parent=3 r=26 x=918 y=400
 obj saw damage=25 id=5 parent=3 r=26 x=618 y=400
-oneway 230 570 220 14
-oneway 1086 570 220 14
-oneway 330 370 180 14
-oneway 1026 370 180 14
-oneway 684 180 168 14
+oneway 230 590 220 14
+oneway 1086 590 220 14
+oneway 330 422 180 14
+oneway 1026 422 180 14
+oneway 684 256 168 14

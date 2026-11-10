@@ -3,9 +3,19 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.6.1",
+  VERSION = "0.6.2",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Jumping: a tap is always a full jump, falling is less heavy, and holding down no longer makes you fall faster.",
+    "Platforms that were just out of reach on 22 maps have been moved so every one can be reached with a normal jump.",
+    "Ropes and everything they hold move smoothly on high refresh rate screens and online, and jitter less when you land on them.",
+    "Online: you no longer clip into platforms hanging from ropes.",
+    "Arms and legs no longer stretch out when they catch on the scenery.",
+    "Fixed: on the card pick screen, your character's arm reaches the card you're on again, and its legs no longer fold up.",
+    "A cleaner win screen.",
+    "Online: a typing bubble shows over anyone writing in the chat.",
+    "No more screen shake.",
+    "Fixed: chat messages showing up black, and the tutorial's last steps, which asked for things the arena no longer has.",
     "Play with friends anywhere, for free: the LAN lobby has an Internet tab with two kinds of invite link.",
     "Direct link: friends open the game's web page with your room code and connect to you peer-to-peer.",
     "Tunnel link: one button sets up a Cloudflare tunnel for you (a one-time download), for connections the direct link can't reach.",

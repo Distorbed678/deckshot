@@ -320,6 +320,8 @@ end
 
 local SEGMENT_LENGTH = 26
 local ROPE_MAX_SEGMENTS = 40
+-- Heavy enough that a player landing on what a rope holds doesn't make the light links jitter.
+local ROPE_DENSITY = 3
 
 -- A chain of small bodies joined end to end, with a rope joint between its ends so that heavy
 -- things can't stretch it. Ends tie to their object's body, or to the world.
@@ -340,7 +342,7 @@ local function addRope(ph, world, rope)
     body:setAngle(angle)
     body:setAngularDamping(1.5)
     body:setLinearDamping(0.15)
-    local f = P.newFixture(body, P.newRectangleShape(6, len), 0.5)
+    local f = P.newFixture(body, P.newRectangleShape(6, len), ROPE_DENSITY)
     f:setFriction(0.5)
     local seg = { body = body, fixture = f, hp = rope.segHp or 60, alive = true, len = len, index = i, rope = rope }
     f:setCategory(CAT_ROPE)
@@ -829,10 +831,24 @@ local function syncFixed(ph, dt)
   for i = #ph.fixed, 1, -1 do
     local o = ph.fixed[i]
     if ph.client then
-      o.body:setActive(o.alive == true and o.solid == true and not (o.crumble and o.s == 2))
+      local active = o.alive == true and o.solid == true and not (o.crumble and o.s == 2)
       local cx, cy = centre(o)
-      o.body:setPosition(cx, cy)
-      o.body:setAngle(o.rot or 0)
+      local bx, by = o.body:getPosition()
+      local rot = o.rot or 0
+      if not active or not o.body:isActive() or (cx - bx) ^ 2 + (cy - by) ^ 2 > 6400 then
+        -- Just appeared, or jumped (a new round): put it there.
+        o.body:setPosition(cx, cy)
+        o.body:setAngle(rot)
+        o.body:setLinearVelocity(0, 0)
+        o.body:setAngularVelocity(0)
+      else
+        -- Moving things move by velocity, so Box2D carries whoever stands on them and pushes
+        -- players aside instead of being teleported into them.
+        local da = (rot - o.body:getAngle() + math.pi) % (math.pi * 2) - math.pi
+        o.body:setLinearVelocity((cx - bx) / dt, (cy - by) / dt)
+        o.body:setAngularVelocity(da / dt)
+      end
+      o.body:setActive(active)
     elseif not o.alive then
       o.body:destroy()
       o.body, o.fixture = nil, nil

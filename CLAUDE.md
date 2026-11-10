@@ -103,7 +103,7 @@ The LÖVE runtimes and appimagetool are downloaded once into `build/cache/` (git
 - **Cards and maps are data files.** Change built-in ones by editing `data/cards|maps/*.txt` (or build them through the editors) and keep `order.txt` in step. Stat lines on cards are generated from `row`s (`Stats.describe`); notes describe abilities. New stats go in `Stats.LIST` (base value, group, display format).
 - Network ids that must only ever be appended to: `assets/sfx/sounds.txt`, `Objects.CODES`, fx event kinds (`gfx/fx.lua`), message kinds (`online/net.lua`).
 - The designer dislikes easy healing: keep heals small and earned (see memory).
-- **Bump `session.PROTOCOL`** whenever the wire format changes (currently `"12"`). Card and map lists are sent by the host, so reordering them no longer needs a bump. Peers with different versions refuse to join.
+- **Bump `session.PROTOCOL`** whenever the wire format changes (currently `"13"`). Card and map lists are sent by the host, so reordering them no longer needs a bump. Peers with different versions refuse to join.
 - **Every card must stack.** Card abilities in `BASE` (player.lua) are **counts of copies, never booleans** (0 = not owned; remember `0` is truthy in Lua, so test `> 0`). When extra copies don't simply add to a stat, give the card a `stack` line describing what they do; `hud.drawCard` shows it. Bullets keep boolean flags (`ghost`, `laser`, `mine`) for drawing and snapshots, with the copy count alongside (`ghostLevel`, `sticky`, `blackhole`, `splitsLeft`).
 - New gameplay effects must work with up to 4 players. Use `world:enemiesOf(p)` and `world:nearestEnemy(p, x, y)`, never assume a single opponent.
 - Rarity weights are whole percentages that always total 100; change them through `Settings.setWeight`.

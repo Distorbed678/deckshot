@@ -15,4 +15,4 @@ obj rail force=6 id=3 path=500,360;500,700 speed=120 x=500 y=360
 obj block h=20 id=4 material=metal parent=3 w=120 x=440 y=350
 obj rail force=6 id=5 path=1036,700;1036,360 speed=120 x=1036 y=700
 obj block h=20 id=6 material=metal parent=5 w=120 x=976 y=690
-oneway 684 180 168 14
+oneway 684 184 168 14

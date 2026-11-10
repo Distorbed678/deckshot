@@ -11,6 +11,6 @@ obj block h=96 id=1 material=stone slope=right w=96 x=432 y=660
 obj block h=96 id=2 material=stone slope=left w=96 x=1008 y=660
 oneway 228 560 180 14
 oneway 1128 560 180 14
-oneway 648 440 240 14
+oneway 648 460 240 14
 oneway 420 330 150 14
 oneway 966 330 150 14

@@ -8,15 +8,15 @@ spawn 1321 672
 rect 96 720 156 144
 rect 1284 720 156 144
 rect 696 770 144 94
-obj block h=16 id=1 material=wood physics=true w=168 x=396 y=300
-obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=404 x2=404 y=60 y2=300
-obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=556 x2=556 y=60 y2=300
-obj block h=16 id=4 material=wood physics=true w=168 x=972 y=300
-obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=980 x2=980 y=60 y2=300
-obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1132 x2=1132 y=60 y2=300
-obj block h=16 id=7 material=wood physics=true w=168 x=684 y=470
-obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=692 x2=692 y=60 y2=470
-obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=844 x2=844 y=60 y2=470
+obj block h=16 id=1 material=wood physics=true w=168 x=396 y=336
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=404 x2=404 y=60 y2=336
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=556 x2=556 y=60 y2=336
+obj block h=16 id=4 material=wood physics=true w=168 x=972 y=336
+obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=980 x2=980 y=60 y2=336
+obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1132 x2=1132 y=60 y2=336
+obj block h=16 id=7 material=wood physics=true w=168 x=684 y=474
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=692 x2=692 y=60 y2=474
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=844 x2=844 y=60 y2=474
 obj block h=16 id=10 material=wood physics=true w=168 x=280 y=610
 obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=288 x2=288 y=60 y2=610
 obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=440 x2=440 y=60 y2=610

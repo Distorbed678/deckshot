@@ -28,6 +28,6 @@ obj rope id=17 level=true segHp=60 slack=1.05 target=15 x=984 x2=984 y=100 y2=38
 obj block h=16 id=18 material=wood physics=true w=108 x=1000 y=380
 obj rope id=19 level=true segHp=60 slack=1.05 target=18 x=1008 x2=1008 y=100 y2=380
 obj rope id=20 level=true segHp=60 slack=1.05 target=18 x=1100 x2=1100 y=100 y2=380
-oneway 170 380 170 14
-oneway 1196 380 170 14
+oneway 170 392 170 14
+oneway 1196 392 170 14
 obj block drop=0.1 h=48 hp=60 id=21 material=crate onBreak=pickup physics=true w=48 x=744 y=708

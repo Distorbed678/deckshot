@@ -159,7 +159,7 @@ build_site() {
   rm -rf "$out"
   mkdir -p "$out/media" "$out/fonts"
   cp "$ROOT/site/index.html" "$out/index.html"
-  cp "$ROOT"/docs/media/{logo,card-pick,arena-1,arena-2,arena-3,recap,editor,cut-glass_cannon,cut-hydra,cut-black_hole}.png "$out/media/"
+  cp "$ROOT"/docs/media/{logo,card-pick,arena-1,arena-2,arena-3,recap,editor,cut-scattergun,cut-many_heads,cut-singularity_rounds}.png "$out/media/"
   cp "$ROOT/docs/media/gameplay.gif" "$out/media/"
   cp "$ROOT/assets/icon.png" "$out/media/icon.png"
   cp "$ROOT"/assets/fonts/*.ttf "$out/fonts/"

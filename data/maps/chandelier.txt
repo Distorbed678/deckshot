@@ -12,8 +12,8 @@ obj weight damage=60 id=3 physics=true r=30 x=768 y=250
 obj rope id=4 segHp=60 slack=1 target=3 x=768 y=60
 obj weight damage=60 id=5 physics=true r=26 x=1104 y=300
 obj rope id=6 segHp=60 slack=1 target=5 x=1104 y=60
-oneway 290 560 200 14
-oneway 1046 560 200 14
+oneway 290 588 200 14
+oneway 1046 588 200 14
 rect 660 470 216 24
-oneway 150 380 150 14
-oneway 1236 380 150 14
+oneway 150 420 150 14
+oneway 1236 420 150 14

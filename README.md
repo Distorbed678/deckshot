@@ -20,7 +20,7 @@
 
 ## Why you'll keep saying "one more round"
 
-- **149 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
+- **116 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
 - **Cards that really combine.** Explosive + Bouncy makes every bounce explode. Poison spreads through your blasts and shards. Nothing is scripted as a special pair.
 - **Losers get stronger.** Win 2 sub-rounds to take a point, then everyone else picks a card, so no match is over until it's over.
 - **Physics runs the whole game.** Crates tumble, walls topple, ropes sag and snap a segment at a time, and everything is simulated with Box2D. Shove cover around, cut something down onto your opponent, or hide behind a wall: blasts and presence cards can't reach through it.
@@ -87,7 +87,7 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
 - There's no double jump by default. If you walk or get knocked off an edge without jumping, you keep **one jump** to use any time during that fall. Air-jump cards add more.
-- Hold **down** in the air to fall faster; **down + jump** drops through thin platforms.
+- Every jump is a full jump, however briefly you press it. **Down + jump** drops through thin platforms.
 - **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online, and **V** (or clicking the right stick) is push-to-talk when voice chat is on. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
 - **Touch:** drag on the left half to move, drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
 - **Card picks:** left/right (or hover) to turn cards over and choose, fire (or click / A) to take, down to discard a card instead.

@@ -590,6 +590,43 @@ end
 function World:savePrevious()
   for _, p in ipairs(self.players) do p.prevX, p.prevY = p.x, p.y end
   for _, b in ipairs(self.bullets) do b.prevDrawX, b.prevDrawY = b.x, b.y end
+  -- Map objects and ropes too, so swinging things move as smoothly as players on fast screens.
+  for _, o in ipairs(self.objects or {}) do
+    o.prevX, o.prevY, o.prevRot = o.x, o.y, o.rot
+    local pts = o.pts
+    if pts then
+      local prev = o.prevPts
+      if not prev then prev = {}; o.prevPts = prev end
+      for k = 1, #pts do
+        local q = prev[k]
+        if not q then q = {}; prev[k] = q end
+        q[1], q[2], q[3] = pts[k][1], pts[k][2], pts[k][3]
+      end
+      for k = #prev, #pts + 1, -1 do prev[k] = nil end
+    end
+  end
+end
+
+-- Rope points drawn between the last two steps (kept in o.drawPts; the real ones stay put).
+local function blendPoints(o, k)
+  local pts, prev = o.pts, o.prevPts
+  if not pts or not prev or #prev ~= #pts then return end
+  local out = o.drawPts
+  if not out then out = {}; o.drawPts = out end
+  for i = 1, #pts do
+    local a, b = prev[i], pts[i]
+    local q = out[i]
+    if not q then q = {}; out[i] = q end
+    if a[3] ~= b[3] then
+      q[1], q[2] = b[1], b[2]
+    else
+      q[1], q[2] = a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k
+    end
+    q[3] = b[3]
+  end
+  for i = #out, #pts + 1, -1 do out[i] = nil end
+  o.simPts = pts
+  o.pts = out
 end
 
 -- Draw positions: everything moves back to where it was between the last two steps.
@@ -603,6 +640,15 @@ function World:beginDraw()
   end
   for _, p in ipairs(self.players) do shift(p, p.prevX, p.prevY) end
   for _, b in ipairs(self.bullets) do shift(b, b.prevDrawX, b.prevDrawY) end
+  for _, o in ipairs(self.objects or {}) do
+    if o.prevX and (o.prevX ~= o.x or o.prevY ~= o.y) then shift(o, o.prevX, o.prevY) end
+    if o.rot and o.prevRot then
+      o.simRot = o.rot
+      local diff = (o.rot - o.prevRot + math.pi) % (math.pi * 2) - math.pi
+      o.rot = o.prevRot + diff * k
+    end
+    blendPoints(o, k)
+  end
 end
 
 function World:endDraw()
@@ -611,6 +657,11 @@ function World:endDraw()
   end
   for _, p in ipairs(self.players) do restore(p) end
   for _, b in ipairs(self.bullets) do restore(b) end
+  for _, o in ipairs(self.objects or {}) do
+    restore(o)
+    if o.simRot then o.rot, o.simRot = o.simRot, nil end
+    if o.simPts then o.pts, o.simPts = o.simPts, nil end
+  end
 end
 
 function World:tick(dt)

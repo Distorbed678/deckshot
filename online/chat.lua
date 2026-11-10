@@ -115,6 +115,7 @@ function Chat.draw(x, y, w, maxLines, fadeAfter)
       love.graphics.setColor(1, 0.85, 0.4, a * 0.85)
       love.graphics.printf(l.text, x, cy, w, "left")
     else
+      love.graphics.setColor(1, 1, 1) -- coloured text is multiplied by the current colour
       love.graphics.printf({ { nameColor[1], nameColor[2], nameColor[3], a }, prefix, { 1, 1, 1, a * 0.95 }, l.text }, x, cy, w, "left")
     end
     drawn = drawn + #wrapped

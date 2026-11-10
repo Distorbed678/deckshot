@@ -12,8 +12,8 @@ obj laser damage=40 dir=down id=2 off=2.4 on=1 phase=0.7 physics=false warn=0.8 
 obj laser damage=40 dir=down id=3 off=2.4 on=1 phase=1.4 physics=false warn=0.8 x=768 y=118
 obj laser damage=40 dir=down id=4 off=2.4 on=1 phase=2.1 physics=false warn=0.8 x=960 y=118
 obj laser damage=40 dir=down id=5 off=2.4 on=1 phase=2.8 physics=false warn=0.8 x=1152 y=118
-oneway 290 560 180 14
-oneway 1066 560 180 14
+oneway 290 588 180 14
+oneway 1066 588 180 14
 oneway 678 560 180 14
-oneway 470 380 170 14
-oneway 896 380 170 14
+oneway 470 392 170 14
+oneway 896 392 170 14

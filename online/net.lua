@@ -47,7 +47,7 @@ end
 function net.encodeInput(s, seq)
   local flags = bit.bor(
     s.left and 1 or 0, s.right and 2 or 0, s.down and 4 or 0,
-    s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0, s.up and 64 or 0)
+    s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0, s.up and 64 or 0, s.typing and 128 or 0)
   return pack("string", "<BI4BfI4I4I4I4BH", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
     s.dashCount or 0, s.meleeCount or 0, math.max(0, math.min(255, s.pickHover or 0)),
     math.max(0, math.min(65535, math.floor(s.ping or 0))))
@@ -64,6 +64,7 @@ function net.decodeInput(data, s)
   s.fire = bit.band(flags, 8) ~= 0
   s.jumpHeld = bit.band(flags, 16) ~= 0
   s.meleeHeld = bit.band(flags, 32) ~= 0
+  s.typing = bit.band(flags, 128) ~= 0 or nil -- typing in the chat
   s.dashCount = dc
   s.meleeCount = mc
   s.aim = aim

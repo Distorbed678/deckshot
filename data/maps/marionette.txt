@@ -6,10 +6,10 @@ spawn 1216 708
 spawn 450 708
 spawn 1086 708
 rect 240 756 1056 48
-obj block h=18 id=1 material=wood physics=true w=144 x=330 y=570
-obj rope id=2 segHp=60 slack=1.02 target=1 x=402 x2=402 y=50 y2=570
-obj block h=18 id=3 material=wood physics=true w=144 x=1062 y=570
-obj rope id=4 segHp=60 slack=1.02 target=3 x=1134 x2=1134 y=50 y2=570
+obj block h=18 id=1 material=wood physics=true w=144 x=330 y=590
+obj rope id=2 segHp=60 slack=1.02 target=1 x=402 x2=402 y=50 y2=590
+obj block h=18 id=3 material=wood physics=true w=144 x=1062 y=590
+obj rope id=4 segHp=60 slack=1.02 target=3 x=1134 x2=1134 y=50 y2=590
 obj block h=18 id=5 material=wood physics=true w=144 x=570 y=440
 obj rope id=6 segHp=60 slack=1.02 target=5 x=642 x2=642 y=50 y2=440
 obj block h=18 id=7 material=wood physics=true w=144 x=822 y=440

@@ -20,25 +20,25 @@ local function addSegment(world, x0, y0, x1, y1, width)
   return body, len
 end
 
-local function addTerrain(rig)
+local function addTerrain(rig, map)
   local P = love.physics
   if rig.terrain then rig.terrain:destroy() end
   rig.terrain = P.newBody(rig.world, 0, 0, "static")
-  for _, r in ipairs(Limbs.map and Limbs.map.rects or {}) do
+  for _, r in ipairs(map and map.rects or {}) do
     if not r.oneway then
       local f = P.newFixture(rig.terrain, P.newRectangleShape(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h))
       f:setCategory(CAT_TERRAIN)
     end
   end
   -- Ramps (blocks with a slope) are part of the ground for ragdolls too.
-  for _, o in ipairs(Limbs.map and Limbs.map.objects or {}) do
+  for _, o in ipairs(map and map.objects or {}) do
     if o.type == "block" and (o.slope == "left" or o.slope == "right") and not o.physics and o.w and o.h and not o.rot then
       local high = o.slope == "right" and o.x + o.w or o.x
       local f = P.newFixture(rig.terrain, P.newPolygonShape(o.x, o.y + o.h, o.x + o.w, o.y + o.h, high, o.y))
       f:setCategory(CAT_TERRAIN)
     end
   end
-  rig.mapRef = Limbs.map
+  rig.mapRef = map
 end
 
 -- A limb from (ax, ay): upper part to the elbow or knee, lower part to the hand or foot.
@@ -65,7 +65,7 @@ local function newRig(p, b)
   local side = p.facing or 1
   local width = math.max(3, r * 0.2)
   local rig = { world = P.newWorld(0, 1800, true), legs = {}, view = { legs = {} } }
-  addTerrain(rig)
+  addTerrain(rig, not p.offWorld and Limbs.map or nil)
   rig.torso = P.newBody(rig.world, p.x, p.y, "kinematic")
   local tf = P.newFixture(rig.torso, P.newCircleShape(r))
   tf:setCategory(CAT_LIMB)
@@ -83,6 +83,28 @@ local function drive(limb, ax, ay, tx, ty, dt)
   local x, y = limb.anchor:getPosition()
   limb.anchor:setLinearVelocity((ax - x) / dt, (ay - y) / dt)
   if limb.pull then limb.pull:setTarget(tx, ty) end
+end
+
+-- Joints get pulled apart when a limb catches on the terrain or the body moves fast, which
+-- shows as a stretched arm or leg. Put each part back on the end of the one before it, keeping
+-- its angle and carrying the body's speed.
+local SLACK = 3
+local function placeSegment(body, len, x0, y0, vx, vy)
+  local a = body:getAngle()
+  body:setPosition(x0 + math.cos(a) * len / 2, y0 + math.sin(a) * len / 2)
+  body:setLinearVelocity(vx, vy)
+  body:setAngularVelocity(0)
+end
+
+local function repairLimb(limb, vx, vy)
+  local ax, ay, ux, uy = limb.top:getAnchors()
+  local ex, ey, lx, ly = limb.mid:getAnchors()
+  local topGap = (ax - ux) ^ 2 + (ay - uy) ^ 2
+  local midGap = (ex - lx) ^ 2 + (ey - ly) ^ 2
+  if topGap <= SLACK * SLACK and midGap <= SLACK * SLACK then return end
+  placeSegment(limb.upper, limb.upperLen, ax, ay, vx, vy)
+  local mx, my = limb.upper:getWorldPoint(limb.upperLen / 2, 0)
+  placeSegment(limb.lower, limb.lowerLen, mx, my, vx, vy)
 end
 
 local function readLimb(limb, into)
@@ -114,7 +136,8 @@ function Limbs.update(p, b, dt)
     rig = newRig(p, b)
     b.rig = rig
   end
-  if rig.mapRef ~= Limbs.map then addTerrain(rig) end
+  local map = not p.offWorld and Limbs.map or nil -- figures on the interface have no terrain
+  if rig.mapRef ~= map then addTerrain(rig, map) end
   dt = math.max(1 / 240, math.min(1 / 30, dt))
   local r, side = p.r, p.facing or 1
   local tx, ty = rig.torso:getPosition()
@@ -125,7 +148,11 @@ function Limbs.update(p, b, dt)
     local l = b.legs[i]
     drive(limb, p.x + l.side * r * 0.5, p.y + r * 0.62, l.foot.x, l.foot.y, dt)
   end
-  rig.world:update(dt, 6, 2)
+  rig.world:update(dt, 8, 3)
+  local vx, vy = rig.torso:getLinearVelocity()
+  repairLimb(rig.gun, vx, vy)
+  repairLimb(rig.off, vx, vy)
+  for _, limb in ipairs(rig.legs) do repairLimb(limb, vx, vy) end
   readRig(rig)
   return rig.view
 end
@@ -175,6 +202,11 @@ function Limbs.updateCorpses(dt)
       table.remove(Limbs.corpses, i)
     else
       c.rig.world:update(math.min(dt, 1 / 30), 6, 2)
+      local rig = c.rig
+      local vx, vy = rig.torso:getLinearVelocity()
+      repairLimb(rig.gun, vx, vy)
+      repairLimb(rig.off, vx, vy)
+      for _, limb in ipairs(rig.legs) do repairLimb(limb, vx, vy) end
     end
   end
 end

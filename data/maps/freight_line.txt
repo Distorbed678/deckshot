@@ -14,6 +14,6 @@ obj rail force=4 id=4 path=1056,460;480,460 speed=150 x=1056 y=460
 obj block h=20 id=5 material=metal parent=4 w=144 x=984 y=450
 oneway 150 440 170 14
 oneway 1216 440 170 14
-oneway 672 280 192 14
+oneway 672 284 192 14
 obj block drop=0.1 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=120 y=592
 obj block drop=0.1 h=48 hp=60 id=7 material=crate onBreak=pickup physics=true w=48 x=1368 y=592

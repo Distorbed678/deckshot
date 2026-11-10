@@ -128,7 +128,7 @@ function Snap.encode(world, events)
       u8(s.orbs), p.orbAngle or 0, u8(p.livesLeft), pending, u16(p.score),
       u8(s.stasis), (world.votes and world.votes[p.slot]) or 0, u8(p.shield), u8(s.sentry),
       bit.bor((p.stunTimer or 0) > 0 and 1 or 0, p.charging and 2 or 0, p.swingHeavy and 4 or 0,
-        (p.dashTimer or 0) > 0 and 8 or 0),
+        (p.dashTimer or 0) > 0 and 8 or 0, p.input and p.input.typing and 16 or 0),
       u8((p.meleeCharge or 0) * 100), u8((p.swingTimer or 0) * 800), u8((p.swingPower or 0) * 255),
       u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy),
       p.ack or 0, i16(p.vx), u8(p.jumpsLeft + (p.fallJump and 128 or 0)), u8(p.dashesLeft),
@@ -385,6 +385,7 @@ function Snap.decode(data)
     p.charging = bit.band(flags2, 2) ~= 0
     p.swingHeavy = bit.band(flags2, 4) ~= 0
     p.dashing = bit.band(flags2, 8) ~= 0
+    p.typing = bit.band(flags2, 16) ~= 0 or nil
     p.meleeCharge = p.meleeCharge / 100
     p.swingTimer = p.swingTimer / 800
     p.swingPower = p.swingPower / 255
