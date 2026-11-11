@@ -1,0 +1,7 @@
+deckshot-card 1
+name Moon
+rarity uncommon
+art moon orbit sky
+row add orbs 1
+note +a moon orbits you: it stops enemy bullets and hits for 10 on touch
+stack +1 moon per copy

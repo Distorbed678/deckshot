@@ -1,0 +1,8 @@
+deckshot-card 1
+name Magnet Mine
+rarity rare
+art magnet mine void
+row add magnetMine 1
+row add reloadTime 0.25
+note +bullets that hit walls stick there for 2s, pulling enemies in, then pop for 25
+stack +25 per copy

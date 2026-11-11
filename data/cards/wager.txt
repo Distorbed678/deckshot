@@ -1,0 +1,8 @@
+deckshot-card 1
+name Wager
+rarity uncommon
+art dice crown gold
+row add wager 1
+note -start each round at 70% HP
+note +your first kill each round gives +40% damage for the rest of it
+stack +40% per copy

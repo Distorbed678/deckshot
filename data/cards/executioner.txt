@@ -1,0 +1,8 @@
+deckshot-card 1
+name Executioner
+rarity legendary
+art axe skull blood
+row add meleeExecute 1
+row add meleeCooldown 0.1
+note +melee hits finish enemies below 25% HP
+stack +10% threshold per copy

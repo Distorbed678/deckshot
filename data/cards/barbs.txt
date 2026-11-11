@@ -1,0 +1,6 @@
+deckshot-card 1
+name Barbs
+rarity rare
+art thorns heart blood
+row add thorns 0.3
+note +30% of the damage you take is dealt back to whoever did it

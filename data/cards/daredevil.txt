@@ -1,0 +1,8 @@
+deckshot-card 1
+name Daredevil
+rarity uncommon
+art eye target fire
+row add daredevil 1
+row add reloadTime 0.25
+note +30% damage while an enemy is within 250 px
+stack +30% per copy

@@ -455,6 +455,7 @@ end
 
 function Objects.drawEffect(e)
   local t = love.timer.getTime()
+  if require("gfx.abilityview").drawEffect(e) then return end -- the v0.7 cards' effects
   if e.type == "pickup" then
     local a = (e.life or 8) < 2 and (math.floor(t * 10) % 2 == 0 and 0.4 or 1) or 1
     white(a)

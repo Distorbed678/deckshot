@@ -1,0 +1,11 @@
+deckshot-card 1
+name Annihilator
+rarity legendary
+art cannon burst fire
+row first mul bulletSize 3
+row first mul gunDamage 2.5
+row first add explosion 90
+row first add ammo -10
+row first add reloadTime 1
+row extra mul gunDamage 1.5
+note +bullets explode

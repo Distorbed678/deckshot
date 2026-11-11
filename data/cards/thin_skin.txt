@@ -1,0 +1,6 @@
+deckshot-card 1
+name Thin Skin
+rarity common
+art heart minus blood
+row mul gunDamage 1.2
+row add maxHp -20

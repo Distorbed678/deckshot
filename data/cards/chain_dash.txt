@@ -1,0 +1,8 @@
+deckshot-card 1
+name Chain Dash
+rarity rare
+art dash target volt
+row add chainDash 1
+row extra mul dashCooldown 0.8
+row add dashCooldown 0.1
+note +landing a shot refills your dash

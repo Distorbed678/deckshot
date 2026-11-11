@@ -1,0 +1,8 @@
+deckshot-card 1
+name Iron Jaw
+rarity rare
+art skull armor steel
+row add ironJaw 1
+row add meleeCooldown 0.1
+note +take 50% less damage while charging a heavy
+stack another 50% less per copy

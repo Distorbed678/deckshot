@@ -69,6 +69,7 @@ end
 -- rules: gameplay rules (see Cards.applyRules); defaults to Cards.rules.
 function World.new(defs, winScore, rules)
   local w = setmetatable({
+    isWorld = true, -- the real simulation (not a client's prediction stub)
     players = {}, bullets = {}, pending = {}, wells = {},
     state = "countdown", timer = 0,
     winScore = winScore,
@@ -708,6 +709,7 @@ function World:tick(dt)
     local sdt = (self.state == "roundOver") and dt * 0.35 or dt
     self.time = self.time + sdt
     Objects.update(self, sdt)
+    require("game.abilities").worldStep(self, sdt)
     for _, p in ipairs(self.players) do
       if p.isBot then Bot.update(p, self, sdt) end
     end

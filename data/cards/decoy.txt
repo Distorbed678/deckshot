@@ -1,0 +1,9 @@
+deckshot-card 1
+name Decoy
+rarity rare
+art ghost swap pink
+row add decoy 1
+row add dashCooldown 0.1
+note +dashing leaves a decoy for 2s that soaks enemy bullets
+note +it pops for 30 when an enemy touches it or time runs out
+stack +15 damage and +1s per copy

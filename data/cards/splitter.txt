@@ -1,0 +1,9 @@
+deckshot-card 1
+name Splitter
+rarity rare
+art fork bounce steel
+row add split 1
+row add bounces 1
+row add reloadTime 0.25
+note +bullets split in two when they bounce off a wall
+stack +1 more split per copy

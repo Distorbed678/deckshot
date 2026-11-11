@@ -611,6 +611,8 @@ function Match:applySnapshot(v)
     p.vote = pv.vote
     p.shield = pv.shield
     p.stillK = pv.stillK
+    p.typing = pv.typing
+    p.burning, p.shocked, p.frozen, p.bleeding, p.flipped = pv.burning, pv.shocked, pv.frozen, pv.bleeding, pv.flipped
     s.sentry = pv.sentry
     p.stunTimer = pv.stunned and 1 or 0
     p.charging, p.meleeCharge = pv.charging, pv.meleeCharge
@@ -632,6 +634,7 @@ function Match:applySnapshot(v)
     b.r = bv.r
     b.color = bv.colorIdx == 5 and Bullet.CRIT_COLOR or (World.COLORS[bv.colorIdx] or { 1, 1, 1 })
     b.ghost, b.mine, b.laser = bv.ghost, bv.mine, bv.laser
+    b.grenade, b.isBee, b.gravOrb, b.isGun = bv.grenade, bv.isBee, bv.gravOrb, bv.isGun
     b.trigger = bv.trigger
     b.armTime = bv.armed and 0 or 1
     if bv.laser then
@@ -712,6 +715,8 @@ function Match:applySnapshot(v)
       fx.explosion(e[2], e[3], e[4], e[5])
     elseif e[1] == 14 then
       fx.bolt(e[2], e[3])
+    elseif e[1] == 15 then
+      fx.arc(e[2], e[3], e[4], e[5])
     else
       fx.clear()
     end
@@ -848,6 +853,7 @@ function Match:reconcile(pv)
   pr.dashTimer, pr.dashCd = pv.dashT, pv.dashCd2
   if pr.dashTimer > 0 then pr.dashX, pr.dashY = pv.vx, pv.vy end
   pr.facing = pv.facing
+  pr.flipT = pv.flipped and 1 or 0 -- Upside Down changes which way you fall
   pr.slowTimer, pr.chillTimer = pv.slowed and 0.2 or 0, pv.chilled and 0.2 or 0 -- both change how fast you walk
   pr.blockTimer = pv.blocking and math.max(pr.blockTimer or 0, 0.05) or 0 -- blocking changes edge bounces
   local hist, keep = self.predHistory, {}

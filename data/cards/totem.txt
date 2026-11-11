@@ -1,0 +1,10 @@
+deckshot-card 1
+name Totem
+rarity rare
+art shrine clock gold
+block
+row add totem 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking plants a totem for 5s; you reload 50% faster near it
+stack +2s per copy

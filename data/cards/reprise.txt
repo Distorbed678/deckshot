@@ -1,0 +1,8 @@
+deckshot-card 1
+name Reprise
+rarity epic
+art x2 bullet pink
+row add reprise 1
+row add reloadTime 0.5
+note +every 4th shot fires again 0.2s later
+stack one shot sooner per copy (every 2nd at most)

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Air Ace
+rarity epic
+art wing dash sky
+row add dashes 2
+row add airAce 1
+row add dashCooldown 0.1
+note +a dash in mid-air gives your mid-air jump back

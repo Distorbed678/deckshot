@@ -1,0 +1,6 @@
+deckshot-card 1
+name Steady Aim
+rarity common
+art target plus steel
+row mul spread 0.5
+row mul gunDamage 1.1

@@ -17,7 +17,7 @@ function Player:drawGlow()
   if self:isBlocking() then
     love.graphics.setColor(1, 1, 1, 0.6)
     love.graphics.setLineWidth(4)
-    love.graphics.circle("line", self.x, self.y, self.r + 14)
+    love.graphics.circle("line", self.x, self.y, (self.r + 14) * ((self.stats and self.stats.blockSize) or 1))
   end
   if self.empowered then
     love.graphics.setColor(1, 0.9, 0.5, 0.8 * A)
@@ -96,11 +96,12 @@ function Player:draw()
   end
 
   if self:isBlocking() then
+    local br = (r + 14) * (s.blockSize or 1) -- Fortress: a bigger block
     love.graphics.setColor(1, 1, 1, 0.3)
-    Assets.center("dot", self.x, self.y, (r + 14) * 2, (r + 14) * 2)
+    Assets.center("dot", self.x, self.y, br * 2, br * 2)
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.setLineWidth(3)
-    love.graphics.circle("line", self.x, self.y, r + 14)
+    love.graphics.circle("line", self.x, self.y, br)
   end
 
   -- Shield Generator bubble
@@ -223,6 +224,7 @@ function Player:draw()
     self.eyes, self.mouth, self.detail)
   if A > 0.3 then Cosmetics.drawHat(self.x, by0 - r * 0.92 * sy, r, self.hat, c) end
   Body.drawArms(self, A)
+  require("gfx.abilityview").drawPlayer(self, A) -- statuses and drones from the v0.7 cards
 
   -- HP bar (pending Decay damage shown faded)
   local pending = 0
@@ -269,5 +271,17 @@ function Player:draw()
   end
 end
 
+
+-- Upside Down: the whole figure is drawn mirrored top to bottom while gravity is flipped.
+local drawUpright = Player.draw
+function Player:draw(...)
+  if not (self.flipped or (self.flipT or 0) > 0) or self.dead then return drawUpright(self, ...) end
+  love.graphics.push()
+  love.graphics.translate(self.x, self.y)
+  love.graphics.scale(1, -1)
+  love.graphics.translate(-self.x, -self.y)
+  drawUpright(self, ...)
+  love.graphics.pop()
+end
 
 return Player

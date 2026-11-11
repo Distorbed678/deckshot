@@ -1,0 +1,8 @@
+deckshot-card 1
+name Grapple
+rarity epic
+art hand lasso steel
+row add grapple 1
+row add meleeCooldown 0.1
+note +a heavy hit pulls the enemy to you and holds them for 0.6s
+stack +0.3s per copy

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Frostbite
+rarity rare
+art snow clock ice
+row add frostbite 1
+row add reloadTime 0.25
+note +an enemy slowed for 2s in a row freezes solid for 0.6s
+stack +0.3s per copy

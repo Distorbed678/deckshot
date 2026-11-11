@@ -1,0 +1,8 @@
+deckshot-card 1
+name Corrode
+rarity uncommon
+art drop x2 toxic
+row add corrode 1
+row add reloadTime 0.25
+note +poisoned enemies take +20% damage from you
+stack +20% per copy

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Cinders
+rarity uncommon
+art burst flame fire
+row add cinders 1
+row add reloadTime 0.25
+note +your explosions set enemies burning
+stack +1s of burning per copy

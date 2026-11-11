@@ -1,0 +1,10 @@
+deckshot-card 1
+name Field Turret
+rarity epic
+art turret shield steel
+block
+row add fieldTurret 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking deploys a turret for 8s (2 at most) that fires once a second with your bullet at 40%
+stack +1 turret out at once per copy

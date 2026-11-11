@@ -1,0 +1,8 @@
+deckshot-card 1
+name Graze
+rarity rare
+art feather bullets gold
+row add graze 1
+row add dashCooldown 0.1
+note +each enemy bullet that passes close during a dash gives you 1 ammo
+stack +1 ammo per bullet per copy

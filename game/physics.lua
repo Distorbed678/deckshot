@@ -555,15 +555,16 @@ end
 
 local function setHitbox(ph, rec, p)
   local blocking = p.isBlocking and p:isBlocking() or false
-  if rec.hitbox and rec.blocking == blocking then return end
+  local radius = blocking and (p.r + 14) * ((p.stats and p.stats.blockSize) or 1) or p.r -- Fortress: a bigger block
+  if rec.hitbox and rec.blocking == blocking and rec.hitR == radius then return end
   if rec.hitbox then rec.hitbox:destroy() end
   local P = love.physics
   -- The round body; bullets only ever touch this, and blocking widens it.
-  local f = P.newFixture(rec.body, P.newCircleShape(0, -p.leg / 2, p.r + (blocking and 14 or 0)), 0)
+  local f = P.newFixture(rec.body, P.newCircleShape(0, -p.leg / 2, radius), 0)
   f:setCategory(CAT_HITBOX)
   f:setMask(CAT_WORLD, CAT_SOLID, CAT_LOOSE, CAT_PLAYER, CAT_HITBOX)
   f:setUserData({ kind = "hitbox", p = p })
-  rec.hitbox, rec.blocking = f, blocking
+  rec.hitbox, rec.blocking, rec.hitR = f, blocking, radius
   if rec.body:getType() == "dynamic" then rec.body:setMass(Physics.PLAYER_MASS) end
 end
 
@@ -650,7 +651,9 @@ function Physics.pullPlayer(p)
         -- Box2D's contact list is from the start of the step, so a jump is still "touching" here.
         -- Judged along the surface's normal, so walking up a ramp still counts as standing on it.
         local surfaceVx, surfaceVy = other:getBody():getLinearVelocity()
-        local away = ny > -0.999 and ((p.vx - surfaceVx) * nx + (p.vy - surfaceVy) * ny) or (surfaceVy - p.vy)
+        local flip = (p.flipT or 0) > 0 -- Upside Down: you stand on ceilings
+        if flip then ny = -ny end
+        local away = ny > -0.999 and ((p.vx - surfaceVx) * nx + ((flip and -1 or 1) * (p.vy - surfaceVy)) * ny) or ((surfaceVy - p.vy) * (flip and -1 or 1))
         if ny < -GROUND_NORMAL and away <= 40 then
           if not p.onGround or ny < p.groundNy then p.groundNx, p.groundNy = nx, ny end
           p.onGround = true
@@ -693,6 +696,26 @@ local function probeFor(ph, w, h)
 end
 
 -- First solid overlapping the box, or nil. `exclude` is an object to ignore.
+-- A solid wall made by a card (Ice Wall): a static box centred on effect e. Bullets that hit it
+-- chip at e.hp (Bullet:onSolid). Removed with Physics.removeEffectWall, never in a callback.
+function Physics.addEffectWall(world, e, w, h)
+  local ph = world.physics
+  if not ph then return end
+  local P = love.physics
+  local body = P.newBody(ph.b2, e.x, e.y, "static")
+  local f = P.newFixture(body, P.newRectangleShape(w, h))
+  f:setFriction(0.7)
+  f:setCategory(CAT_WORLD)
+  e.w, e.h = w, h
+  f:setUserData({ solid = true, isEffectWall = true, effect = e }) -- its own data: e.kind is a colour slot
+  e.body = body
+end
+
+function Physics.removeEffectWall(world, e)
+  if e.body and not e.body:isDestroyed() then e.body:destroy() end
+  e.body = nil
+end
+
 function Physics.hit(world, x, y, w, h, exclude)
   local ph = world.physics
   if not ph then return nil end

@@ -869,7 +869,9 @@ function Objects.update(world, dt)
     e.life = e.life - dt
     if e.follow then e.x, e.y = e.follow.x, e.follow.y end
     if e.follow and e.follow.dead then e.life = 0 end
-    if e.type == "bomb" then
+    if require("game.abilities").updateEffect(world, e, dt) then
+      -- a card's effect in the arena (game/abilities.lua)
+    elseif e.type == "bomb" then
       if e.life <= 0 then explodeAt(world, e.x, e.y, e.radius, e.damage, e.owner, e.owner and e.owner.color, e.owner) end
     elseif e.type == "star" then
       if e.life <= 0 then

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Deflect Swing
+rarity uncommon
+art bat bounce steel
+row add deflectSwing 1
+row add meleeCooldown 0.1
+note +your swings knock enemy bullets back as your own
+stack +25% reflected damage per extra copy

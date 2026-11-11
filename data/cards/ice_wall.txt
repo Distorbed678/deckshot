@@ -1,0 +1,10 @@
+deckshot-card 1
+name Ice Wall
+rarity rare
+art wall snow ice
+block
+row add iceWall 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking raises a breakable ice wall (60 HP) in front of you for 4s
+stack +1s and +30 HP per copy

@@ -1,0 +1,5 @@
+deckshot-card 1
+name Heavy Hands
+rarity common
+art fist plus steel
+row mul heavyDamage 1.2

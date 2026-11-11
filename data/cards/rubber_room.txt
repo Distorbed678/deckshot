@@ -1,0 +1,9 @@
+deckshot-card 1
+name Rubber Room
+rarity legendary
+art bounce swirl pink
+row add rubberRoom 1
+row add reloadTime 0.5
+note +bullets keep bouncing for up to 6s until they hit someone
+note -each bounce costs 10% damage
+stack +3s per copy

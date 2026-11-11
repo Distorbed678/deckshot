@@ -1,0 +1,8 @@
+deckshot-card 1
+name Rebound
+rarity uncommon
+art uturn dash sky
+row add rebound 1
+row add dashCooldown 0.1
+note +dashing into a wall bounces you off it and refills your dash
+stack +20% bounce speed per copy

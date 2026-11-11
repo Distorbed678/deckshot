@@ -1,0 +1,9 @@
+deckshot-card 1
+name Super Ball
+rarity uncommon
+art bounce up pink
+row add superBall 1
+row add bounces 1
+row add reloadTime 0.25
+note +bullets get 15% faster each bounce
+stack +15% per copy

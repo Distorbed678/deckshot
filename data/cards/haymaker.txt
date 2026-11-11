@@ -1,0 +1,9 @@
+deckshot-card 1
+name Haymaker
+rarity epic
+art fist burst fire
+row add haymaker 1
+row add meleeCooldown 0.1
+note +a fully charged heavy deals x2.5 and throws the enemy
+note +if they hit a wall they take 30 more
+stack +30 wall damage per copy

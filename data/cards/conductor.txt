@@ -1,0 +1,8 @@
+deckshot-card 1
+name Conductor
+rarity rare
+art volt fork volt
+row add conductor 1
+row add reloadTime 0.25
+note +hitting a shocked enemy arcs 15 damage to another enemy within 200 px
+stack +1 arc per copy

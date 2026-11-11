@@ -1,0 +1,6 @@
+deckshot-card 1
+name Fortress
+rarity common
+art shield plus steel
+block
+row mul blockSize 1.25

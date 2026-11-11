@@ -1,0 +1,7 @@
+deckshot-card 1
+name Heavy Slug
+rarity uncommon
+art bullet weight steel
+row mul knockback 2
+row mul objectDamage 1.2
+row add reloadTime 0.25

@@ -1,0 +1,7 @@
+deckshot-card 1
+name Final Gambit
+rarity legendary
+art skull bomb fire
+row add finalGambit 1
+note +once per round, when you die you explode for 100 in 250 px
+stack +50 per copy

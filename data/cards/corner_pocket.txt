@@ -1,0 +1,9 @@
+deckshot-card 1
+name Corner Pocket
+rarity epic
+art bounce target gold
+row add cornerPocket 1
+row add bounces 2
+row add reloadTime 0.5
+note +bullets that have bounced twice deal triple damage
+stack +1x per copy

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Hemorrhage
+rarity epic
+art bullet drop blood
+row add hemorrhage 1
+note +shots deal +60% and pierce one enemy
+note -every shot costs 3 HP (it can't kill you)
+stack +30% per copy

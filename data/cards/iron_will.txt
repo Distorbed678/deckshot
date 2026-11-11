@@ -1,0 +1,7 @@
+deckshot-card 1
+name Iron Will
+rarity rare
+art armor heart steel
+row add ironWill 1
+note +no single hit can take more than 60% of your HP
+stack -10% cap per copy (30% at least)

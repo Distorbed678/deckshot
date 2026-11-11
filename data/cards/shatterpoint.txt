@@ -1,0 +1,8 @@
+deckshot-card 1
+name Shatterpoint
+rarity epic
+art snow burst ice
+row add shatterpoint 1
+row add reloadTime 0.25
+note +hitting a frozen enemy shatters the ice for +100% damage
+stack +50% per copy

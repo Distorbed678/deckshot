@@ -1,0 +1,10 @@
+deckshot-card 1
+name Counterweight
+rarity uncommon
+art shield dash sky
+block
+row add blockDash 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking refills your dash
+stack also +1 ammo per extra copy

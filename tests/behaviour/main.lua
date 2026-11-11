@@ -340,6 +340,7 @@ function love.load()
   end
   check("built-in maps are on the 24 px grid",#offGrid==0,table.concat(offGrid," "))
   check("wide grounds reach the bottom",#floating==0,table.concat(floating," "))
+  love.filesystem.load("cards.lua")()(check)
   local noStack={}
   for _,c in ipairs(Cards.list) do if not c.stack or c.stack=="" then noStack[#noStack+1]=c.name end end
   check("every card says how it stacks",#noStack==0,table.concat(noStack,", "))

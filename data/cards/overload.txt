@@ -1,0 +1,9 @@
+deckshot-card 1
+name Overload
+rarity legendary
+art star volt void
+row add overload 1
+row add reloadTime 0.5
+note +every 5th status you put on the same enemy sets off its burst:
+note +fire nova, 1s freeze, poison cloud or a chain shock
+stack one fewer needed per copy (2 at least)

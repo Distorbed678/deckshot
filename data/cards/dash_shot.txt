@@ -1,0 +1,8 @@
+deckshot-card 1
+name Dash Shot
+rarity uncommon
+art dash bullet fire
+row add dashShot 1
+row add dashCooldown 0.1
+note +dashing fires a free bullet the way you dash
+stack +1 bullet per copy

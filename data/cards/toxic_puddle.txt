@@ -1,0 +1,8 @@
+deckshot-card 1
+name Toxic Puddle
+rarity uncommon
+art drop down toxic
+row add toxicPuddle 1
+row add reloadTime 0.25
+note +enemies you poison leave poison puddles as they move
+stack +30% puddle size per copy

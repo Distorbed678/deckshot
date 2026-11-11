@@ -1,0 +1,10 @@
+deckshot-card 1
+name Static Guard
+rarity uncommon
+art shield volt volt
+block
+row add staticGuard 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking zaps the nearest enemy within 300 px for 20
+stack +1 enemy zapped per copy

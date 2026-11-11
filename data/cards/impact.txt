@@ -1,0 +1,8 @@
+deckshot-card 1
+name Impact
+rarity rare
+art ram dash steel
+row add impactDash 1
+row add dashCooldown 0.1
+note +dashing into an enemy knocks them back hard and stuns them for 0.3s
+stack +0.3s per copy

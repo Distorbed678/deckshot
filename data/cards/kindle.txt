@@ -1,0 +1,7 @@
+deckshot-card 1
+name Kindle
+rarity common
+art flame plus fire
+row add burnOnHit 1
+note +hits set enemies burning for 12 over 2s
+stack +12 per copy

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Sap
+rarity uncommon
+art leech minus toxic
+row add sap 1
+row add reloadTime 0.25
+note +hits weaken enemies: -20% damage for 2s
+stack +1s per copy

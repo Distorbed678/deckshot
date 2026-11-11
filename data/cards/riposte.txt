@@ -1,0 +1,8 @@
+deckshot-card 1
+name Riposte
+rarity rare
+art blade shield gold
+row add instantHeavy 1
+row add meleeCooldown 0.1
+note +after you parry a bullet or block a melee, your next melee within 1.5s is a full heavy at once
+stack +30% heavy damage per extra copy

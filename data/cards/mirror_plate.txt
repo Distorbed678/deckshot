@@ -1,0 +1,10 @@
+deckshot-card 1
+name Mirror Plate
+rarity epic
+art mirror shield steel
+block
+row add mirrorPlate 1
+row add blockCooldown 0.5
+row add maxHp 20
+note +every bullet you block also fires a copy at the nearest enemy
+stack +1 copy per bullet per copy

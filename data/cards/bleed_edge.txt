@@ -1,0 +1,8 @@
+deckshot-card 1
+name Bleed Edge
+rarity uncommon
+art blade drop blood
+row add bleed 1
+row add meleeCooldown 0.1
+note +melee hits bleed for 18 over 3s
+stack +18 per copy

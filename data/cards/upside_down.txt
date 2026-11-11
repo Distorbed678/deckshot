@@ -1,0 +1,11 @@
+deckshot-card 1
+name Upside Down
+rarity legendary
+art down swirl void
+block
+row add upsideDown 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking flips your gravity for 3s: you fall up and stand on ceilings
+note +bullets you fire while flipped fall upward
+stack +2s per copy

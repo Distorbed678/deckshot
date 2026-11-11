@@ -1,0 +1,8 @@
+deckshot-card 1
+name Boomerang
+rarity rare
+art uturn bullet gold
+row add boomerang 1
+row add reloadTime 0.25
+note +bullets fly back to you after 0.6s and can hit on the way back
+stack +1 more trip out per copy

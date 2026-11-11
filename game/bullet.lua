@@ -4,6 +4,11 @@ local fx = require("game.events").fx
 local sfx = require("game.events").sfx
 
 local Bullet = {}
+local abilitiesModule
+local function abilities()
+  abilitiesModule = abilitiesModule or require "game.abilities"
+  return abilitiesModule
+end
 Bullet.__index = Bullet
 
 local function objects() return require "game.objects" end
@@ -165,6 +170,10 @@ function Bullet:update(dt, game)
 
   self.age = self.age + dt
   self.life = self.life - dt
+  if game.effects then
+    abilities().bulletStep(self, dt, game)
+    if self.dead then return end
+  end
   if self.life <= 0 then
     self.dead = true
     return
@@ -292,6 +301,7 @@ end
 function Bullet:onSolid(game, solid, nx, ny)
   self.lastSolid = solid
   if solid.isObject then objects().bulletHitSolid(game, solid, self) end
+  if solid.isEffectWall then abilities().wallHit(solid.effect, self:currentDamage()) end
   if solid.material == "sticky" and not self.mine then self.bounces = math.min(self.bounces, 0) end -- nothing bounces off it
   self:bounce(game, math.atan2(ny, nx))
 end
@@ -413,6 +423,7 @@ function Bullet:bounce(game, normal)
     return false
   end
   if not self.laser then sfx.play("bounce", self.x, 0.5) end
+  if game.effects then abilities().bounced(self, game) end
   -- Explosive bullets explode whenever they hit something.
   if self.explosion > 0 and not self.mine then self:smallBlast(game) end
   if self.bounceDamage > 0 then self.damage = self.damage * (1 + self.bounceDamage) end
@@ -454,9 +465,10 @@ function Bullet:becomeMine()
 end
 
 -- Poison and frost go through everything a bullet makes: explosions, shards, Hydra heads.
-function Bullet:applyEffects(p, dmg)
+function Bullet:applyEffects(p, dmg, blast)
   if self.poison > 0 then p:poisonFor(dmg * self.poison, 3) end
   if self.frost > 0 then p.slowTimer = math.max(p.slowTimer, self.frost) end
+  if p.game then abilities().bulletEffects(self, p, dmg, blast) end
 end
 
 -- The smaller blast of an explosive bullet on each bounce and each player it pierces.
@@ -468,7 +480,7 @@ function Bullet:smallBlast(game)
   for _, p in ipairs(game.players) do
     if not p.dead and hurts(game, self.owner, p) and (p.x - self.x) ^ 2 + (p.y - self.y) ^ 2 < (r + p.r) ^ 2
         and Physics.canReach(game, self.x, self.y, p.x, p.y) then
-      if p:hit(dmg, p.x - self.x, p.y - self.y, 300, self.owner, "explosion") ~= false then self:applyEffects(p, dmg) end
+      if p:hit(dmg, p.x - self.x, p.y - self.y, 300, self.owner, "explosion") ~= false then self:applyEffects(p, dmg, true) end
     end
   end
 end
@@ -494,6 +506,7 @@ function Bullet:hitPlayer(p, game)
     fx.burst(self.x, self.y, { 1, 1, 1 }, 8, 200, 3)
     sfx.play("reflect", self.x)
     p:blocked()
+    abilities().blockedBullet(p, self, game, shooter)
     if not self.laser then
       local n = p.stats.reflect
       local ang = math.atan2(self.vy, self.vx)
@@ -513,6 +526,7 @@ function Bullet:hitPlayer(p, game)
   if self.phased and self.ghostLevel > 1 then dmg = dmg * extra(self.ghostLevel, 0.25) end
   if os.execute > 0 and p.hp < p.stats.maxHp * 0.35 then dmg = dmg * (1 + 0.5 * os.execute) end
   if os.combo > 0 and o.comboCount > 0 then dmg = dmg * (1 + 0.1 * os.combo * math.min(5, o.comboCount)) end
+  dmg = abilities().bulletDamage(self, p, dmg)
   local landed = p:hit(dmg, self.vx, self.vy, self.knockback, o, self.crit and "crit" or nil)
   if landed then
     if o.st then o.st.hits = o.st.hits + 1 end
@@ -559,6 +573,8 @@ function Bullet:hitPlayer(p, game)
     end
   end
 
+  if landed and abilities().bulletLanded(self, p, game) then return end -- Body Bounce carries on
+
   -- Piercing Rounds / Railgun: keep going through this player.
   if self.pierce > 0 then
     if self.explosion > 0 then self:smallBlast(game) end
@@ -573,6 +589,7 @@ end
 
 -- hitPlayer: the player this bullet just hit (shards don't hit them again).
 function Bullet:impact(game, hitPlayer)
+  if game.effects and game.enemiesOf then abilities().bulletImpact(self, game, hitPlayer) end
   if not self.isChild and game.effects and game.enemiesOf then
     if self.fuse > 0 then
       -- Fuse: a bomb that goes off half a second later.
@@ -629,7 +646,7 @@ function Bullet:explode(game, mult)
       local dx, dy = p.x - self.x, p.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
       if d < self.explosion + p.r and Physics.canReach(game, self.x, self.y, p.x, p.y) then
-        if p:hit(dmg, dx, dy, self.knockback * 1.5, self.owner) ~= false then self:applyEffects(p, dmg) end
+        if p:hit(dmg, dx, dy, self.knockback * 1.5, self.owner) ~= false then self:applyEffects(p, dmg, true) end
       end
     end
   end

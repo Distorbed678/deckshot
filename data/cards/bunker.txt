@@ -1,0 +1,11 @@
+deckshot-card 1
+name Bunker
+rarity rare
+art wall shield steel
+block
+row add bunker 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +hold block to keep it up for up to 1s
+note -you can barely walk while you hold it
+stack +0.5s per copy

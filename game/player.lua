@@ -7,6 +7,7 @@ local Triggers = require "game.triggers"
 local CardData = require "game.carddata"
 local Cosmetics = require "core.cosmetics"
 local Body = require "game.body"
+local Abilities = require "game.abilities"
 
 local Player = {}
 Player.__index = Player
@@ -231,6 +232,7 @@ function Player:spawn(x, y, facing, game)
   self.stillT, self.stillReady = 0, false
   self.flareT, self.auraT = 0, 0
   for _, inst in ipairs(self.triggerList or {}) do inst.ready, inst.t = 0, 0 end
+  Abilities.reset(self)
 end
 
 function Player:isBlocking()
@@ -263,8 +265,25 @@ function Player:update(dt, frozen)
   local s, game = self.stats, self.game
 
   self.fireTimer = math.max(0, self.fireTimer - dt)
+  -- Bunker: holding block keeps it up (for a while), but you can hardly walk.
+  self.bunkered = false
+  if (s.bunker or 0) > 0 and self.blockTimer > 0 and self.input and self.input.blockHeld then
+    self.bunkerT = (self.bunkerT or 0) + dt
+    if self.bunkerT < 1 + 0.5 * (s.bunker - 1) then
+      self.blockTimer = math.max(self.blockTimer, dt * 2)
+      self.bunkered = true
+    end
+  elseif self.blockTimer <= 0 then
+    self.bunkerT = 0
+  end
   self.blockTimer = math.max(0, self.blockTimer - dt)
   self.blockCd = math.max(0, self.blockCd - dt)
+  -- Spare Guard: the cooldown refills stored blocks one at a time.
+  local mostBlocks = 1 + (s.blockCharges or 0)
+  if self.blockStock and self.blockStock < mostBlocks and self.blockCd <= 0 then
+    self.blockStock = self.blockStock + 1
+    if self.blockStock < mostBlocks then self.blockCd = s.blockCooldown end
+  end
   self.controlLock = math.max(0, self.controlLock - dt)
   self.hitFlash = math.max(0, self.hitFlash - dt)
   self.shotT = math.max(0, (self.shotT or 0) - dt)
@@ -283,10 +302,14 @@ function Player:update(dt, frozen)
     if self.comboTimer <= 0 then self.comboCount = 0 end
   end
   self.sinceShot = self.sinceShot + dt
+  if game.isWorld then
+    Abilities.update(self, dt)
+    if self.dead then return end
+  end
 
   -- Reload when empty, or top up after a short pause in firing.
   if self.reloadTimer > 0 then
-    self.reloadTimer = self.reloadTimer - dt
+    self.reloadTimer = self.reloadTimer - dt * (game.isWorld and Abilities.reloadRate(self) or 1)
     if self.reloadTimer <= 0 then
       self.reloadTimer = 0
       self.ammo = s.ammo
@@ -361,6 +384,12 @@ function Player:update(dt, frozen)
       self.seenMelee = inp.meleeCount or 0
       if self.meleeCd <= 0 and not self.charging and self.lungeTimer <= 0 then
         self.charging, self.meleeCharge = true, 0
+        -- Riposte: right after a parry or a blocked melee, the next swing is a full heavy at once.
+        if (s.instantHeavy or 0) > 0 and (self.riposteTimer or 0) > 0 then
+          self.meleeCharge = MELEE.lightThreshold + s.heavyCharge
+          self.riposteHeavy, self.riposteTimer = 1, 0
+          self:meleeRelease()
+        end
       end
     end
     if self.jumpWasHeld and not inp.jumpHeld then self:jumpReleased() end
@@ -370,6 +399,7 @@ function Player:update(dt, frozen)
   if acting then
     if self.roundStartPending then
       self.roundStartPending = false
+      Abilities.roundStart(self)
       self:trigger("roundStart")
     end
     for _, inst in ipairs(self.triggerList or {}) do
@@ -416,6 +446,7 @@ function Player:update(dt, frozen)
   if self.charging and self.meleeCharge > MELEE.lightThreshold then speed = speed * MELEE.chargeSpeedMul end
   if (self.boostSpeedTimer or 0) > 0 then speed = speed * (1 + self.boostSpeed) end
   if (self.chillTimer or 0) > 0 then speed = speed * 0.75 end -- inside an enemy's Cold Aura
+  speed = Abilities.moveSpeed(self, speed)
   if s.pursuit > 0 and dir ~= 0 and game.nearestEnemy then
     -- Pursuit: faster while you're closing in on the nearest enemy.
     local e = game:nearestEnemy(self, self.x, self.y)
@@ -494,6 +525,12 @@ function Player:afterStep(dt)
   local s, game, inp = self.stats, self.game, self.input
   local acting, frozen, wasGround, fallSpeed = st.acting, st.frozen, st.wasGround, st.fallSpeed
   Physics.pullPlayer(self)
+  -- Upside Down: the open top of the arena works as a ceiling to stand on, so nobody falls out.
+  if (self.flipT or 0) > 0 and self.y - self.r < 0 then
+    self.y = self.r
+    if self.vy < 0 then self.vy = 0 end
+    self.onGround = true
+  end
   self:checkEdges()
   if self.dead then return end
 
@@ -621,24 +658,28 @@ function Player:runPhysics(dt, dir, speed, acting)
 
   -- Gravity: light near the apex of a jump, a little heavier when falling. Every jump is a
   -- full one, however briefly jump is pressed.
+  -- Upside Down: everything below works in a flipped frame (vy measured upwards).
+  local flip = (self.flipT or 0) > 0 and -1 or 1
+  local vy = self.vy * flip
   local g = MOVE.gravity * s.gravityMul
-  if math.abs(self.vy) < MOVE.apexThreshold and not self.onGround and acting then
+  if math.abs(vy) < MOVE.apexThreshold and not self.onGround and acting then
     g = g * MOVE.apexGravityMul
-  elseif self.vy > 0 then
+  elseif vy > 0 then
     g = g * MOVE.fallGravityMul
   end
   local maxFall = MOVE.maxFall
   -- Gravity comes from the body's gravity scale; capping the fall speed just lowers the scale.
   local nextVy
-  if self.vy < maxFall then
-    nextVy = math.min(self.vy + g * dt, maxFall)
+  if vy < maxFall then
+    nextVy = math.min(vy + g * dt, maxFall)
   else
-    nextVy = approach(self.vy, maxFall, g * dt) -- launched faster than the clamp: ease back
+    nextVy = approach(vy, maxFall, g * dt) -- launched faster than the clamp: ease back
   end
-  if self.vy > 0 then self.jumping = false end
+  if vy > 0 then self.jumping = false end
   if not self.onGround and self.wallDir ~= 0 and dir == self.wallDir and nextVy > MOVE.wallSlide then
     nextVy = MOVE.wallSlide
   end
+  nextVy = nextVy * flip
   local gEffective = (nextVy - self.vy) / dt
   self.gravScale = gEffective / Physics.GRAVITY
 
@@ -666,6 +707,7 @@ end
 
 -- Just touched the ground. fallSpeed: vertical speed just before landing.
 function Player:landed(fallSpeed)
+  if self.meteorFrom and self.game.isWorld then Abilities.meteorLanding(self) end
   if fallSpeed > 250 then
     local k = math.min(1, (fallSpeed - 250) / 900)
     fx.spray(self.x - self.r * 0.6, self.y + self.r + self.leg, math.pi, 0.6, { 0.75, 0.75, 0.8 }, 2 + math.floor(4 * k), 160 + 200 * k, 3, 0.2)
@@ -762,7 +804,7 @@ function Player:updateOrbs(dt)
         local dx, dy = enemy.x - ox, enemy.y - oy
         local reach = ORB_SIZE + enemy.r
         if dx * dx + dy * dy < reach * reach then
-          enemy:hit(10, enemy.x - self.x, enemy.y - self.y, 300, self)
+          enemy:hit(10 * Abilities.gadgetDamage(self), enemy.x - self.x, enemy.y - self.y, 300, self)
           self.orbHit[i] = 0.5
           break
         end
@@ -806,11 +848,11 @@ function Player:updateSentry(dt)
       if not target then
         timers[i] = 0.2
       else
-        timers[i] = Player.SENTRY_RATE
+        timers[i] = Player.SENTRY_RATE / Abilities.gadgetRate(self)
         local dx, dy = target.x - sx, target.y - sy
         local d = math.max(1, math.sqrt(dx * dx + dy * dy))
         local b = Bullet.new(self, sx, sy, dx / d * s.bulletSpeed, dy / d * s.bulletSpeed)
-        b.damage = b.damage * TURRET_SHARE
+        b.damage = b.damage * TURRET_SHARE * Abilities.gadgetDamage(self)
         b.poison = (b.poison or 0) * TURRET_SHARE
         b.frost = (b.frost or 0) * TURRET_SHARE
         b.explosion = (b.explosion or 0) * TURRET_SHARE
@@ -941,7 +983,7 @@ function Player:jumpPressed(fromBuffer)
   if self.onGround or self.coyote > 0 then
     local sticky = self.onGround and self.groundRect and self.groundRect.material == "sticky"
     local ramp = s.hillRunner > 0 and self.onGround and (self.groundNy or -1) > -0.999
-    self.vy = -s.jump * (sticky and 0.75 or 1) * (ramp and (1 + 0.2 * s.hillRunner) or 1)
+    self.vy = -s.jump * (sticky and 0.75 or 1) * (ramp and (1 + 0.2 * s.hillRunner) or 1) * ((self.flipT or 0) > 0 and -1 or 1)
     self.coyote = 0
     self.onGround = false
     self.fallJump = false
@@ -1011,6 +1053,7 @@ function Player:dashPressed()
   fx.burst(self.x, self.y, self.color, 8, 180, 3)
   fx.spray(self.x, self.y, math.atan2(-dy, -dx), 0.8, self.color, 12, 340, 3, 0)
   self:emitSound("dash")
+  if self.game.isWorld then Abilities.dash(self, dx, dy) end
   self:trigger("dash")
 end
 
@@ -1023,8 +1066,20 @@ function Player:meleeRelease()
   if held < MELEE.lightThreshold then
     self.swingHeavy, self.swingPower = false, 0
     self.meleeCd = s.meleeCooldown
+    -- Second Swing: after a heavy hit, light hits come with no cooldown.
+    if (self.secondSwings or 0) > 0 then
+      self.secondSwings = self.secondSwings - 1
+      self.meleeCd = 0
+    end
     self.swingTimer = MELEE.swingShow
     self.lungeHit = {}
+    -- Lunge: light hits carry you forward.
+    if (s.lightLunge or 0) > 0 then
+      self.lungeTimer = MELEE.lungeTime * 0.6
+      self.preLungeVx = self.vx
+      self.dashX, self.dashY = self.aimX * s.lightLunge / (MELEE.lungeTime * 0.6), self.aimY * s.lightLunge * 0.4 / (MELEE.lungeTime * 0.6)
+      self.dashTimer = 0
+    end
     self:emitSound("meleeLight")
     self:meleeHitCheck(true)
   else
@@ -1039,6 +1094,22 @@ function Player:meleeRelease()
     self.dashX, self.dashY = self.aimX * dist / MELEE.lungeTime, self.aimY * dist / MELEE.lungeTime
     self.dashTimer = 0
     self:emitSound("meleeHeavy", 0.7 + 0.3 * p)
+    -- Meteor Fist: a heavy in mid-air slams you down; the landing hits around you.
+    if (s.meteor or 0) > 0 and not self.onGround then
+      self.meteorFrom = self.y
+      self.lungeTimer = 0
+      self.vy, self.vx = 1500, self.vx * 0.3
+    end
+    -- Gun Toss: the heavy also throws your gun like a boomerang.
+    if (s.gunToss or 0) > 0 and not self.gunOut and self.game.isWorld then
+      local g = Bullet.new(self, self.x + self.aimX * (self.r + 10), self.y + self.aimY * (self.r + 10), self.aimX * 1000, self.aimY * 1000)
+      g.damage = 60 + 30 * (s.gunToss - 1)
+      g.r, g.gravity, g.bounces, g.explosion, g.poison, g.frost = 12, 0, 3, 0, 0, 0
+      g.returns, g.isGun, g.pierce = 1, true, 3
+      g.life = 3
+      self.gunOut = g
+      self.game:addBullet(g)
+    end
   end
 end
 
@@ -1054,7 +1125,9 @@ function Player:meleeHitCheck(final)
       local dx, dy = e.x - self.x, e.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
       local diff = math.abs((math.atan2(dy, dx) - aimAng + math.pi) % (math.pi * 2) - math.pi)
-      if d <= self.r + reach + e.r and (diff <= MELEE.cone or d < self.r + e.r + 6) then
+      local cone = (heavy and (s.whirlwind or 0) > 0) and math.pi or MELEE.cone
+      if heavy and (s.whirlwind or 0) > 0 then reach = s.meleeRange * 1.2 * (1 + 0.2 * (s.whirlwind - 1)) end
+      if d <= self.r + reach + e.r and (diff <= cone or d < self.r + e.r + 6) then
         self.lungeHit[e] = true
         self:meleeHit(e, heavy, p, dx, dy)
       end
@@ -1069,7 +1142,10 @@ function Player:meleeHit(e, heavy, p, dx, dy)
   local dmg = heavy and s.meleeDamage * (1.5 + 1.0 * p) or s.meleeDamage
   if (self.riposteTimer or 0) > 0 and s.riposte > 0 then dmg = dmg * (1 + 0.25 * s.riposte) end
   local knock = heavy and s.meleeKnockback * (1.2 + 0.8 * p) or s.meleeKnockback
-  if e:isBlocking() then
+  if self.game.isWorld then dmg, knock = Abilities.meleeDamage(self, e, heavy, p, dmg, knock) end
+  if e:isBlocking() and self.game.isWorld and Abilities.meleeBlocked(self, e, heavy) then
+    -- Guard Break: the block shatters and the swing lands.
+  elseif e:isBlocking() then
     -- A blocked melee stuns the attacker; harder swings stun longer.
     local stun = heavy and (MELEE.heavyStunMin + (MELEE.heavyStunMax - MELEE.heavyStunMin) * p) or MELEE.lightStun
     stun = stun * (1 + (e.stats.meleeStun or 0)) * (s.stunTaken or 1)
@@ -1097,6 +1173,7 @@ function Player:meleeHit(e, heavy, p, dx, dy)
     end
     fx.burst(e.x, e.y, { 1, 1, 1 }, heavy and 14 or 7, heavy and 320 or 200, 3)
     self:emitSound(heavy and "meleeHitHeavy" or "meleeHit")
+    if self.game.isWorld then Abilities.meleeLanded(self, e, heavy, p) end
     self:trigger("meleeHit", { target = e })
     self.st.melee = self.st.melee + 1
     if heavy then self:trigger("heavyHit", { target = e }) end
@@ -1110,8 +1187,18 @@ function Player:stun(t)
 end
 
 function Player:blockPressed()
-  if self.dead or self.blockCd > 0 or (self.silenceTimer or 0) > 0 then return end
-  self.blockCd = self.stats.blockCooldown
+  if self.dead or (self.silenceTimer or 0) > 0 then return end
+  -- Remote Charge: blocking sets off your charge instead.
+  if self.game.isWorld and Abilities.detonate(self) then return end
+  -- Spare Guard: blocks are stored, and the cooldown refills them one at a time.
+  local most = 1 + (self.stats.blockCharges or 0)
+  self.blockStock = self.blockStock or most
+  if self.blockStock <= 0 then
+    if self.blockCd > 0 then return end
+    self.blockStock = 1
+  end
+  self.blockStock = self.blockStock - 1
+  if self.blockCd <= 0 then self.blockCd = self.stats.blockCooldown end
   self:doBlock(false)
 end
 
@@ -1123,6 +1210,7 @@ function Player:doBlock(echo)
   self.blockTimer = s.blockTime
   fx.ring(self.x, self.y, self.r + 18, { 1, 1, 1 })
   self:emitSound("block", 0.45, 1.25)
+  if game.isWorld then Abilities.block(self, echo) end
   self:trigger("block")
 
   if s.blockHeal > 0 then
@@ -1280,9 +1368,21 @@ function Player:tryFire()
     self.emptyCd = love.timer.getTime() + 0.35
     self:emitSound("empty", 0.7)
   end
+  if self.gunOut then return end -- Gun Toss: your gun is still flying
+  -- Blood Ammo: empty, you can keep shooting by paying HP (it can't kill you).
+  local bloodShot = false
+  if self.ammo <= 0 and s.bloodAmmo > 0 and self.fireTimer <= 0 then
+    local cost = math.max(2, 8 - 2 * (s.bloodAmmo - 1))
+    if self.hp > cost + 1 then
+      self.hp = self.hp - cost
+      self.hitFlash = 0.05
+      self.ammo = 1
+      bloodShot = true
+    end
+  end
   if self.fireTimer > 0 or self.ammo <= 0 then return end
 
-  local delay = s.fireDelay
+  local delay = Abilities.fireDelay(self, s.fireDelay)
   if s.spinup > 0 then
     self.spin = math.min(1, self.spin + 0.12 * s.spinup)
     delay = delay / (1 + 2 * self.spin)
@@ -1316,11 +1416,13 @@ function Player:tryFire()
   self.fireTimer = delay
   self.sinceShot = 0
   self.reloadTimer = (self.ammo == 0) and s.reloadTime or 0
+  if bloodShot then self.reloadTimer = s.reloadTime end
   if self.ammo == 0 then self:emitSound("reload", 0.6) end
   if s.lastBlock > 0 and self.ammo == 0 and not free then self:doBlock(true) end -- Last Word
 
   self:volley(true, mult)
   self.beamShot = nil
+  if self.game.isWorld then Abilities.afterShot(self) end
   self.st.shots = self.st.shots + s.bullets
   self:trigger("shoot")
   if s.bloodPact > 0 and self.hp > 1 then -- Blood Pact: every shot costs HP (can't kill you)
@@ -1388,6 +1490,10 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
   local b = Bullet.new(self, bx, by, math.cos(ang) * speed, math.sin(ang) * speed)
   if self.inTrigger then b.fromTrigger = true end
   if self.beamShot then b.laser = true end -- Stillness's charged shot
+  if game.isWorld then
+    Abilities.shotDamage(self, b)
+    if not self.inTrigger then Abilities.specialShot(self, b) end
+  end
   if s.airDamage > 0 and not self.onGround then b.damage = b.damage * (1 + s.airDamage) end
   if s.berserk > 0 then
     b.damage = b.damage * (1 + s.berserk * (1 - math.max(0, self.hp) / s.maxHp))
@@ -1434,7 +1540,7 @@ end
 function Player:blocked()
   local s = self.stats
   self.st.blocks = self.st.blocks + 1
-  self.riposteTimer = 1
+  self.riposteTimer = (s.instantHeavy or 0) > 0 and 1.5 or 1
   self:trigger("parry")
   if s.parry > 0 then
     self:emitSound("parry")
@@ -1457,6 +1563,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
     return false
   end
   if self.invuln > 0 then return false end
+  if self.game and self.game.isWorld then amount = Abilities.incoming(self, amount, source, kind) end
 
   local s = self.stats
   -- Fresh Start: hits land softer while you're nearly unhurt.
@@ -1486,6 +1593,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
     end
   end
   if self.hp < s.maxHp * 0.3 and self.hp + amount >= s.maxHp * 0.3 and self.hp > 0 then self:trigger("lowHp") end
+  if self.game and self.game.isWorld then Abilities.hurt(self, amount, source) end
   if source and source ~= self and source.st then source.st.dmg = source.st.dmg + amount end
   fx.number(self.x, self.y - self.r, amount, self.slot or 0, kind == "crit")
   self:trigger("hurt", { target = source })
@@ -1496,7 +1604,7 @@ function Player:hit(amount, dx, dy, knock, source, kind)
   fx.burst(self.x, self.y, self.color, 10, 220, 4)
   fx.addShake(4)
   local len = math.sqrt(dx * dx + dy * dy)
-  if len > 0 and self.stats.knockbackImmune <= 0 then
+  if len > 0 and self.stats.knockbackImmune <= 0 and (self.lastLightT or 0) <= 0 then
     self.vx = self.vx + dx / len * knock
     self.vy = self.vy + dy / len * knock - knock * 0.3
     self.controlLock = 0.12
@@ -1555,6 +1663,7 @@ function Player:die(outOfBounds)
 
   self.dead = true
   self.hp = 0
+  if self.game and self.game.isWorld then Abilities.died(self) end
   local killer = self.lastAttacker
   if killer and killer ~= self and killer.trigger and not killer.dead then killer:trigger("kill", { target = self }) end
   self.st.deaths = self.st.deaths + 1

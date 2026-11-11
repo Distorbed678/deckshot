@@ -1,0 +1,10 @@
+deckshot-card 1
+name Ward
+rarity rare
+art orbit shield sky
+block
+row add ward 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking leaves a ring for 3s that stops enemy bullets
+stack +2s per copy

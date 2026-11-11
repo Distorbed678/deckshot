@@ -1,0 +1,8 @@
+deckshot-card 1
+name Gravity Bomb
+rarity epic
+art blackhole clock void
+row add gravityBomb 1
+row add reloadTime 0.25
+note +every 6s your next shot is a slow orb that pulls enemies in for 2s, then pops for 40
+stack 1.5s sooner per copy

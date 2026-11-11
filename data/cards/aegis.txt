@@ -1,0 +1,10 @@
+deckshot-card 1
+name Aegis
+rarity legendary
+art shield crown gold
+block
+row add aegis 1
+row mul blockCooldown 2
+note +your block is a bubble for 2s that you can move and shoot from
+note -it breaks after stopping 3 attacks
+stack +1s and +2 attacks per copy

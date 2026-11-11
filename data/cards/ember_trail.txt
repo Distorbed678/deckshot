@@ -1,0 +1,8 @@
+deckshot-card 1
+name Ember Trail
+rarity uncommon
+art dash flame fire
+row add emberTrail 1
+row add dashCooldown 0.1
+note +your dashes leave fire for 1.5s that sets enemies burning
+stack +1s per copy

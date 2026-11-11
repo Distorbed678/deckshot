@@ -25,6 +25,11 @@ function Bullet:draw()
     return
   end
 
+  if self.isGun or self.grenade or self.grenadeT or self.isBee or self.gravOrb then
+    require("gfx.abilityview").drawBullet(self)
+    return
+  end
+
   if self.mine then
     local pulse = 0.5 + 0.5 * math.sin(self.life * (self.armTime > 0 and 6 or 14))
     love.graphics.setColor(c[1], c[2], c[3], 0.25 + 0.25 * pulse)

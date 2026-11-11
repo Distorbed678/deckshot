@@ -1,0 +1,9 @@
+deckshot-card 1
+name Overdrive
+rarity legendary
+art jet dash fire
+row add overdrive 1
+row add dashCooldown 0.1
+note +each dash within 2s of the last adds a stack (up to 3)
+note +each stack: +15% speed, damage and fire rate for 3s
+stack +1 max stack per copy

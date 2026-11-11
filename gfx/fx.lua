@@ -21,7 +21,7 @@ fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
--- 10 damage number, 11 death chunks, 12 muzzle flash, 13 explosion, 14 lightning bolt.
+-- 10 damage number, 11 death chunks, 12 muzzle flash, 13 explosion, 14 lightning bolt, 15 zap arc.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -163,6 +163,15 @@ function fx.bolt(x, y)
   end
   table.insert(fx.bolts, { main = main, branches = branches, life = 0.32, max = 0.32 })
   table.insert(fx.rings, { x = x, y = y, r = 70, life = 0.3, max = 0.3, color = { 0.75, 0.88, 1 } })
+end
+
+-- A short zap between two points (Static Guard, Conductor, Overload).
+function fx.arc(x1, y1, x2, y2)
+  record({ 15, x1, y1, x2, y2 })
+  if fx.mute then return end
+  local d = math.sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
+  local main = boltPath(x1, y1, x2, y2, math.min(40, d * 0.15), math.max(4, math.floor(d / 30)))
+  table.insert(fx.bolts, { main = main, branches = {}, life = 0.2, max = 0.2 })
 end
 
 -- A body bursting into chunks that bounce off the map (fx.solids), plus the face.

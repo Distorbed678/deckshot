@@ -1,0 +1,8 @@
+deckshot-card 1
+name Body Bounce
+rarity rare
+art bounce body pink
+row add bodyBounce 1
+row add reloadTime 0.25
+note +after hitting a player, a bullet bounces on to another enemy at 70% damage
+stack +1 player bounce per copy

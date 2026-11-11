@@ -1,0 +1,10 @@
+deckshot-card 1
+name Overcharge
+rarity epic
+art burst shield volt
+block
+row add overcharge 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +every 3rd block releases a nova: 60 damage in 250 px
+stack +30 damage per copy

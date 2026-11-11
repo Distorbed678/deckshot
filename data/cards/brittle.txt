@@ -1,0 +1,7 @@
+deckshot-card 1
+name Brittle
+rarity common
+art snow x2 ice
+row add brittle 1
+note +slowed enemies take +15% damage from you
+stack +15% per copy

@@ -1,0 +1,8 @@
+deckshot-card 1
+name Berserker
+rarity rare
+art axe heart blood
+row add rage 1
+row add reloadTime 0.25
+note +each hit you take gives +10% damage for 4s (5 stacks at most)
+stack +5% per stack per copy

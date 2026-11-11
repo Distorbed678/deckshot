@@ -1,0 +1,7 @@
+deckshot-card 1
+name Shield Drone
+rarity rare
+art orb shield sky
+row add drones 1
+note +a drone circles you and stops one enemy bullet every 4s
+stack +1 drone per copy

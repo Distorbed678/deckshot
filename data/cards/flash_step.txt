@@ -1,0 +1,9 @@
+deckshot-card 1
+name Flash Step
+rarity epic
+art flash dash void
+row add flashStep 1
+row add dashCooldown 0.5
+note +your dash is an instant teleport
+note +where you were, a decoy explodes after 1s for 40
+stack +40 damage per copy

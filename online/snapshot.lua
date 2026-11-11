@@ -16,10 +16,12 @@ local MAX_BULLETS = 1500
 local MAX_LASER_POINTS = 64
 
 -- Spawned effects by code (append only).
-local EFFECT_TYPES = { "pickup", "cloud", "strike", "bomb", "star", "field", "saw", "snare" }
+local EFFECT_TYPES = { "pickup", "cloud", "strike", "bomb", "star", "field", "saw", "snare",
+  "ward", "fire", "trap", "icewall", "totem", "turret", "charge", "magnet", "decoy" }
 local EFFECT_CODE = {}
 for i, name in ipairs(EFFECT_TYPES) do EFFECT_CODE[name] = i end
-local EFFECT_MAX = { strike = 0.5, bomb = 0.5, star = 2, field = 3, saw = 2, snare = 2 }
+local EFFECT_MAX = { ward = 3, fire = 1.5, trap = 12, icewall = 4, totem = 5, turret = 8, charge = 12, magnet = 2,
+  decoy = 2, strike = 0.5, bomb = 0.5, star = 2, field = 3, saw = 2, snare = 2 }
 
 local function i16(v)
   v = math.floor((v or 0) + 0.5)
@@ -128,11 +130,13 @@ function Snap.encode(world, events)
       u8(s.orbs), p.orbAngle or 0, u8(p.livesLeft), pending, u16(p.score),
       u8(s.stasis), (world.votes and world.votes[p.slot]) or 0, u8(p.shield), u8(s.sentry),
       bit.bor((p.stunTimer or 0) > 0 and 1 or 0, p.charging and 2 or 0, p.swingHeavy and 4 or 0,
-        (p.dashTimer or 0) > 0 and 8 or 0, p.input and p.input.typing and 16 or 0),
+        (p.dashTimer or 0) > 0 and 8 or 0, p.input and p.input.typing and 16 or 0,
+        (p.burnT or 0) > 0 and 32 or 0, (p.shockT or 0) > 0 and 64 or 0, (p.freezeT or 0) > 0 and 128 or 0),
       u8((p.meleeCharge or 0) * 100), u8((p.swingTimer or 0) * 800), u8((p.swingPower or 0) * 255),
       u8(s.meleeRange), u8(s.heavyCharge * 100), i16(p.vy),
       p.ack or 0, i16(p.vx), u8(p.jumpsLeft + (p.fallJump and 128 or 0)), u8(p.dashesLeft),
-      bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0),
+      bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0, (p.flipT or 0) > 0 and 8 or 0,
+        (p.bleedT or 0) > 0 and 16 or 0),
       u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping),
       u16(p.st.kills), u16(p.st.deaths), u16(p.st.dmg), u16(p.st.shots), u16(p.st.hits), u16(p.st.blocks), u16(p.st.melee),
       u8((p.stillK or 0) * 255))
@@ -145,7 +149,8 @@ function Snap.encode(world, events)
     local b = bullets[i]
     local colorIdx = b.crit and 5 or (b.owner.slot or 0)
     local flags = bit.bor(b.ghost and 1 or 0, b.mine and 2 or 0, b.laser and 4 or 0,
-      (b.mine and b.armTime <= 0) and 8 or 0)
+      (b.mine and b.armTime <= 0) and 8 or 0, b.grenadeT and 16 or 0, b.isBee and 32 or 0, b.gravOrb and 64 or 0,
+      b.isGun and 128 or 0)
     add(BULLET_FMT, b.id or 0, i16(b.x), i16(b.y), i16(b.vx), i16(b.vy), u8(b.r * 4), colorIdx, flags)
     if b.mine then add("<B", u8((b.trigger or 85) / 2)) end
     if b.laser then
@@ -281,6 +286,8 @@ function Snap.encode(world, events)
       add("<Bhh", 9, i16(e[2] * 10), i16(e[3] * 10))
     elseif kind == 14 then
       add("<Bhh", 14, i16(e[2]), i16(e[3]))
+    elseif kind == 15 then
+      add("<Bhhhh", 15, i16(e[2]), i16(e[3]), i16(e[4]), i16(e[5]))
     elseif kind == 10 then
       add("<BhhHBB", 10, i16(e[2]), i16(e[3]), u16(e[4] * 10), u8(e[5]), e[6])
     else
@@ -383,6 +390,8 @@ function Snap.decode(data)
     p.onGround = bit.band(mflags, 1) ~= 0
     p.jumping = bit.band(mflags, 2) ~= 0
     p.groundOneway = bit.band(mflags, 4) ~= 0
+    p.flipped = bit.band(mflags, 8) ~= 0
+    p.bleeding = bit.band(mflags, 16) ~= 0
     p.dashT = p.dashT / 1000
     p.dashCd2 = p.dashCd2 / 100
     p.stunned = bit.band(flags2, 1) ~= 0
@@ -390,6 +399,9 @@ function Snap.decode(data)
     p.swingHeavy = bit.band(flags2, 4) ~= 0
     p.dashing = bit.band(flags2, 8) ~= 0
     p.typing = bit.band(flags2, 16) ~= 0 or nil
+    p.burning = bit.band(flags2, 32) ~= 0
+    p.shocked = bit.band(flags2, 64) ~= 0
+    p.frozen = bit.band(flags2, 128) ~= 0
     p.meleeCharge = p.meleeCharge / 100
     p.swingTimer = p.swingTimer / 800
     p.swingPower = p.swingPower / 255
@@ -416,6 +428,10 @@ function Snap.decode(data)
     b.mine = bit.band(flags, 2) ~= 0
     b.laser = bit.band(flags, 4) ~= 0
     b.armed = bit.band(flags, 8) ~= 0
+    b.grenade = bit.band(flags, 16) ~= 0 or nil
+    b.isBee = bit.band(flags, 32) ~= 0 or nil
+    b.gravOrb = bit.band(flags, 64) ~= 0 or nil
+    b.isGun = bit.band(flags, 128) ~= 0 or nil
     if b.mine then
       local t
       t, pos = unpack("<B", raw, pos)
@@ -528,6 +544,10 @@ function Snap.decode(data)
       local x, y
       x, y, pos = unpack("<hh", raw, pos)
       v.fx[i] = { 14, x, y }
+    elseif kind == 15 then
+      local x1, y1, x2, y2
+      x1, y1, x2, y2, pos = unpack("<hhhh", raw, pos)
+      v.fx[i] = { 15, x1, y1, x2, y2 }
     elseif kind == 12 then
       local x, y, a, size
       x, y, a, size, pos = unpack("<hhhB", raw, pos)

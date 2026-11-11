@@ -95,7 +95,7 @@ end
 
 local function clearHeld(s)
   s.left, s.right, s.up, s.down, s.fire, s.jumpHeld = false, false, false, false, false, false
-  s.meleeHeld = false
+  s.meleeHeld, s.blockHeld = false, false
 end
 
 -- Refresh held state. (px, py) is the player's position, used for mouse aim.
@@ -111,6 +111,7 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.left, s.right, s.up, s.down, s.fire = down(c.left), down(c.right), down(c.up), down(c.down), down(c.fire)
     s.jumpHeld = s.up
     s.meleeHeld = down(c.melee)
+    s.blockHeld = down(c.block) -- Bunker: holding block keeps it up
   elseif s.kind == "touch" then
     require("core.touch").apply(s, love.timer.getDelta())
   elseif s.kind == "pad" then
@@ -123,6 +124,7 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.down = ly > 0.6 or j:isGamepadDown("dpdown")
     s.jumpHeld = j:isGamepadDown("a")
     s.meleeHeld = j:isGamepadDown("x")
+    s.blockHeld = j:getGamepadAxis("triggerleft") > 0.4 or j:isGamepadDown("rightshoulder")
     s.fire = j:getGamepadAxis("triggerright") > 0.4
     local rx, ry = j:getGamepadAxis("rightx"), j:getGamepadAxis("righty")
     if rx * rx + ry * ry > DEAD * DEAD then
@@ -140,6 +142,7 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.jumpHeld = down(c.jump) or down(c.jump2)
     s.fire = down(c.fire)
     s.meleeHeld = down(c.melee)
+    s.blockHeld = down(c.block)
     if px and mx then
       s.aim = math.atan2(my - py, mx - px)
       s.aimDist = math.sqrt((mx - px) ^ 2 + (my - py) ^ 2) -- how far away the cursor is (Joystick)

@@ -1,0 +1,9 @@
+deckshot-card 1
+name Sonar Bounce
+rarity rare
+art ripple bounce ice
+row add sonar 1
+row add bounces 1
+row add reloadTime 0.25
+note +each bounce sends out a ping that slows enemies within 150 px for 1s
+stack +50 px per copy

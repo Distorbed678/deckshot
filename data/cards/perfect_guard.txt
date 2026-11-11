@@ -1,0 +1,10 @@
+deckshot-card 1
+name Perfect Guard
+rarity uncommon
+art shield flash gold
+block
+row add perfectGuard 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +block in the last 0.15s before a bullet hits: it flies back twice as fast with +50% damage
+stack +50% damage per copy

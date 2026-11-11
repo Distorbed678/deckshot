@@ -1,0 +1,8 @@
+deckshot-card 1
+name Static Rounds
+rarity uncommon
+art bullet volt volt
+row add shockOnHit 1
+row add reloadTime 0.25
+note +hits shock: the next damage the enemy takes within 2s is +25%
+stack +25% per copy

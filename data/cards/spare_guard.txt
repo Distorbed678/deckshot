@@ -1,0 +1,10 @@
+deckshot-card 1
+name Spare Guard
+rarity rare
+art shield plus gold
+block
+row add blockCharges 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +store 2 blocks; the cooldown refills them one at a time
+stack +1 stored block per copy

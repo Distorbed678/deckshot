@@ -1,0 +1,8 @@
+deckshot-card 1
+name Thunder Step
+rarity rare
+art volt dash volt
+row add thunderStep 1
+row add dashCooldown 0.1
+note +lightning strikes along your dash path 0.4s later for 35
+stack +20 damage per copy

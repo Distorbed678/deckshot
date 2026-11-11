@@ -1,0 +1,9 @@
+deckshot-card 1
+name Remote Charge
+rarity epic
+art bomb target blood
+row add remoteCharge 1
+row add reloadTime 0.25
+note +the first shot after each reload sticks where it lands
+note +block to detonate it for 80 (instead of blocking)
+stack +40 per copy

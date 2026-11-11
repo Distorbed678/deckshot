@@ -1,0 +1,8 @@
+deckshot-card 1
+name Meteor Fist
+rarity rare
+art fist down fire
+row add meteor 1
+row add meleeCooldown 0.1
+note +a heavy melee in mid-air slams you down; landing hits around you for 30, plus 10 per 100 px fallen
+stack +20 per copy

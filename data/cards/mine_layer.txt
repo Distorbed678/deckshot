@@ -1,0 +1,7 @@
+deckshot-card 1
+name Mine Layer
+rarity uncommon
+art mine clock steel
+row add mineDrop 1
+note +every 4s on the ground you drop a mine (up to 3): it arms in 1s and blasts for 40
+stack +1 mine and 1s sooner per copy

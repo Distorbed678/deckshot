@@ -1,0 +1,10 @@
+deckshot-card 1
+name Kinetic Guard
+rarity uncommon
+art shield bullets volt
+block
+row add kineticGuard 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +each bullet you block adds +15% damage to your next shot (up to +90%)
+stack +15% per bullet and a higher cap per copy

@@ -1,0 +1,9 @@
+deckshot-card 1
+name Bounce Bomb
+rarity uncommon
+art bounce bomb fire
+row add bounceBomb 1
+row add bounces 1
+row add reloadTime 0.25
+note +each bounce leaves a small bomb (15)
+stack +15 per copy

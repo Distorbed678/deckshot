@@ -1,0 +1,8 @@
+deckshot-card 1
+name Wildfire
+rarity rare
+art flame spread fire
+row add wildfire 1
+row add reloadTime 0.25
+note +enemies you set burning spread the fire to enemies within 120 px
+stack +60 px per copy

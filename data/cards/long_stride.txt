@@ -1,0 +1,5 @@
+deckshot-card 1
+name Long Stride
+rarity common
+art dash plus sky
+row mul dashSpeed 1.25

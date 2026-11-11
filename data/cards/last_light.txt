@@ -1,0 +1,8 @@
+deckshot-card 1
+name Last Light
+rarity legendary
+art sun heart gold
+row add lastLight 1
+note +the first time you drop below 25% HP each round, you release a 400 px blast for 80
+note +and can't be knocked back for 4s
+stack +40 damage per copy

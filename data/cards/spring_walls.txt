@@ -1,0 +1,8 @@
+deckshot-card 1
+name Spring Walls
+rarity uncommon
+art spring bounce sky
+row add springWalls 1
+row add bounces 1
+row add reloadTime 0.25
+note +bullets bounce off the arena's top and side edges instead of leaving

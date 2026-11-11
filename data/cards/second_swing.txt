@@ -1,0 +1,8 @@
+deckshot-card 1
+name Second Swing
+rarity uncommon
+art fist clock sky
+row add secondSwing 1
+row add meleeCooldown 0.1
+note +after a heavy hit, your next light hit has no cooldown
+stack +1 free hit per copy

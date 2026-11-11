@@ -1,0 +1,9 @@
+deckshot-card 1
+name Guard Break
+rarity rare
+art hammer shield blood
+row add guardBreak 1
+row add meleeCooldown 0.1
+note +a heavy melee into a block breaks it and puts it on full cooldown
+note +and stuns them for 0.3s
+stack +0.3s of stun per copy

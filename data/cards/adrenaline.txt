@@ -1,0 +1,7 @@
+deckshot-card 1
+name Adrenaline
+rarity uncommon
+art heart dash blood
+row add rush 1
+note +up to +30% speed as your HP runs low
+stack +30% per copy

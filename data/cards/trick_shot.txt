@@ -1,0 +1,9 @@
+deckshot-card 1
+name Trick Shot
+rarity rare
+art bounce star gold
+row add trickShot 1
+row add bounces 1
+row add reloadTime 0.25
+note +bullets that have bounced deal +75%
+stack +50% per copy

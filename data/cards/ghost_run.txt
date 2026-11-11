@@ -1,0 +1,8 @@
+deckshot-card 1
+name Ghost Run
+rarity epic
+art ghost dash void
+row add ghostRun 1
+row add dashCooldown 0.1
+note +dashing makes you invisible for 1.5s
+stack +1s per copy

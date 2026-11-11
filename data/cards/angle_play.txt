@@ -1,0 +1,7 @@
+deckshot-card 1
+name Angle Play
+rarity common
+art bounce plus gold
+row add bounceBonus 1
+note +bullets that have bounced deal +15%
+stack +15% per copy

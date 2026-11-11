@@ -1,0 +1,10 @@
+deckshot-card 1
+name Spike Trap
+rarity uncommon
+art spread down steel
+block
+row add spikeTrap 1
+row add blockCooldown 0.25
+row add maxHp 20
+note +blocking drops a trap: the first enemy to step on it takes 30 and is slowed
+stack +1 trap per copy
