@@ -3,9 +3,21 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.6.2",
+  VERSION = "0.7.0",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "100 new cards: block and parry, dash, melee, gadgets, bounce, status effects and risk builds, plus new statuses: burn, shock, freeze and bleed.",
+    "50 new maps, half of them simple physics arenas, and two new backdrops: sky islands and caverns.",
+    "Fights are faster: three hits kill at the start. Bigger hits fire bigger bullets.",
+    "Card rebalance: commons are one modest stat, effects cost a little reload or block time, and nine weak cards are gone.",
+    "Homing only works inside a cone ahead of the bullet (shown at your gun). Joystick bullets fly to your cursor.",
+    "Reworked Turret Buddy (floating turrets), Stillness (charge ring and a beam shot), Thunderhead (forked lightning) and black holes (never hurt you).",
+    "Every card says what extra copies do.",
+    "Replays: a timeline along the bottom with round, death and card markers; click to jump.",
+    "Card editor: test against a dummy or a bot, search the stats, pick your test controls in Settings > Controls.",
+    "Hold down to drop through thin platforms. Every jump on every map is comfortably reachable.",
+    "Fixed: the Steam invite button (it now works without the Steam overlay), lasers passing through things, weights you couldn't touch, stretched limbs at spawn, the cut-off scoreboard, maps off the grid and floating grounds.",
+    "Platforms on spinning arms can stay level (Carousel, Clockwork).",
     "Jumping: a tap is always a full jump, falling is less heavy, and holding down no longer makes you fall faster.",
     "Platforms that were just out of reach on 22 maps have been moved so every one can be reached with a normal jump.",
     "Ropes and everything they hold move smoothly on high refresh rate screens and online, and jitter less when you land on them.",

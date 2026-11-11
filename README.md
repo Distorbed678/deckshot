@@ -20,11 +20,11 @@
 
 ## Why you'll keep saying "one more round"
 
-- **116 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
+- **207 upgrade cards that all stack.** Bouncing rockets, black holes, lightning on block, orbiting shields, a turret on your shoulder. Take the same card three times and find out what happens.
 - **Cards that really combine.** Explosive + Bouncy makes every bounce explode. Poison spreads through your blasts and shards. Nothing is scripted as a special pair.
 - **Losers get stronger.** Win 2 sub-rounds to take a point, then everyone else picks a card, so no match is over until it's over.
 - **Physics runs the whole game.** Crates tumble, walls topple, ropes sag and snap a segment at a time, and everything is simulated with Box2D. Shove cover around, cut something down onto your opponent, or hide behind a wall: blasts and presence cards can't reach through it.
-- **50 arenas built around physics**, with rope bridges, spinning arms, rails, crushers, flame jets, liquids you can float crates on, and blocks that break, burn or collapse.
+- **100 arenas built around physics**, with rope bridges, spinning arms, rails, crushers, flame jets, liquids you can float crates on, and blocks that break, burn or collapse.
 - **Elimination, King of the Hill or Juggernaut**, free-for-all or teams picked by colour, with a sudden-death barrier that ends the stalling. In Juggernaut, one over-powered player takes on everyone, and whoever brings them down takes over.
 - **Vote on the next map, ban the card you hate, chat with your friends.**
 - **A recap after every match** with everyone's stats, builds and awards, saved as an image to show off, and you can save the whole match as a replay to watch again.
