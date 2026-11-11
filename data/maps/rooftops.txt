@@ -1,0 +1,15 @@
+deckshot-map 4
+name Rooftops
+theme neon
+spawn 168 624
+spawn 1368 624
+spawn 312 624
+spawn 1224 624
+rect 96 672 312 192
+rect 1128 672 312 192
+rect 456 720 168 144
+rect 912 720 168 144
+rect 264 528 144 24
+rect 1128 528 144 24
+obj rail force=6 id=1 path=672,672;864,672;864,456;672,456 speed=100 x=672 y=672
+obj block h=20 id=2 material=metal parent=1 w=144 x=600 y=662

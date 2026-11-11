@@ -14,9 +14,9 @@ obj spikes anchored=true damage=30 dir=up h=16 id=1 w=120 x=456 y=800
 obj block back=4 crumble=true delay=0.6 h=18 id=2 material=stone w=120 x=456 y=744
 obj spikes anchored=true damage=30 dir=up h=16 id=3 w=120 x=960 y=800
 obj block back=4 crumble=true delay=0.6 h=18 id=4 material=stone w=120 x=960 y=744
-rect 672 576 192 24
+rect 672 600 192 24
 obj spikes anchored=true damage=30 dir=down h=16 id=5 w=192 x=672 y=528
 oneway 240 552 192 14
 oneway 1104 552 192 14
-oneway 432 384 168 14
-oneway 936 384 168 14
+oneway 432 408 168 14
+oneway 936 408 168 14

@@ -1,0 +1,15 @@
+deckshot-map 4
+name Oasis
+theme desert
+spawn 168 720
+spawn 1368 720
+spawn 336 720
+spawn 1200 720
+rect 96 768 456 96
+rect 984 768 456 96
+rect 408 624 144 24
+rect 984 624 144 24
+rect 672 504 192 24
+obj liquid buoyant=true color=#3A8BE0 damage=0 h=96 id=1 w=432 x=552 y=768
+obj block h=18 hp=40 id=2 material=wood physics=true w=120 x=600 y=744
+obj block h=18 hp=40 id=3 material=wood physics=true w=120 x=816 y=744

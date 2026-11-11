@@ -1,0 +1,26 @@
+deckshot-map 4
+name Stack
+theme void
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+oneway 288 624 168 14
+oneway 1080 624 168 14
+oneway 1080 600 168 14
+oneway 288 600 168 14
+oneway 504 456 144 14
+oneway 888 456 144 14
+oneway 888 456 144 14
+oneway 504 456 144 14
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=720 y=720
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=732 y=672
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=720 y=624
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=732 y=576
+obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=720 y=528
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=732 y=480
+obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=648 y=720
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=840 y=720
+obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=600 y=720
+obj block h=48 hp=60 id=10 material=crate physics=true w=48 x=888 y=720

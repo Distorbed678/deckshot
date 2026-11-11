@@ -1,0 +1,17 @@
+deckshot-map 4
+name Wind Vane
+theme sky
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+oneway 144 624 168 14
+oneway 1224 624 168 14
+oneway 144 480 120 14
+oneway 1272 480 120 14
+obj arm count=4 force=4 id=1 length=216 spin=0.45 x=768 y=432
+obj block attach=level h=18 id=2 material=metal parent=1 w=144 x=912 y=420
+obj block attach=level h=18 id=3 material=metal parent=1 w=144 x=696 y=636
+obj block attach=level h=18 id=4 material=metal parent=1 w=144 x=480 y=420
+obj block attach=level h=18 id=5 material=metal parent=1 w=144 x=696 y=204

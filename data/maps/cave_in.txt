@@ -1,0 +1,25 @@
+deckshot-map 4
+name Cave-In
+theme caverns
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 432 624 192 24
+rect 912 624 192 24
+rect 672 480 192 24
+oneway 96 504 144 14
+oneway 1296 504 144 14
+oneway 1296 504 144 14
+oneway 96 504 144 14
+obj block anchorHp=40 anchored=true h=48 hp=150 id=1 material=brick physics=true w=96 x=312 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=2 material=brick physics=true w=96 x=408 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=3 material=brick physics=true w=96 x=504 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=4 material=brick physics=true w=96 x=600 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=5 material=brick physics=true w=96 x=696 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=6 material=brick physics=true w=96 x=792 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=7 material=brick physics=true w=96 x=888 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=8 material=brick physics=true w=96 x=984 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=9 material=brick physics=true w=96 x=1080 y=96
+obj block anchorHp=40 anchored=true h=48 hp=150 id=10 material=brick physics=true w=96 x=1176 y=96

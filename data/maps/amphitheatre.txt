@@ -1,0 +1,18 @@
+deckshot-map 4
+name Amphitheatre
+theme caverns
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 576 672 384 96
+rect 240 552 144 24
+rect 1152 552 144 24
+oneway 624 528 120 14
+oneway 792 528 120 14
+obj block h=96 id=1 material=stone slope=left w=192 x=384 y=672
+obj block h=96 id=2 material=stone slope=right w=192 x=960 y=672
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=696 y=624
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=792 y=624
+obj block h=48 hp=100 id=5 material=stone physics=true w=48 x=744 y=624

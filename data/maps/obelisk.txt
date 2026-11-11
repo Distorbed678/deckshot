@@ -1,0 +1,18 @@
+deckshot-map 4
+name Obelisk
+theme desert
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 432 624 192 24
+rect 912 624 192 24
+rect 240 456 168 24
+rect 1128 456 168 24
+rect 504 336 144 24
+rect 888 336 144 24
+obj block h=96 hp=150 id=1 material=brick w=96 x=720 y=576
+obj block h=96 hp=150 id=2 material=brick w=96 x=720 y=480
+obj block h=96 hp=150 id=3 material=brick w=96 x=720 y=384
+obj block h=96 hp=150 id=4 material=brick w=96 x=720 y=288

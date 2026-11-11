@@ -2,6 +2,10 @@ arm_beam
 arrow
 barrel
 beam
+bg_caverns_1_far
+bg_caverns_1_near
+bg_caverns_2_far
+bg_caverns_2_near
 bg_desert_1_far
 bg_desert_1_near
 bg_desert_2_far
@@ -22,6 +26,10 @@ bg_neon_1_far
 bg_neon_1_near
 bg_neon_2_far
 bg_neon_2_near
+bg_sky_1_far
+bg_sky_1_near
+bg_sky_2_far
+bg_sky_2_near
 bg_void_1_far
 bg_void_1_near
 bg_void_2_far

@@ -11,7 +11,7 @@ rect 1128 624 264 24
 rect 456 504 216 24
 rect 864 504 216 24
 rect 672 648 192 48
-oneway 672 336 192 14
+oneway 672 360 192 14
 oneway 192 408 168 14
 oneway 1176 408 168 14
 obj flame damage=12 dir=up id=2 length=230 off=2.5 on=1.2 phase=0 physics=false warn=0.5 x=540 y=804

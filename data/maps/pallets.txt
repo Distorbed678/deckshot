@@ -1,0 +1,25 @@
+deckshot-map 4
+name Pallets
+theme foundry
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+obj block h=16 id=1 material=wood physics=true w=168 x=312 y=624
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=320 x2=320 y=48 y2=624
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=472 x2=472 y=48 y2=624
+obj block h=16 id=4 material=wood physics=true w=168 x=1056 y=624
+obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=1064 x2=1064 y=48 y2=624
+obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1216 x2=1216 y=48 y2=624
+obj block h=16 id=7 material=wood physics=true w=144 x=528 y=480
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=536 x2=536 y=48 y2=480
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=664 x2=664 y=48 y2=480
+obj block h=16 id=10 material=wood physics=true w=144 x=864 y=480
+obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=872 x2=872 y=48 y2=480
+obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1000 x2=1000 y=48 y2=480
+obj block h=16 id=13 material=wood physics=true w=144 x=696 y=384
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=704 x2=704 y=48 y2=384
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=832 x2=832 y=48 y2=384
+obj block h=48 hp=60 id=16 material=crate physics=true w=48 x=696 y=720
+obj block h=48 hp=60 id=17 material=crate physics=true w=48 x=792 y=720

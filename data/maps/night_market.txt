@@ -1,0 +1,23 @@
+deckshot-map 4
+name Night Market
+theme neon
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+obj block h=16 id=1 material=metal physics=true w=144 x=288 y=624
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=296 x2=296 y=72 y2=624
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=424 x2=424 y=72 y2=624
+obj block h=16 id=4 material=metal physics=true w=144 x=1104 y=624
+obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=1112 x2=1112 y=72 y2=624
+obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1240 x2=1240 y=72 y2=624
+obj block h=16 id=7 material=metal physics=true w=144 x=504 y=480
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=512 x2=512 y=72 y2=480
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=640 x2=640 y=72 y2=480
+obj block h=16 id=10 material=metal physics=true w=144 x=888 y=480
+obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=896 x2=896 y=72 y2=480
+obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1024 x2=1024 y=72 y2=480
+obj block h=16 id=13 material=metal physics=true w=144 x=696 y=384
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=704 x2=704 y=72 y2=384
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=832 x2=832 y=72 y2=384

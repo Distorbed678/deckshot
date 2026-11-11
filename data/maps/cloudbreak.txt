@@ -1,0 +1,15 @@
+deckshot-map 4
+name Cloudbreak
+theme sky
+spawn 168 720
+spawn 1368 720
+spawn 336 720
+spawn 1200 720
+rect 96 768 1344 96
+obj block back=4 crumble=true delay=0.6 h=24 id=1 material=ice w=144 x=264 y=624
+obj block back=4 crumble=true delay=0.6 h=24 id=2 material=ice w=144 x=1128 y=624
+obj block back=4 crumble=true delay=0.6 h=24 id=3 material=ice w=144 x=504 y=528
+obj block back=4 crumble=true delay=0.6 h=24 id=4 material=ice w=144 x=888 y=528
+obj block back=4 crumble=true delay=0.6 h=24 id=5 material=ice w=144 x=696 y=432
+obj block back=4 crumble=true delay=0.6 h=24 id=6 material=ice w=120 x=240 y=384
+obj block back=4 crumble=true delay=0.6 h=24 id=7 material=ice w=120 x=1176 y=384

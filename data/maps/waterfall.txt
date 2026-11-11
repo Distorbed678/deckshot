@@ -1,0 +1,15 @@
+deckshot-map 4
+name Waterfall
+theme jungle
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 408 624 192 24
+rect 936 624 192 24
+rect 216 504 168 24
+rect 1152 504 168 24
+rect 504 384 144 24
+rect 888 384 144 24
+obj fan dir=down force=2400 h=696 id=1 w=144 x=696 y=72

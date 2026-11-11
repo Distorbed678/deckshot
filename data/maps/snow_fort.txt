@@ -1,0 +1,15 @@
+deckshot-map 4
+name Snow Fort
+theme ice
+spawn 168 720
+spawn 1368 720
+spawn 288 720
+spawn 1248 720
+rect 96 768 1344 96
+rect 216 600 192 24
+rect 1128 600 192 24
+rect 672 552 192 24
+oneway 504 432 144 14
+oneway 888 432 144 14
+obj block h=120 hp=80 id=1 material=ice w=48 x=408 y=648
+obj block h=120 hp=80 id=2 material=ice w=48 x=1080 y=648

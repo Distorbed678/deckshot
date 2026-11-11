@@ -1,0 +1,16 @@
+deckshot-map 4
+name Temple Trap
+theme jungle
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 360 624 192 24
+rect 984 624 192 24
+rect 672 504 192 24
+oneway 144 480 144 14
+oneway 1248 480 144 14
+obj rail force=6 id=1 path=504,732;1032,732 speed=160 x=504 y=732
+obj saw damage=25 id=2 parent=1 r=26 x=504 y=732
+obj spikes anchored=true damage=30 dir=up h=16 id=3 w=96 x=720 y=488

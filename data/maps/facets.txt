@@ -10,10 +10,10 @@ obj block h=120 id=1 material=stone slope=right w=168 x=600 y=648
 obj block h=120 id=2 material=stone slope=left w=168 x=768 y=648
 obj block h=48 id=3 material=stone slope=right w=120 x=216 y=480
 obj block h=48 id=4 material=stone slope=left w=120 x=336 y=480
-rect 216 528 240 24
+rect 216 576 240 24
 obj block h=48 id=5 material=stone slope=right w=120 x=1080 y=480
 obj block h=48 id=6 material=stone slope=left w=120 x=1200 y=480
-rect 1080 528 240 24
+rect 1080 576 240 24
 obj block h=72 id=7 material=stone slope=right w=96 x=672 y=336
 obj block h=72 id=8 material=stone slope=left w=96 x=768 y=336
 rect 672 408 192 24

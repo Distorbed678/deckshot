@@ -6,7 +6,7 @@ spawn 1236 720
 spawn 396 720
 spawn 1140 720
 rect 240 768 1056 96
-rect 504 600 528 24
+rect 504 624 528 24
 obj block h=24 id=1 material=stone slope=left w=72 x=432 y=576
 obj block h=24 id=2 material=stone slope=right w=72 x=1032 y=576
 rect 576 432 384 24

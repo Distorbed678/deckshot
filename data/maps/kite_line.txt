@@ -1,0 +1,25 @@
+deckshot-map 4
+name Kite Line
+theme sky
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+oneway 96 480 120 14
+oneway 1320 480 120 14
+obj block h=16 id=1 material=wood physics=true w=168 x=216 y=624
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=224 x2=224 y=48 y2=624
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=376 x2=376 y=48 y2=624
+obj block h=16 id=4 material=wood physics=true w=168 x=1152 y=624
+obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=1160 x2=1160 y=48 y2=624
+obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1312 x2=1312 y=48 y2=624
+obj block h=16 id=7 material=wood physics=true w=168 x=504 y=504
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=512 x2=512 y=48 y2=504
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=664 x2=664 y=48 y2=504
+obj block h=16 id=10 material=wood physics=true w=168 x=864 y=504
+obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=872 x2=872 y=48 y2=504
+obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1024 x2=1024 y=48 y2=504
+obj block h=16 id=13 material=wood physics=true w=144 x=696 y=408
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=704 x2=704 y=48 y2=408
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=832 x2=832 y=48 y2=408

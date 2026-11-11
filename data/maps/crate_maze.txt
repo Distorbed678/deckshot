@@ -24,4 +24,4 @@ obj block h=48 hp=60 id=15 material=crate w=48 x=1104 y=624
 obj block drop=0.15 h=48 hp=60 id=16 material=crate onBreak=pickup w=48 x=1104 y=432
 oneway 168 552 168 14
 oneway 1200 552 168 14
-oneway 672 264 192 14
+oneway 672 288 192 14

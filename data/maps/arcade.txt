@@ -1,0 +1,17 @@
+deckshot-map 4
+name Arcade
+theme neon
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 576 624 96 24
+rect 864 624 96 24
+rect 720 504 96 24
+oneway 216 624 144 14
+oneway 1176 624 144 14
+obj pad h=14 id=1 power=1500 w=96 x=432 y=754
+obj pad h=14 id=2 power=1500 w=96 x=1008 y=754
+obj block h=48 hp=200 id=3 material=metal w=48 x=480 y=552
+obj block h=48 hp=200 id=4 material=metal w=48 x=1008 y=552

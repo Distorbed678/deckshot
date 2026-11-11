@@ -1,0 +1,14 @@
+deckshot-map 4
+name Pendulum
+theme void
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 312 624 168 24
+rect 1056 624 168 24
+rect 192 504 144 24
+rect 1200 504 144 24
+obj weight damage=60 id=1 physics=true r=40 x=600 y=456
+obj rope id=2 segHp=200 slack=1 target=1 x=768 y=48

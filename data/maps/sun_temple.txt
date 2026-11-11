@@ -1,0 +1,17 @@
+deckshot-map 4
+name Sun Temple
+theme desert
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 480 672 576 96
+rect 600 576 336 96
+rect 696 480 144 96
+oneway 192 552 144 14
+oneway 1200 552 144 14
+obj block h=96 id=1 material=stone slope=left w=96 x=384 y=672
+obj block h=96 id=2 material=stone slope=right w=96 x=1056 y=672
+obj block h=96 id=3 material=stone slope=left w=96 x=504 y=576
+obj block h=96 id=4 material=stone slope=right w=96 x=936 y=576

@@ -1,0 +1,22 @@
+deckshot-map 4
+name Market Stalls
+theme desert
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+oneway 408 624 168 14
+oneway 960 624 168 14
+oneway 672 576 192 14
+oneway 216 480 144 14
+oneway 1176 480 144 14
+oneway 696 432 144 14
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=432 y=720
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=1056 y=720
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=528 y=720
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=960 y=720
+obj block h=48 hp=30 id=5 material=barrel physics=true w=48 x=696 y=720
+obj block h=48 hp=30 id=6 material=barrel physics=true w=48 x=792 y=720
+obj block h=18 hp=40 id=7 material=wood physics=true w=168 x=408 y=600
+obj block h=18 hp=40 id=8 material=wood physics=true w=168 x=960 y=600

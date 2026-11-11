@@ -1,0 +1,15 @@
+deckshot-map 4
+name Orbitals
+theme void
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 696 624 144 24
+obj arm count=2 force=4 id=1 length=168 spin=0.55 x=480 y=456
+obj block attach=level h=18 id=2 material=metal parent=1 w=144 x=576 y=444
+obj block attach=level h=18 id=3 material=metal parent=1 w=144 x=240 y=444
+obj arm count=2 force=4 id=4 length=168 spin=-0.55 x=1056 y=456
+obj block attach=level h=18 id=5 material=metal parent=4 w=144 x=1152 y=444
+obj block attach=level h=18 id=6 material=metal parent=4 w=144 x=816 y=444

@@ -168,6 +168,6 @@ return function(check)
     check("Gravity Bomb opens a well", #w.wells>0, #w.wells) end
   -- Shield Drone stops a bullet.
   do local w,a,b=mk({"shield_drone"}); local hits=0
-    for k=1,30 do local dx,dy=require("game.abilities").dronePos(a,1); local bl=Bullet.new(b,dx+40,dy,-900,0); bl.gravity=0; w:addBullet(bl); run(w,1/30) end
+    for k=1,30 do local dx,dy=require("game.abilities").dronePos(a,1); local bl=Bullet.new(b,dx,dy,-20,0); bl.gravity=0; w:addBullet(bl); run(w,1/60) end
     check("Shield Drone stops bullets", a.droneCd and (a.droneCd[1] or 0)>0, a.droneCd and a.droneCd[1]) end
 end

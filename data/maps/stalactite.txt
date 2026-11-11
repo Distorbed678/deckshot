@@ -1,0 +1,22 @@
+deckshot-map 4
+name Stalactite
+theme caverns
+spawn 168 720
+spawn 1368 720
+spawn 336 720
+spawn 1200 720
+rect 96 768 1344 96
+rect 96 0 1344 72
+rect 456 624 192 24
+rect 888 624 192 24
+rect 672 480 192 24
+obj spikes damage=30 dir=down h=16 id=1 physics=true w=48 x=384 y=160
+obj rope id=2 segHp=30 slack=1 target=1 x=408 y=72
+obj spikes damage=30 dir=down h=16 id=3 physics=true w=48 x=1104 y=160
+obj rope id=4 segHp=30 slack=1 target=3 x=1128 y=72
+obj spikes damage=30 dir=down h=16 id=5 physics=true w=48 x=600 y=200
+obj rope id=6 segHp=30 slack=1 target=5 x=624 y=72
+obj spikes damage=30 dir=down h=16 id=7 physics=true w=48 x=888 y=200
+obj rope id=8 segHp=30 slack=1 target=7 x=912 y=72
+obj spikes damage=30 dir=down h=16 id=9 physics=true w=48 x=744 y=220
+obj rope id=10 segHp=30 slack=1 target=9 x=768 y=72

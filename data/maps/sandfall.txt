@@ -1,0 +1,13 @@
+deckshot-map 4
+name Sandfall
+theme desert
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+obj block h=24 hp=60 id=1 material=stone w=240 x=384 y=624
+obj block h=24 hp=60 id=2 material=stone w=240 x=912 y=624
+obj block h=24 hp=60 id=3 material=stone w=240 x=648 y=480
+obj block h=24 hp=60 id=4 material=stone w=144 x=168 y=480
+obj block h=24 hp=60 id=5 material=stone w=144 x=1224 y=480

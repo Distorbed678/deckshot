@@ -1,0 +1,25 @@
+deckshot-map 4
+name Delivery
+theme neon
+spawn 168 648
+spawn 1368 648
+spawn 312 648
+spawn 1224 648
+rect 96 696 360 168
+rect 1080 696 360 168
+rect 528 744 480 120
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=408 y=648
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=1080 y=648
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=600 y=696
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=888 y=696
+obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=744 y=696
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=744 y=648
+obj block h=16 id=7 material=wood physics=true w=144 x=480 y=552
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=488 x2=488 y=48 y2=552
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=616 x2=616 y=48 y2=552
+obj block h=16 id=10 material=wood physics=true w=144 x=912 y=552
+obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=920 x2=920 y=48 y2=552
+obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1048 x2=1048 y=48 y2=552
+obj block h=16 id=13 material=wood physics=true w=144 x=696 y=432
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=704 x2=704 y=48 y2=432
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=832 x2=832 y=48 y2=432

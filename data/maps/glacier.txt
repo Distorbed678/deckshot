@@ -1,0 +1,15 @@
+deckshot-map 4
+name Glacier
+theme ice
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 624 672 288 96
+rect 312 552 144 24
+rect 1080 552 144 24
+rect 696 504 144 24
+obj block h=96 id=1 material=ice slope=right w=192 x=432 y=672
+obj block h=96 id=2 material=ice slope=left w=192 x=912 y=672
+obj block h=48 hp=80 id=3 material=ice physics=true w=48 x=744 y=624

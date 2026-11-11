@@ -1,0 +1,19 @@
+deckshot-map 4
+name Crystal Grotto
+theme caverns
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 480 576 168 24
+rect 888 576 168 24
+rect 696 456 144 24
+oneway 144 576 144 14
+oneway 1248 576 144 14
+obj block h=96 hp=1 id=1 material=glass w=48 x=432 y=672
+obj block h=96 hp=1 id=2 material=glass w=48 x=1056 y=672
+obj block h=72 hp=1 id=3 material=glass w=48 x=624 y=696
+obj block h=72 hp=1 id=4 material=glass w=48 x=864 y=696
+obj block h=72 hp=1 id=5 material=glass w=24 x=744 y=384
+obj block h=72 hp=1 id=6 material=glass w=24 x=768 y=384

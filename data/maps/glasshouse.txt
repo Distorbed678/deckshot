@@ -21,6 +21,6 @@ obj block h=14 hp=1 id=8 material=glass w=144 x=792 y=552
 obj block h=14 hp=1 id=9 material=glass w=168 x=936 y=552
 oneway 168 552 168 14
 oneway 1200 552 168 14
-oneway 672 240 192 14
+oneway 672 264 192 14
 obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=560 y=720
 obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=928 y=720

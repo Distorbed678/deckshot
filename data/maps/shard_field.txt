@@ -1,0 +1,22 @@
+deckshot-map 4
+name Shard Field
+theme void
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 312 624 72 24
+rect 1152 624 72 24
+rect 480 552 72 24
+rect 984 552 72 24
+rect 624 456 72 24
+rect 840 456 72 24
+rect 744 360 48 24
+rect 168 480 72 24
+rect 1296 480 72 24
+rect 384 384 72 24
+rect 1080 384 72 24
+obj block h=36 hp=60 id=1 material=crate physics=true w=36 x=456 y=504
+obj block h=36 hp=60 id=2 material=crate physics=true w=36 x=1044 y=504
+obj block h=36 hp=60 id=3 material=crate physics=true w=36 x=750 y=324

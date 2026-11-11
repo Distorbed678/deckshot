@@ -1,0 +1,16 @@
+deckshot-map 4
+name Polar Station
+theme ice
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 672 456 192 24
+oneway 144 600 144 14
+oneway 1248 600 144 14
+obj block h=24 id=1 material=ice w=720 x=408 y=744
+obj rail force=6 id=2 path=456,600;744,600 speed=120 x=456 y=600
+obj block h=20 id=3 material=metal parent=2 w=144 x=384 y=590
+obj rail force=6 id=4 path=1080,600;792,600 speed=120 x=1080 y=600
+obj block h=20 id=5 material=metal parent=4 w=144 x=1008 y=590

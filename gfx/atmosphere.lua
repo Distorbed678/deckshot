@@ -11,8 +11,13 @@ local THEMES = {
   jungle = { block = { 0.3, 0.33, 0.27 }, edge = { 0.55, 0.8, 0.35 }, mote = { 0.8, 1, 0.45 }, shape = "hills" },
   void = { block = { 0.3, 0.31, 0.38 }, edge = { 0.62, 0.64, 0.82 }, mote = { 0.7, 0.65, 1 }, shape = "peaks" },
   desert = { block = { 0.42, 0.34, 0.27 }, edge = { 0.9, 0.7, 0.42 }, mote = { 1, 0.85, 0.55 }, shape = "hills" },
+  sky = { block = { 0.36, 0.42, 0.55 }, edge = { 0.96, 0.98, 1 }, mote = { 1, 1, 1 }, shape = "hills" },
+  caverns = { block = { 0.24, 0.22, 0.3 }, edge = { 0.45, 0.9, 0.85 }, mote = { 0.5, 1, 0.95 }, shape = "peaks" },
 }
+-- Themes picked for maps without a theme line (kept as they were, so old maps keep their look).
 Atmosphere.NAMES = { "foundry", "ice", "neon", "jungle", "void", "desert" }
+-- Every theme a map can name (the editor's list).
+Atmosphere.ALL = { "foundry", "ice", "neon", "jungle", "void", "desert", "sky", "caverns" }
 
 local function hash(s)
   local h = 7

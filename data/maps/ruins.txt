@@ -1,0 +1,16 @@
+deckshot-map 4
+name Ruins
+theme jungle
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 408 624 192 24
+rect 936 624 192 24
+rect 672 504 192 24
+obj block h=96 hp=150 id=1 material=brick w=48 x=432 y=672
+obj block h=96 hp=150 id=2 material=brick w=48 x=1056 y=672
+obj block h=96 hp=150 id=3 material=brick w=48 x=744 y=672
+obj block h=48 hp=100 id=4 material=stone physics=true w=48 x=552 y=720
+obj block h=48 hp=100 id=5 material=stone physics=true w=48 x=936 y=720

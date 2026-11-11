@@ -18,8 +18,8 @@ obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=560 y=720
 obj block h=48 hp=60 id=10 material=crate physics=true w=48 x=560 y=672
 obj block h=48 hp=60 id=11 material=crate physics=true w=48 x=928 y=720
 obj block h=48 hp=60 id=12 material=crate physics=true w=48 x=928 y=672
-oneway 168 600 192 14
-oneway 1176 600 192 14
+oneway 168 624 192 14
+oneway 1176 624 192 14
 oneway 672 408 192 14
 oneway 456 504 96 14
 oneway 984 504 96 14

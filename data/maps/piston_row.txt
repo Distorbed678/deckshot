@@ -1,0 +1,21 @@
+deckshot-map 4
+name Piston Row
+theme foundry
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 696 408 144 24
+oneway 96 624 144 14
+oneway 1296 624 144 14
+oneway 1296 552 144 14
+oneway 96 552 144 14
+obj rail force=6 id=1 path=456,720;456,552 speed=110 x=456 y=720
+obj block h=20 id=2 material=metal parent=1 w=96 x=408 y=710
+obj rail force=6 id=3 path=648,552;648,720 speed=110 x=648 y=552
+obj block h=20 id=4 material=metal parent=3 w=96 x=600 y=542
+obj rail force=6 id=5 path=888,720;888,552 speed=110 x=888 y=720
+obj block h=20 id=6 material=metal parent=5 w=96 x=840 y=710
+obj rail force=6 id=7 path=1080,552;1080,720 speed=110 x=1080 y=552
+obj block h=20 id=8 material=metal parent=7 w=96 x=1032 y=542

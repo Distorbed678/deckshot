@@ -7,7 +7,7 @@ spawn 192 528
 spawn 1344 528
 rect 96 576 144 288
 rect 1296 576 144 288
-rect 240 408 1056 18
+rect 240 432 1056 18
 obj liquid buoyant=true color=#3A8BE0 h=120 id=1 w=1056 x=240 y=744
 obj block h=22 id=2 material=wood physics=true w=168 x=264 y=690
 obj rope id=3 level=true segHp=60 slack=1.05 target=2 x=276 x2=272 y=384 y2=690

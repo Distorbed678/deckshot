@@ -1,0 +1,15 @@
+deckshot-map 4
+name Sky Ferry
+theme sky
+spawn 192 624
+spawn 1344 624
+spawn 336 624
+spawn 1200 624
+rect 96 672 336 192
+rect 1104 672 336 192
+oneway 96 528 168 14
+oneway 1272 528 168 14
+obj rail force=6 id=1 path=480,648;1056,648 speed=140 x=480 y=648
+obj block h=20 id=2 material=metal parent=1 w=192 x=384 y=638
+obj rail force=6 id=3 path=1056,456;480,456 speed=140 x=1056 y=456
+obj block h=20 id=4 material=metal parent=3 w=192 x=960 y=446

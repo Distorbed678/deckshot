@@ -1,0 +1,22 @@
+deckshot-map 4
+name Icicle Cave
+theme ice
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 96 0 1344 72
+rect 408 624 192 24
+rect 936 624 192 24
+rect 672 480 192 24
+obj spikes damage=30 dir=down h=16 id=1 physics=true w=36 x=480 y=168
+obj rope id=2 segHp=30 slack=1 target=1 x=498 y=72
+obj spikes damage=30 dir=down h=16 id=3 physics=true w=36 x=1020 y=168
+obj rope id=4 segHp=30 slack=1 target=3 x=1038 y=72
+obj spikes damage=30 dir=down h=16 id=5 physics=true w=36 x=288 y=192
+obj rope id=6 segHp=30 slack=1 target=5 x=306 y=72
+obj spikes damage=30 dir=down h=16 id=7 physics=true w=36 x=1212 y=192
+obj rope id=8 segHp=30 slack=1 target=7 x=1230 y=72
+obj spikes damage=30 dir=down h=16 id=9 physics=true w=36 x=750 y=240
+obj rope id=10 segHp=30 slack=1 target=9 x=768 y=72

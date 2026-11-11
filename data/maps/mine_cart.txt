@@ -1,0 +1,15 @@
+deckshot-map 4
+name Mine Cart
+theme caverns
+spawn 168 720
+spawn 1368 720
+spawn 336 720
+spawn 1200 720
+rect 96 768 432 96
+rect 1008 768 432 96
+rect 456 600 144 24
+rect 936 600 144 24
+rect 696 480 144 24
+obj rail force=6 id=1 path=600,744;936,744 speed=150 x=600 y=744
+obj block h=20 id=2 material=metal parent=1 w=144 x=528 y=734
+obj liquid buoyant=false color=#2a2f4a damage=15 h=48 id=3 w=480 x=528 y=816

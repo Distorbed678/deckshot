@@ -1,0 +1,22 @@
+deckshot-map 4
+name Scrap Pile
+theme foundry
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+oneway 216 624 240 14
+oneway 1080 624 240 14
+oneway 672 504 192 14
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=456 y=720
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=1032 y=720
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=504 y=720
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=984 y=720
+obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=480 y=672
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=1008 y=672
+obj block h=24 hp=40 id=7 material=wood physics=true w=192 x=672 y=744
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=696 y=696
+obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=792 y=696
+obj block h=48 hp=200 id=10 material=metal physics=true w=24 x=576 y=720
+obj block h=48 hp=200 id=11 material=metal physics=true w=24 x=936 y=720

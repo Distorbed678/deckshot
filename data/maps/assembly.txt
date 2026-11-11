@@ -1,0 +1,14 @@
+deckshot-map 4
+name Assembly
+theme foundry
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 624 456 288 24
+obj block conveyor=true h=20 id=1 material=metal speed=120 w=720 x=408 y=748
+obj block conveyor=true h=20 id=2 material=metal speed=100 w=288 x=240 y=600
+obj block conveyor=true h=20 id=3 material=metal speed=-100 w=288 x=1008 y=600
+obj crusher damage=60 h=48 id=4 phase=0 travel=384 w=120 wait=2 x=384 y=144
+obj crusher damage=60 h=48 id=5 phase=1.2 travel=384 w=120 wait=2 x=1032 y=144

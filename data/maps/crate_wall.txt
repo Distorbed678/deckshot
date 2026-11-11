@@ -1,0 +1,24 @@
+deckshot-map 4
+name Crate Wall
+theme foundry
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 408 624 168 24
+rect 960 624 168 24
+rect 240 480 144 24
+rect 1152 480 144 24
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=720 y=720
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=768 y=720
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=720 y=672
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=768 y=672
+obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=720 y=624
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=768 y=624
+obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=720 y=576
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=768 y=576
+obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=720 y=528
+obj block h=48 hp=60 id=10 material=crate physics=true w=48 x=768 y=528
+obj block h=48 hp=60 id=11 material=crate physics=true w=48 x=720 y=480
+obj block h=48 hp=60 id=12 material=crate physics=true w=48 x=768 y=480

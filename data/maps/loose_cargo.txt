@@ -1,0 +1,27 @@
+deckshot-map 4
+name Loose Cargo
+theme sky
+spawn 168 720
+spawn 1368 720
+spawn 336 720
+spawn 1200 720
+rect 96 768 1344 96
+oneway 96 624 144 14
+oneway 1296 624 144 14
+obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=480 y=720
+obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=1008 y=720
+obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=528 y=720
+obj block h=48 hp=60 id=4 material=crate physics=true w=48 x=960 y=720
+obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=504 y=672
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=984 y=672
+obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=744 y=720
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=744 y=672
+obj block h=16 id=9 material=wood physics=true w=144 x=408 y=552
+obj rope id=10 level=true segHp=60 slack=1.05 target=9 x=416 x2=416 y=48 y2=552
+obj rope id=11 level=true segHp=60 slack=1.05 target=9 x=544 x2=544 y=48 y2=552
+obj block h=16 id=12 material=wood physics=true w=144 x=984 y=552
+obj rope id=13 level=true segHp=60 slack=1.05 target=12 x=992 x2=992 y=48 y2=552
+obj rope id=14 level=true segHp=60 slack=1.05 target=12 x=1120 x2=1120 y=48 y2=552
+obj block h=16 id=15 material=wood physics=true w=192 x=672 y=432
+obj rope id=16 level=true segHp=60 slack=1.05 target=15 x=680 x2=680 y=48 y2=432
+obj rope id=17 level=true segHp=60 slack=1.05 target=15 x=856 x2=856 y=48 y2=432

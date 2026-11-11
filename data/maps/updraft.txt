@@ -1,0 +1,15 @@
+deckshot-map 4
+name Updraft
+theme sky
+spawn 192 648
+spawn 1344 648
+spawn 312 648
+spawn 1224 648
+rect 96 696 312 48
+rect 1128 696 312 48
+rect 456 480 192 24
+rect 888 480 192 24
+rect 672 336 192 24
+oneway 240 552 144 14
+oneway 1152 552 144 14
+obj fan dir=up force=3400 h=480 id=1 w=192 x=672 y=384

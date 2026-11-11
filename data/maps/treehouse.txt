@@ -1,0 +1,19 @@
+deckshot-map 4
+name Treehouse
+theme jungle
+spawn 168 720
+spawn 1368 720
+spawn 312 720
+spawn 1224 720
+rect 96 768 1344 96
+rect 408 432 48 192
+rect 1080 432 48 192
+rect 288 600 120 24
+rect 1128 600 120 24
+rect 456 504 168 24
+rect 912 504 168 24
+rect 624 384 288 24
+oneway 336 696 72 14
+oneway 1128 696 72 14
+oneway 336 624 72 14
+oneway 1128 624 72 14

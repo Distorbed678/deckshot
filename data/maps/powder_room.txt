@@ -6,11 +6,11 @@ spawn 1332 720
 spawn 240 720
 spawn 1296 720
 rect 144 768 1248 96
-rect 312 600 240 24
-rect 984 600 240 24
-rect 648 432 240 24
-oneway 144 432 168 14
-oneway 1224 432 168 14
+rect 312 624 240 24
+rect 984 624 240 24
+rect 648 480 240 24
+oneway 144 480 168 14
+oneway 1224 480 168 14
 obj block damage=55 h=52 hp=30 id=1 material=barrel onBreak=explode physics=true radius=120 w=40 x=640 y=716
 obj block damage=55 h=52 hp=30 id=2 material=barrel onBreak=explode physics=true radius=120 w=40 x=748 y=716
 obj block damage=55 h=52 hp=30 id=3 material=barrel onBreak=explode physics=true radius=120 w=40 x=856 y=716

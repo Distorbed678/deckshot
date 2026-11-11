@@ -11,9 +11,9 @@ obj block h=120 id=2 material=stone slope=left w=192 x=912 y=648
 obj pad h=14 id=3 power=1500 w=96 x=720 y=754
 obj pad h=14 id=4 power=1350 w=72 x=168 y=754
 obj pad h=14 id=5 power=1350 w=72 x=1296 y=754
-rect 312 336 192 24
-rect 1032 336 192 24
+rect 312 360 192 24
+rect 1032 360 192 24
 oneway 672 240 192 14
-oneway 672 480 192 14
+oneway 672 504 192 14
 oneway 120 504 144 14
 oneway 1272 504 144 14
