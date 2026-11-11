@@ -1,7 +1,7 @@
 deckshot-card 1
 name Counterweight
 rarity uncommon
-art shield dash sky
+art scale sky
 block
 row add blockDash 1
 row add blockCooldown 0.25

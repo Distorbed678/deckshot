@@ -1,6 +1,6 @@
 deckshot-card 1
 name Long Guard
 rarity common
-art shield plus sky
+art hourglass shield sky
 block
 row add blockTime 0.15

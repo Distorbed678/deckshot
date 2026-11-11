@@ -1,7 +1,7 @@
 deckshot-card 1
 name Uppercut Chain
 rarity rare
-art fist up gold
+art uppercut gold
 row add airHunter 1
 row add meleeCooldown 0.1
 note +enemies you hit with a heavy take +50% damage from you until they land

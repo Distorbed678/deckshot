@@ -1,7 +1,7 @@
 deckshot-card 1
 name Momentum Rounds
 rarity uncommon
-art bullet dash fire
+art momentum fire
 row add dashShots 1
 row add reloadTime 0.25
 note +shots fired during a dash and for 0.5s after deal +50%

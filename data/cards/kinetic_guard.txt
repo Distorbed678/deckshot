@@ -1,7 +1,7 @@
 deckshot-card 1
 name Kinetic Guard
 rarity uncommon
-art shield bullets volt
+art absorb volt
 block
 row add kineticGuard 1
 row add blockCooldown 0.25

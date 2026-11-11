@@ -1,7 +1,7 @@
 deckshot-card 1
 name Razor Dash
 rarity uncommon
-art dash blade blood
+art razor blood
 row add razorDash 1
 row add dashCooldown 0.1
 note +dashing through an enemy cuts them for 25

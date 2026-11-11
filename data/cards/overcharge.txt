@@ -1,7 +1,7 @@
 deckshot-card 1
 name Overcharge
 rarity epic
-art burst shield volt
+art charge volt
 block
 row add overcharge 1
 row add blockCooldown 0.25

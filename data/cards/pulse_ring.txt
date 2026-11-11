@@ -1,7 +1,7 @@
 deckshot-card 1
 name Pulse Ring
 rarity uncommon
-art burst snow ice
+art nova ice
 block
 row add blockNova 8
 row add novaFrost 1.5

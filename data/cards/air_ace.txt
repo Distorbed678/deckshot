@@ -1,7 +1,7 @@
 deckshot-card 1
 name Air Ace
 rarity epic
-art wing dash sky
+art plane sky
 row add dashes 2
 row add airAce 1
 row add dashCooldown 0.1

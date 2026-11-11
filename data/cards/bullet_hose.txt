@@ -1,7 +1,7 @@
 deckshot-card 1
 name Bullet Hose
 rarity uncommon
-art bullets flame fire
+art hose fire
 row mul fireDelay 0.3
 row add ammo 6
 row mul gunDamage 0.35

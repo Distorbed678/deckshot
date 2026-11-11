@@ -1,7 +1,7 @@
 deckshot-card 1
 name Plague
 rarity epic
-art skull spread toxic
+art plague toxic
 row add plague 1
 row add reloadTime 0.25
 note +every 2s, poison jumps from each enemy you poisoned to the nearest other enemy

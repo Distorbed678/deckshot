@@ -1,6 +1,6 @@
 deckshot-card 1
 name Light Trigger
 rarity common
-art gun volt volt
+art trigger volt
 row mul fireDelay 0.77
 row mul gunDamage 0.9

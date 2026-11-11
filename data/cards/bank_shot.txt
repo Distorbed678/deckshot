@@ -1,7 +1,7 @@
 deckshot-card 1
 name Bank Shot
 rarity uncommon
-art bounce seek sky
+art seek bounce sky
 row add bounces 1
 row add seek 2.5
 row mul gunDamage 0.8

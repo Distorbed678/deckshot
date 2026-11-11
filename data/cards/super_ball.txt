@@ -1,7 +1,7 @@
 deckshot-card 1
 name Super Ball
 rarity uncommon
-art bounce up pink
+art superball pink
 row add superBall 1
 row add bounces 1
 row add reloadTime 0.25

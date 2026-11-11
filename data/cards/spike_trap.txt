@@ -1,7 +1,7 @@
 deckshot-card 1
 name Spike Trap
 rarity uncommon
-art spread down steel
+art trap steel
 block
 row add spikeTrap 1
 row add blockCooldown 0.25

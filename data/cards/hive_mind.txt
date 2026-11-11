@@ -1,7 +1,7 @@
 deckshot-card 1
 name Hive Mind
 rarity legendary
-art eye gear gold
+art hive gold
 row add hiveMind 1
 note +your turrets, drones, mines, bees and grenades deal +100% and work 50% faster
 stack +50% per copy

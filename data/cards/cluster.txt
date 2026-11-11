@@ -1,7 +1,7 @@
 deckshot-card 1
 name Cluster
 rarity rare
-art bomb fork fire
+art cluster fire
 row add explosion 40
 row add cluster 1
 row mul fireDelay 1.25

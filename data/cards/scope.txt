@@ -1,6 +1,6 @@
 deckshot-card 1
 name Scope
 rarity common
-art eye bullet sky
+art scope sky
 row mul bulletSpeed 1.3
 row mul bulletGravity 0.5

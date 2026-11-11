@@ -1,6 +1,6 @@
 deckshot-card 1
 name Slab
 rarity common
-art body up steel
+art anvil steel
 row add maxHp 60
 row mul speed 0.9

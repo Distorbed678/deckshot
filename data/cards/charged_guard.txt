@@ -1,7 +1,7 @@
 deckshot-card 1
 name Charged Guard
 rarity rare
-art star bullet gold
+art charge bullet gold
 block
 row add empower 1
 row add blockCooldown 0.25

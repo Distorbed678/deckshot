@@ -1,7 +1,7 @@
 deckshot-card 1
 name Bunker
 rarity rare
-art wall shield steel
+art bunker steel
 block
 row add bunker 1
 row add blockCooldown 0.25

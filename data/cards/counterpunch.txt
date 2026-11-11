@@ -1,7 +1,7 @@
 deckshot-card 1
 name Counterpunch
 rarity rare
-art fist bounce pink
+art counter pink
 block
 row add meleeStun 0.5
 row add meleeCooldown 0.1

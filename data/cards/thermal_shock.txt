@@ -1,7 +1,7 @@
 deckshot-card 1
 name Thermal Shock
 rarity rare
-art flame snow fire
+art thermal fire
 row add thermal 1
 row add reloadTime 0.25
 note +hitting an enemy who is burning and slowed sets off a 40 burst and ends both

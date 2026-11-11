@@ -1,7 +1,7 @@
 deckshot-card 1
 name Upside Down
 rarity legendary
-art down swirl void
+art flip void
 block
 row add upsideDown 1
 row add blockCooldown 0.25

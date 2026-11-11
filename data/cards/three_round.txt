@@ -1,7 +1,7 @@
 deckshot-card 1
 name Three-Round
 rarity uncommon
-art bullets x2 sky
+art bullets sky
 row add burst 2
 row add ammo 2
 row mul gunDamage 0.5

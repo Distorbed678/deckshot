@@ -1,6 +1,6 @@
 deckshot-card 1
 name Fat Rounds
 rarity common
-art orb up steel
+art bigbullet steel
 row mul bulletSize 1.6
 row mul bulletSpeed 0.9

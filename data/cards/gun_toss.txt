@@ -1,7 +1,7 @@
 deckshot-card 1
 name Gun Toss
 rarity rare
-art gun uturn steel
+art spingun steel
 row add gunToss 1
 row add meleeCooldown 0.1
 note +your heavy melee throws your gun like a boomerang for 60

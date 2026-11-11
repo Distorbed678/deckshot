@@ -1,7 +1,7 @@
 deckshot-card 1
 name Perfect Guard
 rarity uncommon
-art shield flash gold
+art parry gold
 block
 row add perfectGuard 1
 row add blockCooldown 0.25

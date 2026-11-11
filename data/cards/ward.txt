@@ -1,7 +1,7 @@
 deckshot-card 1
 name Ward
 rarity rare
-art orbit shield sky
+art ward sky
 block
 row add ward 1
 row add blockCooldown 0.25

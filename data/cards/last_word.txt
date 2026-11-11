@@ -1,7 +1,7 @@
 deckshot-card 1
 name Last Word
 rarity rare
-art shield bullet gold
+art lastbullet gold
 block
 row add lastBlock 1
 row add reloadTime 0.5

@@ -1,5 +1,5 @@
 deckshot-card 1
 name Lunge
 rarity common
-art fist dash steel
+art lunge steel
 row add lightLunge 40

@@ -1,7 +1,7 @@
 deckshot-card 1
 name Blood Ammo
 rarity epic
-art drop bullets blood
+art bloodbullet blood
 row add bloodAmmo 1
 row add reloadTime 0.25
 note +out of ammo, keep firing by spending 8 HP a bullet (it can't kill you)

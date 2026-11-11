@@ -1,5 +1,5 @@
 deckshot-card 1
 name Quick Jab
 rarity common
-art fist clock sky
+art jab sky
 row mul meleeCooldown 0.75

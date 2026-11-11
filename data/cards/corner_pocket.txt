@@ -1,7 +1,7 @@
 deckshot-card 1
 name Corner Pocket
 rarity epic
-art bounce target gold
+art pocket gold
 row add cornerPocket 1
 row add bounces 2
 row add reloadTime 0.5

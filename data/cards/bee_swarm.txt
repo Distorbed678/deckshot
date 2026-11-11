@@ -1,7 +1,7 @@
 deckshot-card 1
 name Bee Swarm
 rarity epic
-art seek plus gold
+art bee gold
 row add bees 1
 row add reloadTime 0.25
 note +every hit releases a homing bee that stings for 10 (6 alive at most)

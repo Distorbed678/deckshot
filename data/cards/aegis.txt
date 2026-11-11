@@ -1,7 +1,7 @@
 deckshot-card 1
 name Aegis
 rarity legendary
-art shield crown gold
+art aegis gold
 block
 row add aegis 1
 row mul blockCooldown 2

@@ -1,7 +1,7 @@
 deckshot-card 1
 name Whirlwind
 rarity rare
-art swirl fist sky
+art tornado sky
 row add whirlwind 1
 row add meleeCooldown 0.1
 note +your heavy melee hits all around you

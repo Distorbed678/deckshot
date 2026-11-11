@@ -1,5 +1,5 @@
 deckshot-card 1
 name Afterburn
 rarity common
-art boot flame fire
+art afterburner fire
 row mul dashCooldown 0.75

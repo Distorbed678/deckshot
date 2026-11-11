@@ -1,7 +1,7 @@
 deckshot-card 1
 name Slow Burn
 rarity uncommon
-art heart hourglass toxic
+art decay toxic
 row add decay 1
 row add maxHp 40
 note +damage you take is dealt slowly over 4s

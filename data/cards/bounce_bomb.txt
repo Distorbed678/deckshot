@@ -1,7 +1,7 @@
 deckshot-card 1
 name Bounce Bomb
 rarity uncommon
-art bounce bomb fire
+art bomb bounce fire
 row add bounceBomb 1
 row add bounces 1
 row add reloadTime 0.25

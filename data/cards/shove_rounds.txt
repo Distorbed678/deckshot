@@ -1,5 +1,5 @@
 deckshot-card 1
 name Shove Rounds
 rarity common
-art bullet wave pink
+art push pink
 row mul knockback 1.6

@@ -1,7 +1,7 @@
 deckshot-card 1
 name Combo Fists
 rarity uncommon
-art fist x2 gold
+art combo gold
 row add comboFists 1
 row add meleeCooldown 0.1
 note +every 3rd light hit in a row deals triple damage

@@ -1,7 +1,7 @@
 deckshot-card 1
 name Payback
 rarity uncommon
-art fist shield blood
+art spikeshield blood
 block
 row add payback 1
 row add maxHp 25

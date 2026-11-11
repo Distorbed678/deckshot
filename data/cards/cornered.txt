@@ -1,7 +1,7 @@
 deckshot-card 1
 name Cornered
 rarity common
-art heart clock blood
+art battery blood
 row add cornered 1
 note +25% fire rate while below 50% HP
 stack +25% per copy

@@ -1,5 +1,5 @@
 deckshot-card 1
 name Pinball
 rarity common
-art bounce plus pink
+art pinball pink
 row add bounces 1

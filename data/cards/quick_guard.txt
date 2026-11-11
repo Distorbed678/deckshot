@@ -1,7 +1,7 @@
 deckshot-card 1
 name Quick Guard
 rarity common
-art shield clock sky
+art quickshield sky
 block
 row mul blockCooldown 0.85
 row add maxHp -10

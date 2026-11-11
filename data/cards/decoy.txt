@@ -1,7 +1,7 @@
 deckshot-card 1
 name Decoy
 rarity rare
-art ghost swap pink
+art decoy pink
 row add decoy 1
 row add dashCooldown 0.1
 note +dashing leaves a decoy for 2s that soaks enemy bullets

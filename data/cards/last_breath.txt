@@ -1,7 +1,7 @@
 deckshot-card 1
 name Last Breath
 rarity rare
-art skull flame blood
+art lastbreath blood
 row add lastBreath 1
 row add reloadTime 0.25
 note +below 30% HP: +50% damage and fire rate

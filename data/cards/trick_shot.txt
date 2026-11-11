@@ -1,7 +1,7 @@
 deckshot-card 1
 name Trick Shot
 rarity rare
-art bounce star gold
+art trickshot gold
 row add trickShot 1
 row add bounces 1
 row add reloadTime 0.25

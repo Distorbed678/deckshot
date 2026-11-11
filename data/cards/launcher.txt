@@ -1,7 +1,7 @@
 deckshot-card 1
 name Launcher
 rarity uncommon
-art fist up fire
+art launch fire
 row add uppercut 1
 row add meleeCooldown 0.1
 note +your heavy melee launches enemies straight up

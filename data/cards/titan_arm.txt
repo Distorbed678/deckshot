@@ -1,7 +1,7 @@
 deckshot-card 1
 name Titan Arm
 rarity epic
-art fist crown steel
+art gauntlet steel
 row mul heavyCharge 0.4
 row mul meleeDamage 1.8
 row mul fireDelay 1.428571

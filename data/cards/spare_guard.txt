@@ -1,7 +1,7 @@
 deckshot-card 1
 name Spare Guard
 rarity rare
-art shield plus gold
+art shields gold
 block
 row add blockCharges 1
 row add blockCooldown 0.25
