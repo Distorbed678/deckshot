@@ -51,6 +51,7 @@ function Replay.open(file)
   end
   local T = { entries = entries, index = 1, clock = 0, speed = 1, paused = false, title = title }
   T.duration = #entries > 0 and entries[#entries].t or 0
+  T.markers = Replay.markers(entries)
   function T:send() end
   function T:advance(dt)
     if not self.paused then self.clock = self.clock + dt * self.speed end
@@ -65,6 +66,43 @@ function Replay.open(file)
   end
   function T:finished() return self.index > #self.entries end
   return T
+end
+
+-- Timeline markers, read from the stream once: round starts (snapshot state turns to countdown),
+-- deaths (KILL messages) and card picks (ROSTER messages, whoever has one more card).
+-- Each is { t, kind = "round"|"death"|"pick", round = n, victim, killer, cause, slot, card }.
+function Replay.markers(entries)
+  local net = require "online.net"
+  local Snap = require "online.snapshot"
+  local out, lastState, rounds, counts = {}, nil, 0, {}
+  for _, e in ipairs(entries) do
+    local kind = e.data:byte(1)
+    if kind == net.MSG.SNAPSHOT then
+      local ok, state = pcall(Snap.peekState, e.data)
+      if ok then
+        if state == "countdown" and lastState ~= "countdown" then
+          rounds = rounds + 1
+          out[#out + 1] = { t = e.t, kind = "round", round = rounds }
+        end
+        lastState = state
+      end
+    elseif kind == net.MSG.KILL then
+      local ok, victim, killer, cause = pcall(net.decodeKill, e.data)
+      if ok then out[#out + 1] = { t = e.t, kind = "death", victim = victim, killer = killer, cause = cause } end
+    elseif kind == net.MSG.ROSTER then
+      local ok, list = pcall(net.decodeRoster, e.data)
+      if ok then
+        for slot, r in ipairs(list) do
+          local n = #r.cards
+          if counts[slot] and n == counts[slot] + 1 then
+            out[#out + 1] = { t = e.t, kind = "pick", slot = slot, card = r.cards[n] }
+          end
+          counts[slot] = n
+        end
+      end
+    end
+  end
+  return out
 end
 
 -- Saving a replay as a video needs ffmpeg installed on this computer. Video only, no sound.

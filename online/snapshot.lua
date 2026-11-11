@@ -303,6 +303,13 @@ function Snap.encode(world, events)
   return string.char(net.MSG.SNAPSHOT, 0) .. raw
 end
 
+-- Just the round state of a snapshot (replay timelines scan thousands of them).
+function Snap.peekState(data)
+  local raw = data:sub(3)
+  if data:byte(2) == 1 then raw = love.data.decompress("string", "lz4", raw) end
+  return Snap.STATES[raw:byte(1)] or "countdown"
+end
+
 function Snap.decode(data)
   local raw = data:sub(3)
   if data:byte(2) == 1 then raw = love.data.decompress("string", "lz4", raw) end

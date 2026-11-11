@@ -1970,7 +1970,9 @@ function Match:keypressed(key)
     local T = self.replayView
     if key == "escape" then app.switch(require("screens.replays").new())
     elseif key == "space" then T.paused = not T.paused
-    elseif key == "f" then T.speed = T.speed >= 4 and 0.5 or T.speed * 2 end
+    elseif key == "f" then T.speed = T.speed >= 4 and 0.5 or T.speed * 2
+    elseif key == "," or key == "left" then self:replayJump(-1)
+    elseif key == "." or key == "right" then self:replayJump(1) end
     return
   end
   if self.chatOpen then
@@ -3121,18 +3123,129 @@ function Match:updateRagdolls(players, st)
   Limbs.updateCorpses(love.timer.getDelta())
 end
 
+-- Jump the replay to time t. Going back rebuilds the view from the start and fast-forwards.
+function Match:replaySeek(t)
+  local T = self.replayView
+  t = math.max(0, math.min(T.duration, t))
+  local m = self
+  if t < T.clock then
+    T.index, T.clock = 1, 0
+    local net = require "online.net"
+    local winScore, slots = net.decodeStart(T.entries[1].data)
+    m = Match.newClient(slots, 0, winScore, T, "H", nil, { popEvents = function() return {} end })
+    m.replayView = T
+    m.loading = nil
+    local slide = app.noSlide
+    app.noSlide = true
+    app.switch(m)
+    app.noSlide = slide
+  end
+  local mute, silent = fx.mute, sfx.silent
+  fx.mute, sfx.silent = true, true
+  T.clock = t
+  m:clientNetwork()
+  fx.mute, sfx.silent = mute, silent
+  fx.clear()
+end
+
+-- The marker before or after the current time (the , and . keys).
+function Match:replayJump(dir)
+  local T = self.replayView
+  local best
+  for _, mk in ipairs(T.markers or {}) do
+    if dir > 0 and mk.t > T.clock + 0.05 and (not best or mk.t < best) then best = mk.t end
+    if dir < 0 and mk.t < T.clock - 1 and (not best or mk.t > best) then best = mk.t end
+  end
+  if best then self:replaySeek(math.max(0, best - (dir > 0 and 0.2 or 0.2))) end
+end
+
+local function clockText(t) return string.format("%d:%02d", math.floor(t / 60), math.floor(t % 60)) end
+
+-- What a timeline marker says when you point at it.
+function Match:markerText(mk)
+  local function name(slot)
+    local p = self.proxies and self.proxies[slot]
+    return p and p.name or ("Player " .. tostring(slot))
+  end
+  if mk.kind == "round" then return "Round " .. mk.round end
+  if mk.kind == "death" then
+    if mk.killer and mk.killer ~= mk.victim then
+      return name(mk.killer) .. " killed " .. name(mk.victim) .. (mk.cause and (" (" .. mk.cause .. ")") or "")
+    end
+    return name(mk.victim) .. " died" .. (mk.cause and (" (" .. mk.cause .. ")") or "")
+  end
+  local card = Cards.list[mk.card or 0]
+  return name(mk.slot) .. " took " .. (card and card.name or "a card")
+end
+
+-- The replay bar along the bottom: controls, a timeline you can click or drag, and markers.
 function Match:drawReplayBar()
   local T = self.replayView
   if not T then return end
-  local mins = math.floor(T.clock / 60)
-  local text = string.format("REPLAY   %d:%02d / %d:%02d   %sx%s   Space: pause   F: speed   Esc: exit", mins, math.floor(T.clock % 60),
-    math.floor(T.duration / 60), math.floor(T.duration % 60), T.speed, T.paused and "  (paused)" or "")
-  if T:finished() then text = "End of replay   Esc: exit" end
-  love.graphics.setColor(0, 0, 0, 0.55)
-  love.graphics.rectangle("fill", 0, 0, app.W, 28)
-  love.graphics.setFont(app.fonts.small)
-  love.graphics.setColor(1, 1, 1, 0.9)
-  love.graphics.printf(text, 0, 4, app.W, "center")
+  local barH = 64
+  local y0 = app.H - barH
+  love.graphics.setColor(0.06, 0.06, 0.08, 0.88)
+  love.graphics.rectangle("fill", 0, y0, app.W, barH)
+  local font = app.fonts.small
+  -- Controls.
+  if ui.button(T.paused and ">" or "||", 14, y0 + 12, 44, 40, { font = app.fonts.med }) then T.paused = not T.paused end
+  if ui.button(T.speed .. "x", 64, y0 + 12, 56, 40, { font = font }) then T.speed = T.speed >= 4 and 0.5 or T.speed * 2 end
+  love.graphics.setFont(font)
+  love.graphics.setColor(1, 1, 1, 0.85)
+  love.graphics.print(clockText(T.clock) .. " / " .. clockText(T.duration), 132, y0 + 22)
+  love.graphics.setColor(1, 1, 1, 0.45)
+  love.graphics.printf("Esc: exit", app.W - 120, y0 + 22, 104, "right")
+  -- Timeline.
+  local tx, tw, ty = 250, app.W - 250 - 140, y0 + 32
+  love.graphics.setColor(1, 1, 1, 0.15)
+  love.graphics.rectangle("fill", tx, ty - 3, tw, 6, 3, 3)
+  local k = T.duration > 0 and math.min(1, T.clock / T.duration) or 0
+  love.graphics.setColor(ui.ACCENT)
+  love.graphics.rectangle("fill", tx, ty - 3, tw * k, 6, 3, 3)
+  local mx, my = app.mouse()
+  local hover
+  for _, mk in ipairs(T.markers or {}) do
+    local x = tx + tw * (T.duration > 0 and mk.t / T.duration or 0)
+    if mk.kind == "round" then
+      love.graphics.setColor(1, 1, 1, 0.7)
+      love.graphics.rectangle("fill", x - 1, ty - 12, 2, 24)
+      love.graphics.setFont(app.fonts.tiny)
+      love.graphics.print("R" .. mk.round, x + 3, ty - 24)
+    elseif mk.kind == "death" then
+      local c = World.COLORS[mk.victim] or { 1, 1, 1 }
+      love.graphics.setColor(c)
+      love.graphics.circle("fill", x, ty + 12, 4)
+    else
+      local c = World.COLORS[mk.slot] or { 1, 1, 1 }
+      love.graphics.setColor(c)
+      love.graphics.rectangle("fill", x - 3, ty + 7, 6, 9, 1, 1)
+    end
+    if math.abs(mx - x) < 5 and math.abs(my - (ty + 6)) < 16 then hover = mk end
+  end
+  -- Click or drag on the bar to seek (not every frame while dragging: seeking back rebuilds).
+  local onBar = mx >= tx and mx <= tx + tw and my >= ty - 18 and my <= ty + 20
+  if love.mouse.isDown(1) and (onBar or self.replayDrag) and app.top() == self then
+    self.replayDrag = true
+    local want = T.duration * math.max(0, math.min(1, (mx - tx) / tw))
+    if math.abs(want - T.clock) > 0.3 then self:replaySeek(want) end
+  elseif not love.mouse.isDown(1) then
+    self.replayDrag = nil
+  end
+  if hover then
+    local text = clockText(hover.t) .. "  " .. self:markerText(hover)
+    local w = font:getWidth(text) + 20
+    local bx = math.max(6, math.min(app.W - w - 6, mx - w / 2))
+    love.graphics.setColor(0.12, 0.12, 0.16, 0.95)
+    love.graphics.rectangle("fill", bx, ty - 52, w, 26, 6, 6)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(font)
+    love.graphics.print(text, bx + 10, ty - 47)
+  end
+  if T:finished() then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.8)
+    love.graphics.printf("End of replay", 0, y0 - 34, app.W, "center")
+  end
 end
 
 function Match:drawFrame()
@@ -3203,7 +3316,7 @@ function Match:drawFrame()
   end
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.3)
-  love.graphics.printf(map.name .. "   -   First to " .. st.winScore, 0, app.H - 24, app.W, "center")
+  love.graphics.printf(map.name .. "   -   First to " .. st.winScore, 0, app.H - (self.replayView and 88 or 24), app.W, "center")
 
   for i, t in ipairs(self.toasts) do
     local c = t.color
