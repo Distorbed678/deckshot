@@ -2,4 +2,5 @@ deckshot-card 1
 name Sticky Fingers
 rarity uncommon
 art hand bullet gold
+row add meleeCooldown 0.1
 trigger meleeHit ammo amount=20

@@ -2,4 +2,4 @@ deckshot-card 1
 name Coil Springs
 rarity common
 art spring up toxic
-row mul jump 1.25
+row mul jump 1.15

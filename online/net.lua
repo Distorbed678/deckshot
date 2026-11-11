@@ -48,15 +48,16 @@ function net.encodeInput(s, seq)
   local flags = bit.bor(
     s.left and 1 or 0, s.right and 2 or 0, s.down and 4 or 0,
     s.fire and 8 or 0, s.jumpHeld and 16 or 0, s.meleeHeld and 32 or 0, s.up and 64 or 0, s.typing and 128 or 0)
-  return pack("string", "<BI4BfI4I4I4I4BH", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
+  return pack("string", "<BI4BfI4I4I4I4BHH", M.INPUT, seq, flags, s.aim or 0, s.jumpCount, s.blockCount,
     s.dashCount or 0, s.meleeCount or 0, math.max(0, math.min(255, s.pickHover or 0)),
-    math.max(0, math.min(65535, math.floor(s.ping or 0))))
+    math.max(0, math.min(65535, math.floor(s.ping or 0))), math.max(0, math.min(65535, math.floor(s.aimDist or 0))))
 end
 
 -- Returns the packet's sequence number.
 function net.decodeInput(data, s)
-  local _, seq, flags, aim, jc, bc, dc, mc, hover, ping = unpack("<BI4BfI4I4I4I4BH", data)
+  local _, seq, flags, aim, jc, bc, dc, mc, hover, ping, aimDist = unpack("<BI4BfI4I4I4I4BHH", data)
   s.ping = ping
+  s.aimDist = aimDist > 0 and aimDist or nil
   s.up = bit.band(flags, 64) ~= 0
   s.left = bit.band(flags, 1) ~= 0
   s.right = bit.band(flags, 2) ~= 0

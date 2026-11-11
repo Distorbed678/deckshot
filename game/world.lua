@@ -113,9 +113,15 @@ function World:addBullet(b)
   table.insert(self.pending, b)
 end
 
+-- A bullet that appears `delay` seconds from now (Looking Glass), unless its spot is solid by then.
+function World:addBulletLater(b, delay)
+  self.delayed = self.delayed or {}
+  table.insert(self.delayed, { b = b, t = delay })
+end
+
 -- Can a hurt b? (Teammates can't, unless friendly fire is on.)
--- The center of a black hole hurts everyone in it, its owner too, in small ticks.
-local WELL_CORE, WELL_TICK, WELL_DPS = 40, 0.25, 20
+-- The center of a black hole hurts the enemies of whoever made it, in small ticks.
+local WELL_CORE, WELL_TICK, WELL_DPS = 40, 0.25, 30
 function World:wellDamage(w, dt)
   if self.state ~= "playing" then return end
   w.tick = (w.tick or WELL_TICK) - dt
@@ -123,7 +129,8 @@ function World:wellDamage(w, dt)
   w.tick = w.tick + WELL_TICK
   for _, p in ipairs(self.players) do
     local dx, dy = p.x - w.x, p.y - w.y
-    if not p.dead and dx * dx + dy * dy < WELL_CORE * WELL_CORE and Physics.canReach(self, w.x, w.y, p.x, p.y) then
+    local foe = p ~= w.owner and (not w.owner or self:isEnemy(w.owner, p))
+    if foe and not p.dead and dx * dx + dy * dy < WELL_CORE * WELL_CORE and Physics.canReach(self, w.x, w.y, p.x, p.y) then
       p:hit(WELL_DPS * WELL_TICK, 0, 0, 0, w.owner, "blackhole")
     end
   end
@@ -196,7 +203,7 @@ end
 
 -- Put everyone on the current map's spawns (for screens that show the arena behind them).
 function World:placePlayers()
-  self.bullets, self.pending, self.wells = {}, {}, {}
+  self.bullets, self.pending, self.wells, self.delayed = {}, {}, {}, {}
   for i, p in ipairs(self.players) do
     local s = self.map.spawns[i]
     p:spawn(s[1], s[2], s[1] < Map.W / 2 and 1 or -1, self)
@@ -261,7 +268,7 @@ function World:beginRound(sameMap)
   self.keepMap = sameMap
   self:loadMap()
   self.bullets = {}
-  self.pending = {}
+  self.pending, self.delayed = {}, {}
   self.wells = {}
   fx.clear()
   self:setupJuggernaut()
@@ -718,6 +725,20 @@ function World:tick(dt)
     end
     for _, b in ipairs(self.pending) do table.insert(self.bullets, b) end
     self.pending = {}
+    local delayed = self.delayed
+    if delayed then
+      for i = #delayed, 1, -1 do
+        local d = delayed[i]
+        d.t = d.t - sdt
+        if d.t <= 0 then
+          table.remove(delayed, i)
+          local b = d.b
+          if not (b.owner and b.owner.dead) and not Physics.hit(self, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2) then
+            table.insert(self.bullets, b)
+          end
+        end
+      end
+    end
     for i = #self.wells, 1, -1 do
       local w = self.wells[i]
       w.t = w.t - sdt

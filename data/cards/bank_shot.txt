@@ -2,8 +2,9 @@ deckshot-card 1
 name Bank Shot
 rarity uncommon
 art bounce seek sky
-row add bounces 2
+row add bounces 1
 row add seek 2.5
 row mul gunDamage 0.8
-note +bullets turn toward an enemy after they bounce
+row add reloadTime 0.25
+note +after a bounce, bullets turn toward enemies inside the cone ahead of them
 stack sharper turns per copy

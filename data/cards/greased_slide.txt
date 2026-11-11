@@ -2,4 +2,4 @@ deckshot-card 1
 name Greased Slide
 rarity common
 art mag clock sky
-row mul reloadTime 0.6
+row mul reloadTime 0.75

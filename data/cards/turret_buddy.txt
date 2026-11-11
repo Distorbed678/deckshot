@@ -3,6 +3,6 @@ name Turret Buddy
 rarity rare
 art turret steel
 row add sentry 1
-note +a turret hovers by you and shoots the nearest enemy
-note +turret shots deal 40% of your damage
-stack turret fires 50% faster per extra copy
+note +a turret floats above you and fires once a second at the nearest enemy it can see
+note +turret shots carry your bullet and its effects at 40% strength
+stack +1 turret per copy

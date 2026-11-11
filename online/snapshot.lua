@@ -19,7 +19,7 @@ local MAX_LASER_POINTS = 64
 local EFFECT_TYPES = { "pickup", "cloud", "strike", "bomb", "star", "field", "saw", "snare" }
 local EFFECT_CODE = {}
 for i, name in ipairs(EFFECT_TYPES) do EFFECT_CODE[name] = i end
-local EFFECT_MAX = { strike = 0.75, bomb = 0.5, star = 2, field = 3, saw = 2, snare = 2 }
+local EFFECT_MAX = { strike = 0.5, bomb = 0.5, star = 2, field = 3, saw = 2, snare = 2 }
 
 local function i16(v)
   v = math.floor((v or 0) + 0.5)
@@ -44,7 +44,7 @@ end
 -- ..., then for client prediction: last input applied (ack), vx, air jumps left, dashes left,
 -- movement flags, dash time left, dash cooldown, and the player's ping in ms.
 -- ... and the scoreboard: kills, deaths, damage, shots, hits, blocks, melee hits.
-local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBHHHHHHHH"
+local PLAYER_FMT = "<fffbffBBfBBBBBfBfHBBBBBBBBBBhI4hBBBBBHHHHHHHHB"
 local BULLET_FMT = "<HhhhhBBB"
 
 -- Stores a value and says whether it differed from what was there.
@@ -134,7 +134,8 @@ function Snap.encode(world, events)
       p.ack or 0, i16(p.vx), u8(p.jumpsLeft + (p.fallJump and 128 or 0)), u8(p.dashesLeft),
       bit.bor(p.onGround and 1 or 0, p.jumping and 2 or 0, p.groundOneway and 4 or 0),
       u8((p.dashTimer or 0) * 1000), u8((p.dashCd or 0) * 100), u16(p.ping),
-      u16(p.st.kills), u16(p.st.deaths), u16(p.st.dmg), u16(p.st.shots), u16(p.st.hits), u16(p.st.blocks), u16(p.st.melee))
+      u16(p.st.kills), u16(p.st.deaths), u16(p.st.dmg), u16(p.st.shots), u16(p.st.hits), u16(p.st.blocks), u16(p.st.melee),
+      u8((p.stillK or 0) * 255))
   end
 
   local bullets = world.bullets
@@ -278,6 +279,8 @@ function Snap.encode(world, events)
       add("<BhhBBBBB", 11, i16(e[2]), i16(e[3]), u8(c[1] * 255), u8(c[2] * 255), u8(c[3] * 255), u8(e[5]), u8(e[6]))
     elseif kind == 9 then
       add("<Bhh", 9, i16(e[2] * 10), i16(e[3] * 10))
+    elseif kind == 14 then
+      add("<Bhh", 14, i16(e[2]), i16(e[3]))
     elseif kind == 10 then
       add("<BhhHBB", 10, i16(e[2]), i16(e[3]), u16(e[4] * 10), u8(e[5]), e[6])
     else
@@ -374,8 +377,9 @@ function Snap.decode(data)
     p.orbs, p.orbAngle, p.lives, p.pending, p.score, p.stasis, p.vote, p.shield, p.sentry,
     flags2, p.meleeCharge, p.swingTimer, p.swingPower, p.meleeRange, p.heavyCharge, p.vy,
     p.ack, p.vx, p.jumpsLeft, p.dashesLeft, mflags, p.dashT, p.dashCd2, p.ping,
-    p.st.kills, p.st.deaths, p.st.dmg, p.st.shots, p.st.hits, p.st.blocks, p.st.melee, pos =
+    p.st.kills, p.st.deaths, p.st.dmg, p.st.shots, p.st.hits, p.st.blocks, p.st.melee, p.stillK, pos =
       unpack(PLAYER_FMT, raw, pos)
+    p.stillK = p.stillK / 255
     p.onGround = bit.band(mflags, 1) ~= 0
     p.jumping = bit.band(mflags, 2) ~= 0
     p.groundOneway = bit.band(mflags, 4) ~= 0
@@ -520,6 +524,10 @@ function Snap.decode(data)
       local x, y, radius, r, g, b
       x, y, radius, r, g, b, pos = unpack("<hhHBBB", raw, pos)
       v.fx[i] = { 13, x, y, radius, { r / 255, g / 255, b / 255 } }
+    elseif kind == 14 then
+      local x, y
+      x, y, pos = unpack("<hh", raw, pos)
+      v.fx[i] = { 14, x, y }
     elseif kind == 12 then
       local x, y, a, size
       x, y, a, size, pos = unpack("<hhhB", raw, pos)

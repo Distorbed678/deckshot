@@ -2,6 +2,5 @@ deckshot-card 1
 name Long Barrel
 rarity common
 art gun target steel
-row mul bulletSpeed 2
-row mul gunDamage 1.4
-row mul fireDelay 2
+row mul gunDamage 1.35
+row mul fireDelay 1.43

@@ -2,5 +2,5 @@ deckshot-card 1
 name Plating
 rarity common
 art armor plus steel
-row add armor 4
+row add armor 3
 row mul speed 0.95

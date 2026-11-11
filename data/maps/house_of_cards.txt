@@ -21,7 +21,7 @@ obj block h=18 hp=40 id=12 material=wood physics=true w=150 x=780 y=492
 obj block h=120 hp=40 id=13 material=wood physics=true w=18 x=702 y=372
 obj block h=120 hp=40 id=14 material=wood physics=true w=18 x=822 y=372
 obj block h=18 hp=40 id=15 material=wood physics=true w=150 x=696 y=354
-oneway 168 552 168 14
-oneway 1200 552 168 14
-oneway 312 384 144 14
-oneway 1080 384 144 14
+oneway 168 600 168 14
+oneway 1200 600 168 14
+oneway 312 432 144 14
+oneway 1080 432 144 14

@@ -5,6 +5,7 @@ art ripple sky
 block
 row add blockEcho 1
 row add blockCooldown 0.25
+row add maxHp 20
 note +1s after you block, you block again for free
 note +the second block sets off your block cards too
 stack +1 more echo per copy

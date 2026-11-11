@@ -2,5 +2,4 @@ deckshot-card 1
 name Snap Swing
 rarity common
 art blade clock steel
-row mul heavyCharge 0.7
-row mul meleeDamage 1.2
+row mul heavyCharge 0.75

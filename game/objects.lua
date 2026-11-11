@@ -913,8 +913,8 @@ function Objects.update(world, dt)
       end
     elseif e.type == "strike" and e.life <= 0 then
       -- Lightning (Thunder God): strikes where the enemy was when it started charging.
-      fx.ring(e.x, e.y, e.radius, { 0.7, 0.85, 1 })
-      fx.spray(e.x, e.y, -math.pi / 2, 0.4, { 0.8, 0.9, 1 }, 14, 500, 3, -0.5)
+      fx.bolt(e.x, e.y)
+      fx.spray(e.x, e.y, -math.pi / 2, 1.2, { 0.8, 0.9, 1 }, 16, 420, 3, 0.4)
       fx.addShake(4)
       sfx.play("laserFire", e.x, 0.8, 1.6)
       for _, p in ipairs(world.players) do

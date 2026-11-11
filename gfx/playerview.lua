@@ -110,11 +110,76 @@ function Player:draw()
     love.graphics.circle("line", self.x, self.y, r + 5)
   end
 
-  -- Sentry turret
-  if (s.sentry or 0) > 0 then
-    local sx, sy = self:sentryPos()
-    love.graphics.setColor(1, 1, 1, A)
-    Assets.center("sentry", sx, sy, 16, 12)
+  -- Stillness: a ring fills while you stand still; when it's full a star glints on the muzzle.
+  local still = self.stillK or 0
+  if (s.stillness or 0) > 0 and still > 0 and not self.dead then
+    local gold = { 1, 0.85, 0.35 }
+    love.graphics.setLineWidth(3)
+    love.graphics.setColor(gold[1], gold[2], gold[3], 0.25 * A)
+    love.graphics.circle("line", self.x, self.y, r + 12)
+    love.graphics.setColor(gold[1], gold[2], gold[3], 0.9 * A)
+    love.graphics.arc("line", "open", self.x, self.y, r + 12, -math.pi / 2, -math.pi / 2 + math.pi * 2 * still, 32)
+    if still >= 1 then
+      local md = Body.muzzleDist(self)
+      local mx, my = self.x + (self.aimX or 1) * md, self.y + (self.aimY or 0) * md
+      local t = love.timer.getTime()
+      local size = 9 + 3 * math.sin(t * 9)
+      local rot = t * 1.5
+      -- A four-point star: two thin crossed diamonds (fill only works on convex shapes).
+      local pts = self.starPts or {}
+      self.starPts = pts
+      love.graphics.setColor(1, 0.97, 0.8, A)
+      for arm = 0, 1 do
+        local a = rot + arm * math.pi / 2
+        local ca, sa = math.cos(a), math.sin(a)
+        local w = size * 0.22
+        pts[1], pts[2] = mx + ca * size, my + sa * size
+        pts[3], pts[4] = mx - sa * w, my + ca * w
+        pts[5], pts[6] = mx - ca * size, my - sa * size
+        pts[7], pts[8] = mx + sa * w, my - ca * w
+        love.graphics.polygon("fill", pts)
+      end
+    end
+  end
+
+  -- Homing cone: the arc ahead of the gun that homing bullets look in, faint, for everyone to see.
+  if ((s.homing or 0) > 0 or (s.seek or 0) > 0) and not self.dead then
+    local Bullet = require "game.bullet"
+    local aim = math.atan2(self.aimY or 0, self.aimX or 1)
+    local half = Bullet.HOMING_CONE / 2
+    local reach = 260
+    local gx, gy = self.x + (self.aimX or 1) * (r + 10), self.y + (self.aimY or 0) * (r + 10)
+    love.graphics.setColor(c[1], c[2], c[3], 0.07 * A)
+    love.graphics.arc("fill", gx, gy, reach, aim - half, aim + half, 16)
+    love.graphics.setColor(c[1], c[2], c[3], 0.22 * A)
+    love.graphics.setLineWidth(1.5)
+    love.graphics.arc("line", "open", gx, gy, reach, aim - half, aim + half, 16)
+  end
+
+  -- Turret Buddy: round turrets floating above, each aiming its barrel at the nearest enemy.
+  local turrets = s.sentry or 0
+  if turrets > 0 and not self.dead then
+    local game = self.game
+    for i = 1, turrets do
+      local sx, sy = self:sentryPos(i, turrets)
+      local aim = math.atan2(self.aimY or 0, self.aimX or 1)
+      local foe = game and game.nearestEnemy and game:nearestEnemy(self, sx, sy, true)
+      if foe then aim = math.atan2(foe.y - sy, foe.x - sx) end
+      love.graphics.push()
+      love.graphics.translate(sx, sy)
+      love.graphics.rotate(aim)
+      love.graphics.setColor(0.2, 0.21, 0.25, A)
+      love.graphics.rectangle("fill", 2, -3, 15, 6, 2, 2)
+      love.graphics.setColor(0.45, 0.47, 0.52, A)
+      love.graphics.rectangle("fill", 13, -3.5, 4, 7, 1, 1)
+      love.graphics.pop()
+      love.graphics.setColor(0.16, 0.17, 0.2, A)
+      love.graphics.circle("fill", sx, sy, 9)
+      love.graphics.setColor(c[1], c[2], c[3], A)
+      love.graphics.setLineWidth(2.5)
+      love.graphics.circle("line", sx, sy, 9)
+      love.graphics.circle("fill", sx, sy, 3.5)
+    end
   end
 
   for i = 1, s.orbs do

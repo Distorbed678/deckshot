@@ -71,8 +71,8 @@ Their files move to `legacy/cards/`. Their stats and code stay unless they becom
   |---|---|
   | Gun effect | +0.25s reload (strong ones +0.5s) |
   | Block trigger | +0.25s block cooldown, +20 HP |
-  | Dash effect | +0.25s dash cooldown |
-  | Melee effect | +0.25s melee cooldown |
+  | Dash effect | +0.1s dash cooldown (base is 0.6s) |
+  | Melee effect | +0.1s melee cooldown (base is 0.45s) |
   | Gadgets | nothing extra (they live on another card's trigger), unless strong |
 
   The new cards below get this tax added on top of what's written. Existing effect cards are brought into line.

@@ -610,6 +610,7 @@ function Match:applySnapshot(v)
     s.blockCooldown = 1 -- blockCd arrives as a fraction of the cooldown
     p.vote = pv.vote
     p.shield = pv.shield
+    p.stillK = pv.stillK
     s.sentry = pv.sentry
     p.stunTimer = pv.stunned and 1 or 0
     p.charging, p.meleeCharge = pv.charging, pv.meleeCharge
@@ -709,6 +710,8 @@ function Match:applySnapshot(v)
       fx.muzzle(e[2], e[3], e[4], e[5])
     elseif e[1] == 13 then
       fx.explosion(e[2], e[3], e[4], e[5])
+    elseif e[1] == 14 then
+      fx.bolt(e[2], e[3])
     else
       fx.clear()
     end

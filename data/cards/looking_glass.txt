@@ -3,5 +3,6 @@ name Looking Glass
 rarity epic
 art mirror up sky
 row add mirror 1
-note +every shot is also fired from the mirrored side of the arena
+row add reloadTime 0.5
+note +1s after each shot, a copy is fired from the mirrored side of the arena
 stack 2nd copy: also mirrored top-to-bottom, 3rd: corner-to-corner, more: +15% damage

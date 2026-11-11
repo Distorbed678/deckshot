@@ -2,5 +2,5 @@ deckshot-card 1
 name Paper Tiger
 rarity uncommon
 art fang minus blood
-row mul gunDamage 2
-row add maxHp -50
+row mul gunDamage 1.6
+row add maxHp -40

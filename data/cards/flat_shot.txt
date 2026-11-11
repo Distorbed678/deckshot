@@ -3,4 +3,4 @@ name Flat Shot
 rarity common
 art target dash sky
 row set bulletGravity 0
-row mul bulletSpeed 1.6
+row mul bulletSpeed 1.2

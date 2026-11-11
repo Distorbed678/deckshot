@@ -69,3 +69,4 @@ laserFire
 flame
 barrier
 acid
+chargeReady

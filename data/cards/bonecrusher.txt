@@ -4,5 +4,6 @@ rarity rare
 art bone hammer steel
 row add boneBreaker 1
 row mul meleeDamage 1.3
+row add meleeCooldown 0.1
 note +heavy melee hits slow nearby enemies for 0.5s
 stack +0.5s per extra copy

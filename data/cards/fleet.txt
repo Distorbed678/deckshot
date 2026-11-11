@@ -2,4 +2,4 @@ deckshot-card 1
 name Fleet
 rarity common
 art boot dash sky
-row mul speed 1.2
+row mul speed 1.12

@@ -3,6 +3,7 @@ name Body Swap
 rarity epic
 art swap void
 row add swap 1
+row add reloadTime 0.25
 note +hitting an enemy swaps your places
 note 1.5s cooldown
 stack -30% cooldown per extra copy

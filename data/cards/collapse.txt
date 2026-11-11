@@ -5,5 +5,6 @@ art blackhole shield void
 block
 row add gravityBlock 1
 row add blockCooldown 0.25
+row add maxHp 20
 note +blocking opens a black hole where you stand
 stack +30% pull radius and strength per extra copy

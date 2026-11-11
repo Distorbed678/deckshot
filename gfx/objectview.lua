@@ -460,13 +460,20 @@ function Objects.drawEffect(e)
     white(a)
     Assets.center(e.kind == 1 and "pickup_health" or "pickup_ammo", e.x, e.y + math.sin(t * 4) * 3, 26, 26)
   elseif e.type == "strike" then
-    local k = 1 - math.max(0, e.life or 0) / (e.max or 0.75)
-    g.setColor(0.7, 0.85, 1, 0.15 + 0.35 * k)
-    g.circle("fill", e.x, e.y, (e.radius or 55) * k)
-    g.setColor(0.85, 0.95, 1, 0.8)
+    -- Charging: a crackling ring that closes in on the target.
+    local k = 1 - math.max(0, e.life or 0) / (e.max or 0.5)
+    local rad = e.radius or 55
+    g.setColor(0.7, 0.85, 1, 0.12 + 0.3 * k)
+    g.circle("fill", e.x, e.y, rad * k)
+    g.setColor(0.85, 0.95, 1, 0.55 + 0.4 * k)
     g.setLineWidth(2)
-    g.circle("line", e.x, e.y, e.radius or 55)
-    g.line(e.x, e.y - 400, e.x, e.y - 400 + 400 * k)
+    local n = 14
+    local seed = math.floor(t * 24)
+    for i = 0, n - 1 do
+      local a0, a1 = i / n * math.pi * 2, (i + 0.6) / n * math.pi * 2
+      local j = ((seed * 7 + i * 13) % 9) / 9 * 6
+      g.arc("line", "open", e.x, e.y, rad + j, a0 + t * 2, a1 + t * 2, 3)
+    end
   elseif e.type == "cloud" then
     drawCloud(e, t)
   elseif e.type == "bomb" then

@@ -11,8 +11,8 @@ obj rail force=6 id=1 path=492,516;1044,516 speed=110 x=492 y=516
 obj block h=20 id=2 material=metal parent=1 w=192 x=408 y=504
 obj weight damage=60 id=3 physics=true r=30 x=768 y=252
 obj rope id=4 segHp=60 slack=1 target=3 x=768 y=60
-oneway 288 360 168 14
-oneway 1080 360 168 14
+oneway 288 408 168 14
+oneway 1080 408 168 14
 oneway 672 720 192 14
 obj block drop=0.1 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=120 y=528
 obj block drop=0.1 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=1368 y=528

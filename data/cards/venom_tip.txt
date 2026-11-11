@@ -1,6 +1,6 @@
 deckshot-card 1
 name Venom Tip
-rarity common
+rarity uncommon
 art drop bullet toxic
 row add poison 0.5
 row add reloadTime 0.25

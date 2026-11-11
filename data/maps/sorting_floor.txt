@@ -8,14 +8,14 @@ spawn 1236 720
 rect 144 768 1248 96
 obj block conveyor=true h=20 id=1 material=metal speed=150 w=384 x=384 y=748
 obj block conveyor=true h=20 id=2 material=metal speed=-150 w=384 x=768 y=748
-obj block conveyor=true h=20 id=3 material=metal speed=-130 w=336 x=264 y=552
-obj block conveyor=true h=20 id=4 material=metal speed=130 w=336 x=936 y=552
-rect 624 384 288 24
-oneway 144 384 168 14
-oneway 1224 384 168 14
+obj block conveyor=true h=20 id=3 material=metal speed=-130 w=336 x=264 y=600
+obj block conveyor=true h=20 id=4 material=metal speed=130 w=336 x=936 y=600
+rect 624 456 288 24
+oneway 144 456 168 14
+oneway 1224 456 168 14
 obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=430 y=700
 obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=620 y=700
 obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=868 y=700
 obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=1058 y=700
-obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=300 y=504
-obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=1188 y=504
+obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=300 y=552
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=1188 y=552

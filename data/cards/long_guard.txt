@@ -3,4 +3,4 @@ name Long Guard
 rarity common
 art shield plus sky
 block
-row add blockTime 0.25
+row add blockTime 0.15

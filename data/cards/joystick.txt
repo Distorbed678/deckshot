@@ -4,6 +4,7 @@ rarity rare
 art stick pink
 row add remote 1
 row mul bulletSpeed 0.6
+row mul gunDamage 0.75
 row add reloadTime 0.25
-note +bullets steer toward where you aim
+note +bullets fly toward your cursor (or along your stick's aim), so you can curve them around cover
 stack tighter turns per copy

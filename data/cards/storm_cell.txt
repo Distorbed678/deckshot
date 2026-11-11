@@ -5,6 +5,7 @@ art cloud volt volt
 block
 row add stormCell 1
 row add blockCooldown 0.25
+row add maxHp 20
 note +blocking leaves a field for 3s
 note +the field slows and hurts enemies inside it
 stack +12 damage per second per copy

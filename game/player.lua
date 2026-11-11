@@ -88,11 +88,20 @@ function Player:recompute()
   -- and each copy adds its trigger rules again.
   local copies = {}
   self.triggerList = {}
+  local ruleOf = {}
   for _, card in ipairs(self.cards) do
     copies[card] = (copies[card] or 0) + 1
     card.apply(s, copies[card])
+    -- Copies of a card share its trigger rules, which get stronger with the count (Triggers.run).
     for _, rule in ipairs(card.triggers or {}) do
-      self.triggerList[#self.triggerList + 1] = { rule = rule, ready = 0, t = 0 }
+      local inst = ruleOf[rule]
+      if inst then
+        inst.copies = inst.copies + 1
+      else
+        inst = { rule = rule, ready = 0, t = 0, copies = 1 }
+        ruleOf[rule] = inst
+        self.triggerList[#self.triggerList + 1] = inst
+      end
     end
   end
   if self.isJugg then
@@ -108,6 +117,8 @@ function Player:recompute()
   s.crit = math.min(0.9, s.crit)
   s.orbs = math.min(8, s.orbs)
   s.radius = math.max(10, s.radius)
+  -- Harder-hitting bullets are bigger: size grows with the square root of damage (4x damage, 2x size).
+  s.bulletSize = s.bulletSize * math.max(0.5, math.min(3, math.sqrt(math.max(0, s.gunDamage) / BASE.gunDamage)))
   self.stats = s
   self.r = s.radius
   self.leg = self.r * 0.7 -- the body rides this far above the ground on its legs
@@ -127,7 +138,7 @@ function Player:trigger(when, ctx)
     if rule.when == when and now >= inst.ready and love.math.random() < (rule.chance or 1) then
       inst.ready = now + (rule.cd or 0)
       self.inTrigger = true
-      Triggers.run(self, rule, ctx)
+      Triggers.run(self, rule, ctx, inst.copies)
       self.inTrigger = false
     end
   end
@@ -226,10 +237,16 @@ function Player:isBlocking()
   return self.blockTimer > 0
 end
 
--- Where the Sentry turret hovers (behind the player's shoulder).
-function Player:sentryPos()
-  return self.x - self.facing * (self.r + 16), self.y - self.r - 14
+-- Where turret i of n floats: in an arc above the player, bobbing a little.
+function Player:sentryPos(i, n)
+  i, n = i or 1, n or 1
+  local spread = math.min(2.4, 0.75 * (n - 1))
+  local a = -math.pi / 2 + (n > 1 and ((i - 1) / (n - 1) - 0.5) * spread or 0)
+  local d = self.r + 34
+  local bob = math.sin((love.timer.getTime() * 2.6) + i * 1.7) * 3
+  return self.x + math.cos(a) * d, self.y + math.sin(a) * d + bob
 end
+Player.SENTRY_RATE = 1 -- seconds between each turret's shots
 
 -- Adrenaline is active below half HP.
 function Player:adrenalineActive()
@@ -362,7 +379,7 @@ function Player:update(dt, frozen)
           inst.t = 0
           if not self.inTrigger then
             self.inTrigger = true
-            Triggers.run(self, inst.rule)
+            Triggers.run(self, inst.rule, nil, inst.copies)
             self.inTrigger = false
           end
         end
@@ -427,9 +444,9 @@ function Player:update(dt, frozen)
     self:runPhysics(dt, dir, speed, acting)
   end
 
-  -- Enemy black holes pull you in
+  -- Enemy black holes pull you in (never your own or a teammate's).
   for _, w in ipairs(game.wells) do
-    if w.owner ~= self then
+    if w.owner ~= self and not (w.owner and game.isEnemy and not game:isEnemy(w.owner, self)) then
       local dx, dy = w.x - self.x, w.y - self.y
       local d = math.sqrt(dx * dx + dy * dy)
       if d > 1 and d < w.radius and Physics.canReach(game, w.x, w.y, self.x, self.y) then
@@ -527,6 +544,7 @@ function Player:afterStep(dt)
   if inp.aim then
     -- Mouse aim (online): free angle, facing follows the aim.
     self.aimX, self.aimY = math.cos(inp.aim), math.sin(inp.aim)
+    self.aimDist = inp.aimDist
     if math.abs(self.aimX) > 0.05 and self.controlLock <= 0 then
       self.facing = self.aimX > 0 and 1 or -1
     end
@@ -772,26 +790,39 @@ function Player:updateStatic(dt)
   end
 end
 
--- Sentry: a turret that shoots the nearest visible enemy.
+-- Turret Buddy: one turret per copy floats above you. Each fires once a second at the nearest
+-- enemy it can see, with your bullet and its effects at 40% strength (beams too, with Sunbeam).
+local TURRET_SHARE = 0.4
 function Player:updateSentry(dt)
   local s, game = self.stats, self.game
-  self.sentryTimer = self.sentryTimer - dt
-  if self.sentryTimer > 0 then return end
-  local sx, sy = self:sentryPos()
-  local target = game:nearestEnemy(self, sx, sy, true)
-  if not target then
-    self.sentryTimer = 0.2
-    return
+  local n = s.sentry
+  local timers = self.turretTimers
+  if not timers then timers = {}; self.turretTimers = timers end
+  for i = 1, n do
+    timers[i] = (timers[i] or (SENTRY_DELAY + (i - 1) * Player.SENTRY_RATE / n)) - dt
+    if timers[i] <= 0 then
+      local sx, sy = self:sentryPos(i, n)
+      local target = game:nearestEnemy(self, sx, sy, true)
+      if not target then
+        timers[i] = 0.2
+      else
+        timers[i] = Player.SENTRY_RATE
+        local dx, dy = target.x - sx, target.y - sy
+        local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+        local b = Bullet.new(self, sx, sy, dx / d * s.bulletSpeed, dy / d * s.bulletSpeed)
+        b.damage = b.damage * TURRET_SHARE
+        b.poison = (b.poison or 0) * TURRET_SHARE
+        b.frost = (b.frost or 0) * TURRET_SHARE
+        b.explosion = (b.explosion or 0) * TURRET_SHARE
+        b.r = math.max(2.5, b.r * 0.7)
+        b.gravity = 0
+        b.fromTurret = true
+        game:addBullet(b)
+        fx.burst(sx, sy, self.color, 3, 100, 2)
+        self:emitSound("turretShot", 0.35)
+      end
+    end
   end
-  self.sentryTimer = SENTRY_DELAY / (1 + 0.5 * (s.sentry - 1))
-  local dx, dy = target.x - sx, target.y - sy
-  local d = math.max(1, math.sqrt(dx * dx + dy * dy))
-  local b = Bullet.new(self, sx, sy, dx / d * s.bulletSpeed, dy / d * s.bulletSpeed)
-  b.damage = b.damage * 0.4
-  b.r = math.max(2.5, b.r * 0.7)
-  b.gravity = 0
-  game:addBullet(b)
-  fx.burst(sx, sy, self.color, 3, 100, 2)
 end
 
 -- Timed and presence abilities from cards: echo blocks, the buzzsaw, auras, Stillness and Sunflare.
@@ -851,12 +882,14 @@ function Player:updateAbilities(dt)
         self.stillReady = true
         fx.ring(self.x, self.y, 70, { 1, 0.9, 0.5 })
         fx.burst(self.x, self.y, { 1, 0.9, 0.5 }, 12, 200, 3)
-        self:emitSound("dashReady", 0.8, 0.7)
+        self:emitSound("chargeReady", 0.9)
       end
     else
       self.stillT = 0
     end
   end
+  -- How charged Stillness is (0..1), drawn as a ring and sent to clients.
+  self.stillK = s.stillness > 0 and (self.stillReady and 1 or math.min(1, (self.stillT or 0) / 3)) or 0
   if s.sunflare > 0 and self.reloadTimer > 0 and self.ammo == 0 then
     -- Sunflare: waves come faster as the reload nears its end.
     self.flareT = (self.flareT or 0) - dt
@@ -1116,7 +1149,7 @@ function Player:doBlock(echo)
   if s.gravityBlock > 0 then
     local mult = 1 + 0.3 * (s.gravityBlock - 1)
     table.insert(game.wells, {
-      x = self.x, y = self.y, t = 1.4, max = 1.4, owner = self, radius = 280 * mult, strength = 3200 * mult,
+      x = self.x, y = self.y, t = 1.4, max = 1.4, owner = self, radius = 280 * mult, strength = 4000 * mult,
     })
   end
   for i = 1, s.mineLayer do
@@ -1273,9 +1306,10 @@ function Player:tryFire()
     mult = mult * (1 + 0.6 * s.spite)
     self.spiteReady = false
   end
-  if self.stillReady then -- Stillness: the charged shot
+  if self.stillReady then -- Stillness: the charged shot, fired as a beam
     mult = mult * (1 + 2 * s.stillness)
     self.stillReady, self.stillT = false, 0
+    self.beamShot = true
   end
 
   if not free then self.ammo = self.ammo - 1 end
@@ -1286,6 +1320,7 @@ function Player:tryFire()
   if s.lastBlock > 0 and self.ammo == 0 and not free then self:doBlock(true) end -- Last Word
 
   self:volley(true, mult)
+  self.beamShot = nil
   self.st.shots = self.st.shots + s.bullets
   self:trigger("shoot")
   if s.bloodPact > 0 and self.hp > 1 then -- Blood Pact: every shot costs HP (can't kill you)
@@ -1352,6 +1387,7 @@ function Player:spawnBullet(ang, speedMul, empowered, mult)
 
   local b = Bullet.new(self, bx, by, math.cos(ang) * speed, math.sin(ang) * speed)
   if self.inTrigger then b.fromTrigger = true end
+  if self.beamShot then b.laser = true end -- Stillness's charged shot
   if s.airDamage > 0 and not self.onGround then b.damage = b.damage * (1 + s.airDamage) end
   if s.berserk > 0 then
     b.damage = b.damage * (1 + s.berserk * (1 - math.max(0, self.hp) / s.maxHp))
@@ -1389,7 +1425,8 @@ function Player:mirrorBullet(b)
     local c = b:clone()
     if MIRRORS[i][1] then c.x, c.vx = ARENA_W - c.x, -c.vx end
     if MIRRORS[i][2] then c.y, c.vy = ARENA_H - c.y, -c.vy end
-    if not Physics.hit(game, c.x - c.r, c.y - c.r, c.r * 2, c.r * 2) then game:addBullet(c) end
+    -- The mirrored shot comes a second later, so it can be seen coming and dodged.
+    if game.addBulletLater then game:addBulletLater(c, 1) end
   end
 end
 

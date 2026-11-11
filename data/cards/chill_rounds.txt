@@ -1,6 +1,6 @@
 deckshot-card 1
 name Chill Rounds
-rarity common
+rarity uncommon
 art snow bullet ice
 row add frost 1.5
 row add reloadTime 0.25

@@ -1,6 +1,6 @@
 deckshot-card 1
 name Cold Slam
-rarity common
+rarity uncommon
 art snow wave ice
 block
 row add maxHp 25

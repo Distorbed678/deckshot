@@ -13,6 +13,8 @@ rect 912 360 216 24
 rect 96 432 72 48
 rect 1368 432 72 48
 oneway 696 432 144 14
+oneway 96 648 120 14
+oneway 1320 648 120 14
 oneway 672 240 192 14
 obj block drop=0.1 h=48 hp=60 id=1 material=crate onBreak=pickup physics=true w=48 x=744 y=720
 obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=696 y=720

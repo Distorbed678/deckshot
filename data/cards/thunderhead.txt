@@ -2,4 +2,4 @@ deckshot-card 1
 name Thunderhead
 rarity legendary
 art volt crown gold
-trigger interval lightning every=5 damage=30 delay=0.75
+trigger interval lightning every=5 damage=50 delay=0.5

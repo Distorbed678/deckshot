@@ -13,8 +13,8 @@ obj block h=60 id=3 material=stone physics=true w=60 x=702 y=540
 obj block h=60 id=4 material=stone physics=true w=60 x=774 y=540
 obj block h=60 id=5 material=stone physics=true w=60 x=255 y=420
 obj block h=60 id=6 material=stone physics=true w=60 x=1221 y=420
-oneway 192 480 192 14
-oneway 1152 480 192 14
+oneway 192 504 192 14
+oneway 1152 504 192 14
 oneway 672 408 192 14
 oneway 432 336 144 14
 oneway 960 336 144 14

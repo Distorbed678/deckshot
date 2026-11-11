@@ -2,5 +2,4 @@ deckshot-card 1
 name Heavy Bat
 rarity common
 art bat gold
-row mul meleeKnockback 1.6
-row mul meleeDamage 1.15
+row mul meleeKnockback 1.4

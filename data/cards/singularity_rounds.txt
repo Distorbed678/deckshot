@@ -3,6 +3,7 @@ name Singularity Rounds
 rarity legendary
 art blackhole void
 row add blackhole 1
+row add reloadTime 0.5
 note +bullet impacts open a black hole
 note +black holes pull your enemies in
 stack +30% pull radius and strength per extra copy

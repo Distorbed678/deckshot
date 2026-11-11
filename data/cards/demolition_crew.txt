@@ -4,5 +4,6 @@ rarity epic
 art hammer bomb fire
 row add demolition 1
 row mul objectDamage 4
+row add reloadTime 0.25
 note +map objects you break explode
 stack +30% blast size and +30 blast damage per copy

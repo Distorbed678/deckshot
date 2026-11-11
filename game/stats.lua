@@ -13,7 +13,7 @@ Stats.GROUPS = { "Gun", "Bullets", "Melee", "Movement", "Defense", "Block", "Abi
 
 Stats.LIST = {
   -- Gun
-  { "gunDamage", 25, "Gun", "pct", "high", "gun damage" },
+  { "gunDamage", 34, "Gun", "pct", "high", "gun damage" },
   { "airDamage", 0, "Gun", "pct", "high", "gun damage while airborne" },
   { "bloodPact", 0, "Gun", "count", "high", "blood pact" },
   { "fireDelay", 0.25, "Gun", "rate", "low", "fire rate" },

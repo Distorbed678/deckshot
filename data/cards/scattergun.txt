@@ -2,7 +2,7 @@ deckshot-card 1
 name Scattergun
 rarity common
 art spread fire
-row add bullets 3
-row add ammo 3
-row add spread 0.5
-row mul gunDamage 0.45
+row add bullets 2
+row add ammo 2
+row add spread 0.4
+row mul gunDamage 0.55

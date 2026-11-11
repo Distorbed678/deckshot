@@ -127,6 +127,7 @@ function Input.poll(s, suppressed, px, py, mx, my)
     local rx, ry = j:getGamepadAxis("rightx"), j:getGamepadAxis("righty")
     if rx * rx + ry * ry > DEAD * DEAD then
       s.aim = math.atan2(ry, rx)
+      s.aimDist = 140 + 360 * math.min(1, math.sqrt(rx * rx + ry * ry)) -- Joystick steers toward this point
     elseif s.left ~= s.right then
       s.aim = s.left and math.pi or 0 -- aim where you're moving when the right stick is idle
     end
@@ -139,7 +140,10 @@ function Input.poll(s, suppressed, px, py, mx, my)
     s.jumpHeld = down(c.jump) or down(c.jump2)
     s.fire = down(c.fire)
     s.meleeHeld = down(c.melee)
-    if px and mx then s.aim = math.atan2(my - py, mx - px) end
+    if px and mx then
+      s.aim = math.atan2(my - py, mx - px)
+      s.aimDist = math.sqrt((mx - px) ^ 2 + (my - py) ^ 2) -- how far away the cursor is (Joystick)
+    end
   end
 end
 

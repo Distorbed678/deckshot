@@ -3,7 +3,7 @@
 -- can be replayed on clients.
 local Assets = require "core.assets"
 local fx = {
-  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, puffs = {}, shake = 0, kickX = 0, kickY = 0,
+  particles = {}, rings = {}, ghosts = {}, chunks = {}, numbers = {}, flashes = {}, puffs = {}, bolts = {}, shake = 0, kickX = 0, kickY = 0,
   showNumbers = true, -- damage numbers (a per-player setting)
   shakeScale = 1, particleScale = 1,
   recorder = nil,
@@ -21,7 +21,7 @@ fx.record = record
 
 -- Event kinds (also the network codes in online/snapshot.lua):
 -- 1 burst, 2 ring, 3 shake, 4 clear, 5 sound (gfx/sfx.lua), 6 spray, 7 ghost, 8 debris, 9 kick,
--- 10 damage number, 11 death chunks, 12 muzzle flash, 13 explosion.
+-- 10 damage number, 11 death chunks, 12 muzzle flash, 13 explosion, 14 lightning bolt.
 
 -- fx.mute: create nothing (client prediction re-simulates moves the host already showed).
 function fx.burst(x, y, color, count, speed, size)
@@ -137,6 +137,34 @@ function fx.explosion(x, y, radius, color)
   fx.recorder = keep
 end
 
+-- A jagged, forking lightning bolt from the top of the arena down to (x, y) (Thunderhead).
+-- Each machine draws its own random shape; only the strike point travels.
+local function boltPath(x0, y0, x1, y1, jag, steps)
+  local pts = { x0, y0 }
+  for i = 1, steps - 1 do
+    local k = i / steps
+    pts[#pts + 1] = x0 + (x1 - x0) * k + (love.math.random() - 0.5) * jag
+    pts[#pts + 1] = y0 + (y1 - y0) * k + (love.math.random() - 0.5) * jag * 0.3
+  end
+  pts[#pts + 1], pts[#pts + 2] = x1, y1
+  return pts
+end
+function fx.bolt(x, y)
+  record({ 14, x, y })
+  if fx.mute then return end
+  local main = boltPath(x + (love.math.random() - 0.5) * 120, -20, x, y, 70, 14)
+  local branches = {}
+  for _ = 1, 3 do
+    local i = 2 * love.math.random(3, 10) - 1
+    local bx, by = main[i], main[i + 1]
+    local ex = bx + (love.math.random() - 0.5) * 220
+    local ey = by + 60 + love.math.random() * 140
+    branches[#branches + 1] = boltPath(bx, by, ex, ey, 40, 6)
+  end
+  table.insert(fx.bolts, { main = main, branches = branches, life = 0.32, max = 0.32 })
+  table.insert(fx.rings, { x = x, y = y, r = 70, life = 0.3, max = 0.3, color = { 0.75, 0.88, 1 } })
+end
+
 -- A body bursting into chunks that bounce off the map (fx.solids), plus the face.
 function fx.gibs(x, y, color, count, size)
   record({ 11, x, y, color, count, size })
@@ -236,11 +264,17 @@ function fx.clear()
   fx.flashes = {}
   fx.puffs = {}
   fx.numbers = {}
+  fx.bolts = {}
   fx.shake = 0
   fx.kickX, fx.kickY = 0, 0
 end
 
 function fx.update(dt)
+  for i = #fx.bolts, 1, -1 do
+    local b = fx.bolts[i]
+    b.life = b.life - dt
+    if b.life <= 0 then table.remove(fx.bolts, i) end
+  end
   for i = #fx.particles, 1, -1 do
     local p = fx.particles[i]
     p.life = p.life - dt
@@ -317,6 +351,18 @@ local function dot(x, y, r)
 end
 
 function fx.draw()
+  for _, b in ipairs(fx.bolts) do
+    local k = b.life / b.max
+    local flicker = (math.floor(b.life * 40) % 2 == 0) and 1 or 0.7
+    love.graphics.setColor(0.55, 0.75, 1, 0.5 * k * flicker)
+    love.graphics.setLineWidth(10)
+    love.graphics.line(b.main)
+    love.graphics.setColor(0.95, 0.98, 1, k * flicker)
+    love.graphics.setLineWidth(3.5)
+    love.graphics.line(b.main)
+    love.graphics.setLineWidth(1.8)
+    for _, br in ipairs(b.branches) do love.graphics.line(br) end
+  end
   for _, g in ipairs(fx.ghosts) do
     local c = g.color
     love.graphics.setColor(c[1], c[2], c[3], 0.45 * g.life / g.max)

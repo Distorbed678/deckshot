@@ -5,6 +5,7 @@ art star bullet gold
 block
 row add empower 1
 row add blockCooldown 0.25
+row add maxHp 20
 note +after blocking, your next shot is bigger and faster
 note +that shot deals double damage
 stack +1 charged shot per copy

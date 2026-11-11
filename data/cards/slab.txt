@@ -2,6 +2,5 @@ deckshot-card 1
 name Slab
 rarity common
 art body up steel
-row add maxHp 100
-row mul fireDelay 1.25
-row add reloadTime 0.5
+row add maxHp 60
+row mul speed 0.9

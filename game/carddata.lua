@@ -159,6 +159,10 @@ function CardData.stackText(def)
     end
   end
   if #parts > 0 then return "extra copies: " .. table.concat(parts, ", ") end
+  -- Every card stacks; say how when the card doesn't.
+  if def.triggers and #def.triggers > 0 then return "its effect is stronger with each copy" end
+  if def.special == "double" then return "two more cards per copy" end
+  if #def.rows > 0 then return "the same again per copy" end
   return nil
 end
 

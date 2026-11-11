@@ -5,6 +5,7 @@ art bomb fork fire
 row add explosion 40
 row add cluster 1
 row mul fireDelay 1.25
+row add reloadTime 0.25
 note +bullets explode
 note +explosions split into 3 mini blasts
 stack +2 mini blasts per extra copy

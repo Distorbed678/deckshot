@@ -5,5 +5,6 @@ art magnet down void
 block
 row add implode 1
 row add maxHp 40
+row add blockCooldown 0.25
 note +blocking drags nearby enemies to you
 stack +30% reach per copy

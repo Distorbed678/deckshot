@@ -18,8 +18,10 @@ local STASIS_SLOW = 0.45 -- enemy bullets move at this fraction of their speed i
 local MINE_TRIGGER = 85
 local MINE_BLAST = 80
 local WELL_RADIUS = 280
-local WELL_STRENGTH = 3200
-local HOMING_CONE = math.rad(70)
+local WELL_STRENGTH = 4000
+local HOMING_CONE = math.rad(45) -- full width of the cone homing bullets look in
+local HOMING_TURN = 0.6            -- homing turns 40% slower than its stat says
+Bullet.HOMING_CONE = HOMING_CONE
 local CRIT_COLOR = { 1, 0.85, 0.2 }
 Bullet.LASER_FADE = LASER_FADE
 Bullet.CRIT_COLOR = CRIT_COLOR
@@ -168,32 +170,45 @@ function Bullet:update(dt, game)
     return
   end
 
-  -- Homing only kicks in after a moment and only steers toward targets roughly ahead.
-  local homing = self.homing + (self.bounced and self.seek or 0) -- Ricochet Seeker
+  -- Homing only kicks in after a moment, and only on an enemy inside the cone ahead of the
+  -- bullet (Bullet.HOMING_CONE wide, shown around the shooter's gun) that it can see.
+  local homing = (self.homing + (self.bounced and self.seek or 0)) * HOMING_TURN
   if homing > 0 and self.age > 0.2 then
-    local target = game:nearestEnemy(self.owner, self.x, self.y, true)
-    if target then
-      local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
-      local cur = math.atan2(self.vy, self.vx)
-      local want = math.atan2(target.y - self.y, target.x - self.x)
-      local diff = (want - cur + math.pi) % (math.pi * 2) - math.pi
-      if math.abs(diff) < HOMING_CONE then
-        local maxTurn = homing * dt
-        cur = cur + math.max(-maxTurn, math.min(maxTurn, diff))
-        self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
+    local cur = math.atan2(self.vy, self.vx)
+    local best, bestD, bestDiff
+    for _, e in ipairs(game:enemiesOf(self.owner)) do
+      if not e.dead and not e.cloaked and (e.cloakTimer or 0) <= 0 then
+        local want = math.atan2(e.y - self.y, e.x - self.x)
+        local diff = (want - cur + math.pi) % (math.pi * 2) - math.pi
+        local d = (e.x - self.x) ^ 2 + (e.y - self.y) ^ 2
+        if math.abs(diff) <= HOMING_CONE / 2 and (not bestD or d < bestD) and Physics.canReach(game, self.x, self.y, e.x, e.y) then
+          best, bestD, bestDiff = e, d, diff
+        end
       end
+    end
+    if best then
+      local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
+      local maxTurn = homing * dt
+      cur = cur + math.max(-maxTurn, math.min(maxTurn, bestDiff))
+      self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
     end
   end
 
-  -- Joystick: the bullet turns towards wherever its owner is aiming.
+  -- Joystick: the bullet flies toward wherever its owner is pointing right now (the cursor, or a
+  -- point along a stick's aim), so shots can curve around cover. Near that point it flies straight.
   if self.remote > 0 and not self.owner.dead and self.owner.aimX then
-    local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
-    local cur = math.atan2(self.vy, self.vx)
-    local want = math.atan2(self.owner.aimY, self.owner.aimX)
-    local diff = (want - cur + math.pi) % (math.pi * 2) - math.pi
-    local maxTurn = (4 + 2 * self.remote) * dt
-    cur = cur + math.max(-maxTurn, math.min(maxTurn, diff))
-    self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
+    local o = self.owner
+    local dist = o.aimDist or 400
+    local tx, ty = o.x + o.aimX * dist, o.y + o.aimY * dist
+    local dx, dy = tx - self.x, ty - self.y
+    if dx * dx + dy * dy > 40 * 40 then
+      local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
+      local cur = math.atan2(self.vy, self.vx)
+      local diff = (math.atan2(dy, dx) - cur + math.pi) % (math.pi * 2) - math.pi
+      local maxTurn = (4 + 2 * self.remote) * dt
+      cur = cur + math.max(-maxTurn, math.min(maxTurn, diff))
+      self.vx, self.vy = math.cos(cur) * speed, math.sin(cur) * speed
+    end
     self.gravity = 0
   end
 

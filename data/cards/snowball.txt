@@ -3,6 +3,7 @@ name Snowball
 rarity uncommon
 art snowball ice
 row add distDamage 1
+row add reloadTime 0.25
 note +bullets gain damage the farther they fly
 note +100% for every 1000 px
 stack +100% per 1000 px per copy

@@ -3,5 +3,6 @@ name Many Heads
 rarity epic
 art hydra toxic
 row add hydra 1
+row add reloadTime 0.25
 note +hits spawn 2 bullets that fly off (35% damage)
 stack +1 bullet per extra copy

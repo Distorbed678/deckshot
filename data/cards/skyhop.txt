@@ -3,3 +3,4 @@ name Skyhop
 rarity common
 art wing up sky
 row add airJumps 1
+row add maxHp -10

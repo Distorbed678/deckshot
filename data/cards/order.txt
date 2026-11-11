@@ -19,8 +19,6 @@ slab
 plating
 guard_drill
 long_guard
-hazard_suit
-edge_padding
 fleet
 coil_springs
 skyhop
@@ -28,7 +26,6 @@ afterburn
 light_frame
 knuckle_wraps
 long_arm
-wrecker
 cold_slam
 fan_fire
 bullet_hose
@@ -62,7 +59,6 @@ auger
 miasma
 showboat
 joystick
-tangle
 top_up
 last_word
 hop
@@ -85,7 +81,6 @@ sunflare
 leech_aura
 stillness
 spare_life
-mag_dump
 rail_lance
 many_heads
 looking_glass
@@ -102,15 +97,11 @@ heavy_bat
 quick_jab
 snap_swing
 spare_dash
-wall_spring
 pounce
 sticky_fingers
 launcher
 tailwind
-reload_roll
-skyshot
 runaway
-hill_runner
 bonecrusher
 phase_step
 titan_arm

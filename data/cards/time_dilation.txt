@@ -4,5 +4,7 @@ rarity epic
 art hourglass swirl void
 block
 row add timeWarp 1
+row add maxHp 20
+row add blockCooldown 0.25
 note +blocking slows every enemy bullet for 1.5s
 stack +1s per extra copy

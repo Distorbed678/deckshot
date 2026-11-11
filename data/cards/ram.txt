@@ -5,6 +5,7 @@ art ram steel
 block
 row add ram 1
 row add blockCooldown 0.25
+row add maxHp 20
 note +blocking launches you where you aim
 note +you block again when the charge ends
 stack +25% charge speed per copy

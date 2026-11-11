@@ -5,6 +5,7 @@ art wave shield sky
 block
 row add shockwave 1
 row add maxHp 40
+row add blockCooldown 0.25
 note +blocking releases a shockwave
 note +the wave hurts, knocks back and erases bullets
 stack +15 wave damage per copy

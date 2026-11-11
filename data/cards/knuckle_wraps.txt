@@ -2,4 +2,4 @@ deckshot-card 1
 name Knuckle Wraps
 rarity common
 art fist plus gold
-row mul meleeDamage 1.5
+row mul meleeDamage 1.3

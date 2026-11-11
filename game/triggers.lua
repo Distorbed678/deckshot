@@ -64,7 +64,7 @@ Triggers.EFFECTS = {
     text = function(p) return "poison nearby enemies (" .. p.damage .. " over 3s)" end },
   { id = "blackhole", name = "Black hole", params = {}, text = function() return "open a black hole" end },
   { id = "dash", name = "Refill dash", params = {}, text = function() return "refill your dash" end },
-  { id = "lightning", name = "Lightning", params = { { "damage", 30, 5, 1, 200, "Damage" }, { "delay", 0.75, 0.05, 0.2, 3, "Charge (s)" } },
+  { id = "lightning", name = "Lightning", params = { { "damage", 50, 5, 1, 200, "Damage" }, { "delay", 0.5, 0.05, 0.2, 3, "Charge (s)" } },
     text = function(p) return "lightning charges on every enemy, striking for " .. p.damage .. " after " .. p.delay .. "s" end },
   { id = "melee", name = "Reset melee", params = {}, text = function() return "reset your melee cooldown" end },
   { id = "block", name = "Refresh block", params = {}, text = function() return "refresh your block" end },
@@ -196,10 +196,18 @@ function RUN.block(p)
 end
 
 -- Run one rule for player p. ctx: { target = player, x = .., y = .. } (where it happened).
-function Triggers.run(p, rule, ctx)
+-- What grows with each copy of a card: its amounts, damage, percentages, counts, times and reach.
+local STACKS = { damage = true, amount = true, pct = true, count = true, time = true, dist = true }
+
+function Triggers.run(p, rule, ctx, copies)
   local f = RUN[rule.effect]
   if not f or not p.game then return end
   local q = Triggers.params(rule)
+  if copies and copies > 1 then
+    for k in pairs(STACKS) do
+      if q[k] and not (rule.effect == "ammo" and k == "amount" and q[k] >= 20) then q[k] = q[k] * copies end
+    end
+  end
   local x, y = p.x, p.y
   if ctx and ctx.target then x, y = ctx.target.x, ctx.target.y end
   if ctx and ctx.x then x, y = ctx.x, ctx.y end

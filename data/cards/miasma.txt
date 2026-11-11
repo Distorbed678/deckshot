@@ -1,6 +1,6 @@
 deckshot-card 1
 name Miasma
-rarity rare
+rarity epic
 art cloud skull toxic
 row add cloudShot 1
 row mul fireDelay 1.25

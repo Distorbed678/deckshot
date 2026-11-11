@@ -3,5 +3,6 @@ name Runaway
 rarity uncommon
 art boot up fire
 row add momentum 1
+row add reloadTime 0.25
 note +up to +50% gun damage while you're moving fast
 stack +50% per copy

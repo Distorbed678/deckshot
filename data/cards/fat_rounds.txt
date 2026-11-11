@@ -2,6 +2,5 @@ deckshot-card 1
 name Fat Rounds
 rarity common
 art orb up steel
-row mul bulletSize 1.8
-row mul gunDamage 1.15
-row add reloadTime 0.25
+row mul bulletSize 1.6
+row mul bulletSpeed 0.9
