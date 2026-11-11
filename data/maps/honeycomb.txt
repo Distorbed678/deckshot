@@ -1,66 +1,66 @@
 deckshot-map 4
 name Honeycomb
 theme jungle
-spawn 200 708
-spawn 1336 708
-spawn 290 708
-spawn 1246 708
-rect 144 756 1248 48
-obj block h=36 hp=40 id=1 material=wood w=36 x=372 y=320
-obj block h=36 hp=40 id=2 material=wood w=36 x=444 y=320
-obj block h=36 hp=40 id=3 material=wood w=36 x=516 y=320
-obj block h=36 hp=40 id=4 material=wood w=36 x=588 y=320
-obj block h=36 hp=40 id=5 material=wood w=36 x=660 y=320
-obj block h=36 hp=40 id=6 material=wood w=36 x=732 y=320
-obj block h=36 hp=40 id=7 material=wood w=36 x=804 y=320
-obj block h=36 hp=40 id=8 material=wood w=36 x=876 y=320
-obj block h=36 hp=40 id=9 material=wood w=36 x=948 y=320
-obj block h=36 hp=40 id=10 material=wood w=36 x=1020 y=320
-obj block h=36 hp=40 id=11 material=wood w=36 x=1092 y=320
-obj block h=36 hp=40 id=12 material=wood w=36 x=408 y=404
-obj block h=36 hp=40 id=13 material=wood w=36 x=480 y=404
-obj block h=36 hp=40 id=14 material=wood w=36 x=552 y=404
-obj block h=36 hp=40 id=15 material=wood w=36 x=624 y=404
-obj block h=36 hp=40 id=16 material=wood w=36 x=696 y=404
-obj block h=36 hp=40 id=17 material=wood w=36 x=768 y=404
-obj block h=36 hp=40 id=18 material=wood w=36 x=840 y=404
-obj block h=36 hp=40 id=19 material=wood w=36 x=912 y=404
-obj block h=36 hp=40 id=20 material=wood w=36 x=984 y=404
-obj block h=36 hp=40 id=21 material=wood w=36 x=1056 y=404
-obj block h=36 hp=40 id=22 material=wood w=36 x=1128 y=404
-obj block h=36 hp=40 id=23 material=wood w=36 x=372 y=488
-obj block h=36 hp=40 id=24 material=wood w=36 x=444 y=488
-obj block h=36 hp=40 id=25 material=wood w=36 x=516 y=488
-obj block h=36 hp=40 id=26 material=wood w=36 x=588 y=488
-obj block h=36 hp=40 id=27 material=wood w=36 x=660 y=488
-obj block h=36 hp=40 id=28 material=wood w=36 x=732 y=488
-obj block h=36 hp=40 id=29 material=wood w=36 x=804 y=488
-obj block h=36 hp=40 id=30 material=wood w=36 x=876 y=488
-obj block h=36 hp=40 id=31 material=wood w=36 x=948 y=488
-obj block h=36 hp=40 id=32 material=wood w=36 x=1020 y=488
-obj block h=36 hp=40 id=33 material=wood w=36 x=1092 y=488
-obj block h=36 hp=40 id=34 material=wood w=36 x=408 y=572
-obj block h=36 hp=40 id=35 material=wood w=36 x=480 y=572
-obj block h=36 hp=40 id=36 material=wood w=36 x=552 y=572
-obj block h=36 hp=40 id=37 material=wood w=36 x=624 y=572
-obj block h=36 hp=40 id=38 material=wood w=36 x=696 y=572
-obj block h=36 hp=40 id=39 material=wood w=36 x=768 y=572
-obj block h=36 hp=40 id=40 material=wood w=36 x=840 y=572
-obj block h=36 hp=40 id=41 material=wood w=36 x=912 y=572
-obj block h=36 hp=40 id=42 material=wood w=36 x=984 y=572
-obj block h=36 hp=40 id=43 material=wood w=36 x=1056 y=572
-obj block h=36 hp=40 id=44 material=wood w=36 x=1128 y=572
-obj block h=36 hp=40 id=45 material=wood w=36 x=372 y=656
-obj block h=36 hp=40 id=46 material=wood w=36 x=444 y=656
-obj block h=36 hp=40 id=47 material=wood w=36 x=516 y=656
-obj block h=36 hp=40 id=48 material=wood w=36 x=588 y=656
-obj block h=36 hp=40 id=49 material=wood w=36 x=660 y=656
-obj block h=36 hp=40 id=50 material=wood w=36 x=804 y=656
-obj block h=36 hp=40 id=51 material=wood w=36 x=876 y=656
-obj block h=36 hp=40 id=52 material=wood w=36 x=948 y=656
-obj block h=36 hp=40 id=53 material=wood w=36 x=1020 y=656
-obj block h=36 hp=40 id=54 material=wood w=36 x=1092 y=656
-obj block h=6 id=55 material=sticky w=192 x=420 y=750
-obj block h=6 id=56 material=sticky w=192 x=924 y=750
-oneway 150 560 170 14
-oneway 1216 560 170 14
+spawn 204 720
+spawn 1332 720
+spawn 288 720
+spawn 1248 720
+rect 144 768 1248 96
+obj block h=48 hp=40 id=1 material=wood w=24 x=384 y=312
+obj block h=48 hp=40 id=2 material=wood w=24 x=456 y=312
+obj block h=48 hp=40 id=3 material=wood w=24 x=528 y=312
+obj block h=48 hp=40 id=4 material=wood w=24 x=600 y=312
+obj block h=48 hp=40 id=5 material=wood w=24 x=672 y=312
+obj block h=48 hp=40 id=6 material=wood w=24 x=744 y=312
+obj block h=48 hp=40 id=7 material=wood w=48 x=792 y=312
+obj block h=48 hp=40 id=8 material=wood w=48 x=864 y=312
+obj block h=48 hp=40 id=9 material=wood w=48 x=936 y=312
+obj block h=48 hp=40 id=10 material=wood w=48 x=1008 y=312
+obj block h=48 hp=40 id=11 material=wood w=48 x=1080 y=312
+obj block h=24 hp=40 id=12 material=wood w=48 x=408 y=408
+obj block h=24 hp=40 id=13 material=wood w=48 x=480 y=408
+obj block h=24 hp=40 id=14 material=wood w=48 x=552 y=408
+obj block h=24 hp=40 id=15 material=wood w=48 x=624 y=408
+obj block h=24 hp=40 id=16 material=wood w=48 x=696 y=408
+obj block h=24 hp=40 id=17 material=wood w=24 x=768 y=408
+obj block h=24 hp=40 id=18 material=wood w=24 x=840 y=408
+obj block h=24 hp=40 id=19 material=wood w=24 x=912 y=408
+obj block h=24 hp=40 id=20 material=wood w=24 x=984 y=408
+obj block h=24 hp=40 id=21 material=wood w=24 x=1056 y=408
+obj block h=24 hp=40 id=22 material=wood w=24 x=1128 y=408
+obj block h=48 hp=40 id=23 material=wood w=24 x=384 y=480
+obj block h=48 hp=40 id=24 material=wood w=24 x=456 y=480
+obj block h=48 hp=40 id=25 material=wood w=24 x=528 y=480
+obj block h=48 hp=40 id=26 material=wood w=24 x=600 y=480
+obj block h=48 hp=40 id=27 material=wood w=24 x=672 y=480
+obj block h=48 hp=40 id=28 material=wood w=24 x=744 y=480
+obj block h=48 hp=40 id=29 material=wood w=48 x=792 y=480
+obj block h=48 hp=40 id=30 material=wood w=48 x=864 y=480
+obj block h=48 hp=40 id=31 material=wood w=48 x=936 y=480
+obj block h=48 hp=40 id=32 material=wood w=48 x=1008 y=480
+obj block h=48 hp=40 id=33 material=wood w=48 x=1080 y=480
+obj block h=24 hp=40 id=34 material=wood w=48 x=408 y=576
+obj block h=24 hp=40 id=35 material=wood w=48 x=480 y=576
+obj block h=24 hp=40 id=36 material=wood w=48 x=552 y=576
+obj block h=24 hp=40 id=37 material=wood w=48 x=624 y=576
+obj block h=24 hp=40 id=38 material=wood w=48 x=696 y=576
+obj block h=24 hp=40 id=39 material=wood w=24 x=768 y=576
+obj block h=24 hp=40 id=40 material=wood w=24 x=840 y=576
+obj block h=24 hp=40 id=41 material=wood w=24 x=912 y=576
+obj block h=24 hp=40 id=42 material=wood w=24 x=984 y=576
+obj block h=24 hp=40 id=43 material=wood w=24 x=1056 y=576
+obj block h=24 hp=40 id=44 material=wood w=24 x=1128 y=576
+obj block h=48 hp=40 id=45 material=wood w=24 x=384 y=648
+obj block h=48 hp=40 id=46 material=wood w=24 x=456 y=648
+obj block h=48 hp=40 id=47 material=wood w=24 x=528 y=648
+obj block h=48 hp=40 id=48 material=wood w=24 x=600 y=648
+obj block h=48 hp=40 id=49 material=wood w=24 x=672 y=648
+obj block h=48 hp=40 id=50 material=wood w=48 x=792 y=648
+obj block h=48 hp=40 id=51 material=wood w=48 x=864 y=648
+obj block h=48 hp=40 id=52 material=wood w=48 x=936 y=648
+obj block h=48 hp=40 id=53 material=wood w=48 x=1008 y=648
+obj block h=48 hp=40 id=54 material=wood w=48 x=1080 y=648
+obj block h=6 id=55 material=sticky w=192 x=432 y=762
+obj block h=6 id=56 material=sticky w=192 x=912 y=762
+oneway 144 552 168 14
+oneway 1224 552 168 14

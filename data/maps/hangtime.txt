@@ -1,27 +1,27 @@
 deckshot-map 4
 name Hangtime
 theme neon
-spawn 140 652
-spawn 1396 652
-spawn 232 652
-spawn 1304 652
-rect 96 700 180 164
-rect 1260 700 180 164
+spawn 144 648
+spawn 1392 648
+spawn 228 648
+spawn 1308 648
+rect 96 696 192 168
+rect 1248 696 192 168
 obj block h=16 id=1 material=wood physics=true w=200 x=330 y=590
-obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=338 x2=338 y=60 y2=590
-obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=522 x2=522 y=60 y2=590
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=336 x2=338 y=60 y2=590
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=528 x2=522 y=60 y2=590
 obj block h=16 id=4 material=wood physics=true w=200 x=1006 y=590
-obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=1014 x2=1014 y=60 y2=590
-obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1198 x2=1198 y=60 y2=590
+obj rope id=5 level=true segHp=60 slack=1.05 target=4 x=1020 x2=1014 y=60 y2=590
+obj rope id=6 level=true segHp=60 slack=1.05 target=4 x=1200 x2=1198 y=60 y2=590
 obj block h=16 id=7 material=wood physics=true w=180 x=480 y=430
-obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=488 x2=488 y=60 y2=430
-obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=652 x2=652 y=60 y2=430
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=492 x2=488 y=60 y2=430
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=648 x2=652 y=60 y2=430
 obj block h=16 id=10 material=wood physics=true w=180 x=876 y=430
-obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=884 x2=884 y=60 y2=430
-obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1048 x2=1048 y=60 y2=430
+obj rope id=11 level=true segHp=60 slack=1.05 target=10 x=888 x2=884 y=60 y2=430
+obj rope id=12 level=true segHp=60 slack=1.05 target=10 x=1044 x2=1048 y=60 y2=430
 obj block h=16 id=13 material=wood physics=true w=200 x=668 y=620
-obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=676 x2=676 y=60 y2=620
-obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=860 x2=860 y=60 y2=620
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=672 x2=676 y=60 y2=620
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=864 x2=860 y=60 y2=620
 obj block h=16 id=16 material=wood physics=true w=180 x=678 y=280
-obj rope id=17 level=true segHp=60 slack=1.05 target=16 x=686 x2=686 y=60 y2=280
-obj rope id=18 level=true segHp=60 slack=1.05 target=16 x=850 x2=850 y=60 y2=280
+obj rope id=17 level=true segHp=60 slack=1.05 target=16 x=684 x2=686 y=60 y2=280
+obj rope id=18 level=true segHp=60 slack=1.05 target=16 x=852 x2=850 y=60 y2=280

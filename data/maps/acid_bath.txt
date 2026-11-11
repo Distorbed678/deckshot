@@ -1,17 +1,17 @@
 deckshot-map 4
 name Acid Bath
 theme jungle
-spawn 180 652
-spawn 1356 652
-spawn 300 652
-spawn 1236 652
-rect 96 700 360 164
-rect 1080 700 360 164
-rect 456 820 624 44
-obj liquid buoyant=false color=#59D934 damage=20 h=70 id=1 poison=true w=624 x=456 y=750
-obj block h=24 id=2 material=sticky w=96 x=540 y=650
-obj block h=24 id=3 material=sticky w=96 x=720 y=590
-obj block h=24 id=4 material=sticky w=96 x=900 y=650
-oneway 290 510 180 14
-oneway 1066 510 180 14
-rect 648 390 240 24
+spawn 180 648
+spawn 1356 648
+spawn 300 648
+spawn 1236 648
+rect 96 696 360 168
+rect 1080 696 360 168
+rect 456 816 624 48
+obj liquid buoyant=false color=#59D934 damage=20 h=72 id=1 poison=true w=624 x=456 y=744
+obj block h=24 id=2 material=sticky w=96 x=552 y=648
+obj block h=24 id=3 material=sticky w=96 x=720 y=600
+obj block h=24 id=4 material=sticky w=96 x=888 y=648
+oneway 288 504 192 14
+oneway 1056 504 192 14
+rect 648 384 240 24

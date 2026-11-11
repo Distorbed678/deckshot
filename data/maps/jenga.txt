@@ -1,33 +1,33 @@
 deckshot-map 4
 name Jenga
 theme ice
-spawn 180 708
-spawn 1356 708
-spawn 270 708
-spawn 1266 708
-rect 144 756 1248 48
-obj block h=40 hp=40 id=1 material=wood physics=true w=96 x=624 y=716
-obj block h=40 hp=40 id=2 material=wood physics=true w=96 x=720 y=716
-obj block h=40 hp=40 id=3 material=wood physics=true w=96 x=816 y=716
-obj block h=40 hp=40 id=4 material=wood physics=true w=288 x=624 y=676
-obj block h=40 hp=40 id=5 material=wood physics=true w=96 x=624 y=636
-obj block h=40 hp=40 id=6 material=wood physics=true w=96 x=720 y=636
-obj block h=40 hp=40 id=7 material=wood physics=true w=96 x=816 y=636
-obj block h=40 hp=40 id=8 material=wood physics=true w=288 x=624 y=596
-obj block h=40 hp=40 id=9 material=wood physics=true w=96 x=624 y=556
-obj block h=40 hp=40 id=10 material=wood physics=true w=96 x=720 y=556
-obj block h=40 hp=40 id=11 material=wood physics=true w=96 x=816 y=556
-obj block h=40 hp=40 id=12 material=wood physics=true w=288 x=624 y=516
-obj block h=40 hp=40 id=13 material=wood physics=true w=96 x=624 y=476
-obj block h=40 hp=40 id=14 material=wood physics=true w=96 x=720 y=476
-obj block h=40 hp=40 id=15 material=wood physics=true w=96 x=816 y=476
-obj block h=48 hp=60 id=16 material=crate physics=true w=48 x=372 y=708
-obj block h=48 hp=60 id=17 material=crate physics=true w=48 x=372 y=660
-obj block h=48 hp=60 id=18 material=crate physics=true w=48 x=372 y=612
-obj block h=48 hp=60 id=19 material=crate physics=true w=48 x=1116 y=708
-obj block h=48 hp=60 id=20 material=crate physics=true w=48 x=1116 y=660
-obj block h=48 hp=60 id=21 material=crate physics=true w=48 x=1116 y=612
-oneway 150 560 170 14
-oneway 1216 560 170 14
-oneway 420 400 150 14
-oneway 966 400 150 14
+spawn 180 720
+spawn 1356 720
+spawn 276 720
+spawn 1272 720
+rect 144 768 1248 96
+obj block h=40 hp=40 id=1 material=wood physics=true w=96 x=624 y=728
+obj block h=40 hp=40 id=2 material=wood physics=true w=96 x=720 y=728
+obj block h=40 hp=40 id=3 material=wood physics=true w=96 x=816 y=728
+obj block h=40 hp=40 id=4 material=wood physics=true w=288 x=624 y=688
+obj block h=40 hp=40 id=5 material=wood physics=true w=96 x=624 y=648
+obj block h=40 hp=40 id=6 material=wood physics=true w=96 x=720 y=648
+obj block h=40 hp=40 id=7 material=wood physics=true w=96 x=816 y=648
+obj block h=40 hp=40 id=8 material=wood physics=true w=288 x=624 y=608
+obj block h=40 hp=40 id=9 material=wood physics=true w=96 x=624 y=568
+obj block h=40 hp=40 id=10 material=wood physics=true w=96 x=720 y=568
+obj block h=40 hp=40 id=11 material=wood physics=true w=96 x=816 y=568
+obj block h=40 hp=40 id=12 material=wood physics=true w=288 x=624 y=528
+obj block h=40 hp=40 id=13 material=wood physics=true w=96 x=624 y=488
+obj block h=40 hp=40 id=14 material=wood physics=true w=96 x=720 y=488
+obj block h=40 hp=40 id=15 material=wood physics=true w=96 x=816 y=488
+obj block h=48 hp=60 id=16 material=crate physics=true w=48 x=372 y=720
+obj block h=48 hp=60 id=17 material=crate physics=true w=48 x=372 y=672
+obj block h=48 hp=60 id=18 material=crate physics=true w=48 x=372 y=624
+obj block h=48 hp=60 id=19 material=crate physics=true w=48 x=1116 y=720
+obj block h=48 hp=60 id=20 material=crate physics=true w=48 x=1116 y=672
+obj block h=48 hp=60 id=21 material=crate physics=true w=48 x=1116 y=624
+oneway 144 552 168 14
+oneway 1224 552 168 14
+oneway 432 408 144 14
+oneway 960 408 144 14

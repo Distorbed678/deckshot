@@ -87,7 +87,7 @@ All keys can be rebound in **Settings → Controls**, and **How to Play** in the
 | **Gamepad** | Left stick | A | Right stick | Right trigger | Left trigger / RB | B / LB | X |
 
 - There's no double jump by default. If you walk or get knocked off an edge without jumping, you keep **one jump** to use any time during that fall. Air-jump cards add more.
-- Every jump is a full jump, however briefly you press it. **Down + jump** drops through thin platforms.
+- Every jump is a full jump, however briefly you press it. Hold **down** to drop through thin platforms (you keep falling through them while you hold it).
 - **Tab** (gamepad **Back**) shows the scoreboard. **Enter** opens chat online, and **V** (or clicking the right stick) is push-to-talk when voice chat is on. **Esc** (gamepad **Start**) pauses. **F11** or **Alt+Enter** toggles fullscreen.
 - **Touch:** drag on the left half to move, drag on the right half to aim and fire, plus Jump, Block, Dash and Melee buttons. Move them in Settings → Controls → Touch layout.
 - **Card picks:** left/right (or hover) to turn cards over and choose, fire (or click / A) to take, down to discard a card instead.

@@ -227,23 +227,33 @@ function D.spikes(o)
   g.pop()
 end
 
-function D.laser(o)
-  local d = DIRS[o.dir] or DIRS.down
+local beamLine = { 0, 0, 0, 0 } -- reused every frame
+local function laserLine(o)
+  local dx, dy = Objects.laserDir(o)
   local len = o.a or 0
-  local ex, ey = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
+  beamLine[1], beamLine[2] = o.x, o.y
+  beamLine[3], beamLine[4] = o.x + dx * (len + 14), o.y + dy * (len + 14)
+  return beamLine, dx, dy
+end
+
+function D.laser(o)
+  local line, dx, dy = laserLine(o)
   if o.s == 1 then
     g.setColor(1, 0.25, 0.25, 0.35 + 0.25 * math.sin(love.timer.getTime() * 30))
-    Assets.strip("beam", { o.x, o.y, ex, ey }, 6, 32)
+    Assets.strip("beam", line, 6, 32)
   elseif o.s == 2 then
     g.setColor(1, 0.2, 0.25)
-    Assets.strip("beam", { o.x, o.y, ex, ey }, 22, 32)
+    Assets.strip("beam", line, 22, 32)
     g.setColor(1, 0.92, 0.92)
-    Assets.strip("beam", { o.x, o.y, ex, ey }, 8, 32)
+    Assets.strip("beam", line, 8, 32)
+    -- Where it ends: a bright splash on whatever stopped it.
+    g.setColor(1, 0.85, 0.85, 0.9)
+    Assets.center("dot", line[3], line[4], 18, 18)
   end
   white()
   Assets.center("laser_emitter", o.x, o.y, 28, 28)
   g.setColor(o.s == 0 and 0.4 or 1, 0.2, 0.25)
-  Assets.center("dot", o.x + d[1] * 8, o.y + d[2] * 8, 12, 12)
+  Assets.center("dot", o.x + dx * 8, o.y + dy * 8, 12, 12)
 end
 
 function D.crusher(o)
@@ -347,10 +357,8 @@ end
 
 function GLOW.laser(o)
   if o.s ~= 2 then return end
-  local d = DIRS[o.dir] or DIRS.down
-  local len = o.a or 0
   g.setColor(1, 0.2, 0.25, 0.9)
-  Assets.strip("beam", { o.x, o.y, o.x + d[1] * (len + 14), o.y + d[2] * (len + 14) }, 28, 32)
+  Assets.strip("beam", (laserLine(o)), 28, 32)
 end
 
 function GLOW.pad(o)

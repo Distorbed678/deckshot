@@ -3,17 +3,17 @@ name Ziggurat
 theme desert
 spawn 180 720
 spawn 1356 720
-spawn 268 720
-spawn 1268 720
-rect 96 768 1344 48
+spawn 264 720
+spawn 1272 720
+rect 96 768 1344 96
 rect 432 648 672 120
 obj block h=120 id=1 material=stone slope=right w=120 x=312 y=648
 obj block h=120 id=2 material=stone slope=left w=120 x=1104 y=648
 rect 624 528 288 120
 obj block h=120 id=3 material=stone slope=right w=120 x=504 y=528
 obj block h=120 id=4 material=stone slope=left w=120 x=912 y=528
-oneway 108 560 170 14
-oneway 1258 560 170 14
-oneway 250 400 170 14
-oneway 1116 400 170 14
-oneway 678 360 180 14
+oneway 120 552 168 14
+oneway 1248 552 168 14
+oneway 240 408 192 14
+oneway 1104 408 192 14
+oneway 672 360 192 14

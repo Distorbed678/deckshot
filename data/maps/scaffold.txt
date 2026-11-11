@@ -1,26 +1,26 @@
 deckshot-map 4
 name Scaffold
 theme void
-spawn 200 708
-spawn 1336 708
-spawn 270 708
-spawn 1266 708
-rect 144 756 1248 48
-obj block h=436 id=1 material=metal w=18 x=336 y=320
-obj block h=436 id=2 material=metal w=18 x=624 y=320
-obj block h=436 id=3 material=metal w=18 x=894 y=320
-obj block h=436 id=4 material=metal w=18 x=1182 y=320
-oneway 354 600 270 14
-oneway 642 600 270 14
-oneway 912 600 270 14
-oneway 354 460 270 14
-oneway 642 460 270 14
-oneway 912 460 270 14
-oneway 354 320 270 14
-oneway 642 320 270 14
-oneway 912 320 270 14
+spawn 204 720
+spawn 1332 720
+spawn 276 720
+spawn 1272 720
+rect 144 768 1248 96
+obj block h=456 id=1 material=metal w=24 x=336 y=312
+obj block h=456 id=2 material=metal w=24 x=624 y=312
+obj block h=456 id=3 material=metal w=24 x=888 y=312
+obj block h=456 id=4 material=metal w=24 x=1176 y=312
+oneway 360 600 264 14
+oneway 648 600 264 14
+oneway 912 600 264 14
+oneway 360 456 264 14
+oneway 648 456 264 14
+oneway 912 456 264 14
+oneway 360 312 264 14
+oneway 648 312 264 14
+oneway 912 312 264 14
 obj block h=48 hp=60 id=5 material=crate physics=true w=48 x=450 y=552
-obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=1040 y=552
-obj block drop=0.1 h=48 hp=60 id=7 material=crate onBreak=pickup physics=true w=48 x=744 y=412
-obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=470 y=272
-obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=1020 y=272
+obj block h=48 hp=60 id=6 material=crate physics=true w=48 x=1038 y=552
+obj block drop=0.1 h=48 hp=60 id=7 material=crate onBreak=pickup physics=true w=48 x=744 y=408
+obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=470 y=264
+obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=1018 y=264

@@ -342,8 +342,19 @@ function session.setJoinable(on)
   end
 end
 
+-- Steam's invite dialog lives in its overlay, which only exists when the game was started from
+-- Steam. Returns false when it can't open (the lobby then shows screens/invite.lua instead).
+function session.overlayAvailable()
+  local U = steam.available and S().Utils
+  if not (U and U.IsOverlayEnabled) then return false end
+  local ok, on = pcall(U.IsOverlayEnabled)
+  return ok and on == true
+end
+
 function session.openInviteDialog()
-  if session.lobby then S().Friends.ActivateGameOverlayInviteDialog(session.lobby) end
+  if not session.lobby or not session.overlayAvailable() then return false end
+  S().Friends.ActivateGameOverlayInviteDialog(session.lobby)
+  return true
 end
 
 function session.friendsOnline()

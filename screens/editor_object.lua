@@ -25,7 +25,7 @@ local HOLD = {
   { "hinge", "Hinge point", options = { "center", "top", "bottom", "left", "right" },
     show = function(o) return o.anchored and o.anchorType == "hinge" and o.w end },
   { "anchorHp", "Anchor HP (0 = forever)", 5, 0, 500, show = function(o) return o.anchored or o.parent end },
-  { "attach", "Attached with", options = { "rigid", "hinge" }, show = when("parent") },
+  { "attach", "Attached with", options = { "rigid", "hinge", "level" }, show = when("parent") }, -- level: rides it but stays flat
 }
 
 local function list(...)

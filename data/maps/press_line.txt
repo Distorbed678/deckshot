@@ -1,17 +1,17 @@
 deckshot-map 4
 name Press Line
 theme foundry
-spawn 190 708
-spawn 1346 708
-spawn 270 708
-spawn 1266 708
-rect 144 756 1248 48
-rect 240 96 1056 36
-obj crusher damage=60 h=60 id=1 phase=0 travel=540 w=120 wait=2 x=432 y=132
-obj crusher damage=60 h=60 id=2 phase=0.9 travel=540 w=120 wait=2 x=708 y=132
-obj crusher damage=60 h=60 id=3 phase=1.8 travel=540 w=120 wait=2 x=984 y=132
-obj block conveyor=true h=20 id=4 material=metal speed=110 w=720 x=408 y=736
-oneway 144 568 150 14
-oneway 1242 568 150 14
-oneway 580 600 110 14
-oneway 846 600 110 14
+spawn 192 720
+spawn 1344 720
+spawn 276 720
+spawn 1272 720
+rect 144 768 1248 96
+rect 240 96 1056 48
+obj crusher damage=60 h=48 id=1 phase=0 travel=540 w=120 wait=2 x=432 y=144
+obj crusher damage=60 h=48 id=2 phase=0.9 travel=540 w=96 wait=2 x=720 y=144
+obj crusher damage=60 h=48 id=3 phase=1.8 travel=540 w=120 wait=2 x=984 y=144
+obj block conveyor=true h=20 id=4 material=metal speed=110 w=720 x=408 y=748
+oneway 144 624 144 14
+oneway 1248 624 144 14
+oneway 576 600 120 14
+oneway 840 600 120 14

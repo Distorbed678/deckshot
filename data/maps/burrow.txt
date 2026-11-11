@@ -1,19 +1,19 @@
 deckshot-map 4
 name Burrow
 theme jungle
-spawn 170 720
-spawn 1366 720
-spawn 330 512
-spawn 1206 512
-rect 96 768 1344 48
-rect 228 560 432 48
-rect 876 560 432 48
-rect 396 350 228 36
-rect 912 350 228 36
-rect 96 440 60 36
-rect 1380 440 60 36
-oneway 696 430 144 14
-oneway 672 250 192 14
+spawn 168 720
+spawn 1368 720
+spawn 336 504
+spawn 1212 504
+rect 96 768 1344 96
+rect 240 552 432 48
+rect 864 552 432 48
+rect 408 360 216 24
+rect 912 360 216 24
+rect 96 432 72 48
+rect 1368 432 72 48
+oneway 696 432 144 14
+oneway 672 240 192 14
 obj block drop=0.1 h=48 hp=60 id=1 material=crate onBreak=pickup physics=true w=48 x=744 y=720
 obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=696 y=720
 obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=792 y=720

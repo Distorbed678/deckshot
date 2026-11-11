@@ -2687,7 +2687,8 @@ end
 function Match:drawScoreboard()
   local players = self:players()
   local pw, rowH = 1000, 52
-  local ph = 150 + #players * rowH + 70
+  local hist0 = self.role == "client" and self.view.history or (self.world and self.world.history) or {}
+  local ph = 150 + #players * rowH + 70 + math.max(0, math.ceil(#hist0 / math.floor((pw - 140) / 22)) - 1) * 22
   local px, py = (app.W - pw) / 2, (app.H - ph) / 2
   love.graphics.setColor(0, 0, 0, 0.5)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
@@ -2695,11 +2696,14 @@ function Match:drawScoreboard()
   love.graphics.setFont(app.fonts.big)
   love.graphics.setColor(1, 1, 1)
   love.graphics.printf("SCOREBOARD", px, py + 16, pw, "center")
-  local cols = { { "Player", 0, "left", 240 }, { "Score", 250 }, { "Kills", 340 }, { "Deaths", 430 }, { "Damage", 530 },
-    { "Accuracy", 640 }, { "Blocks", 750 }, { "Melee", 840 }, { "Ping", 920 } }
-  love.graphics.setFont(app.fonts.small)
+  -- The name column, then the numbers shared out evenly over the rest of the panel's width.
+  local inner, nameW = pw - 60, 240
+  local cols = { { "Player", 0, "left", nameW } }
+  local heads = { "Score", "Kills", "Deaths", "Damage", "Accuracy", "Blocks", "Melee", "Ping" }
+  local colW = (inner - nameW) / #heads
+  for k, h in ipairs(heads) do cols[k + 1] = { h, nameW + (k - 1) * colW, "center", colW } end
   love.graphics.setColor(1, 1, 1, 0.5)
-  for _, c in ipairs(cols) do love.graphics.printf(c[1], px + 30 + c[2], py + 74, c[4] or 80, c[3] or "center") end
+  for _, c in ipairs(cols) do ui.printFit(c[1], app.fonts.small, px + 30 + c[2], py + 74, c[4] - 6, c[3]) end
   local streaks = self.role ~= "local" and active.get().peerStreaks or {}
   for i, p in ipairs(players) do
     local y = py + 100 + (i - 1) * rowH
@@ -2714,7 +2718,7 @@ function Match:drawScoreboard()
     love.graphics.setFont(app.fonts.med)
     love.graphics.setColor(p.color)
     local name = (p.name or ("Player " .. i)) .. (p.disconnected and "  (left)" or "")
-    love.graphics.printf(name, px + 30, y + 6, 240, "left")
+    ui.printFit(name, app.fonts.med, px + 30, y + 6, nameW - 10, "left")
     if streak and streak.streak > 1 then
       love.graphics.setFont(app.fonts.tiny)
       love.graphics.setColor(1, 0.8, 0.35)
@@ -2722,7 +2726,7 @@ function Match:drawScoreboard()
       love.graphics.setFont(app.fonts.med)
     end
     love.graphics.setColor(1, 1, 1, 0.9)
-    for k, v in ipairs(vals) do love.graphics.printf(v, px + 30 + cols[k + 1][2], y + 6, 80, "center") end
+    for k, v in ipairs(vals) do ui.printFit(v, app.fonts.med, px + 30 + cols[k + 1][2], y + 6, colW - 6, "center") end
   end
   -- Round by round: a dot per round in the winner's colour.
   local hist = self.role == "client" and self.view.history or (self.world and self.world.history) or {}
@@ -2730,10 +2734,12 @@ function Match:drawScoreboard()
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(1, 1, 1, 0.5)
   love.graphics.print("Rounds", px + 30, y)
+  local perRow = math.max(1, math.floor((pw - 140) / 22))
   for k, slot in ipairs(hist) do
     local c = players[slot] and players[slot].color or { 0.5, 0.5, 0.5 }
     love.graphics.setColor(c)
-    love.graphics.circle("fill", px + 110 + (k - 1) * 22, y + 9, 8)
+    local col, row = (k - 1) % perRow, math.floor((k - 1) / perRow)
+    love.graphics.circle("fill", px + 110 + col * 22, y + 9 + row * 22, 8)
   end
 end
 
@@ -3030,6 +3036,9 @@ function Match:drawPause()
   love.graphics.setColor(0, 0, 0, 0.6)
   love.graphics.rectangle("fill", 0, 0, app.W, app.H)
   local buttons = self.role == "host" and 4 or 3
+  local okS, sess = pcall(active.get)
+  local steamLobby = self.role ~= "local" and okS and sess and sess.kind == "steam" and sess.lobby
+  if steamLobby then buttons = buttons + 1 end
   local pw, ph = 420, 120 + buttons * 62
   local px, py = (app.W - pw) / 2, (app.H - ph) / 2
   ui.panel(px, py, pw, ph)
@@ -3048,6 +3057,14 @@ function Match:drawPause()
   y = y + 62
   if ui.button("Settings", bx, y, bw, bh) then app.push(require("screens.settings").new()) end
   y = y + 62
+  if steamLobby then
+    -- Friends who join now watch until the next match.
+    if ui.button("Invite Friends", bx, y, bw, bh) and not sess.openInviteDialog() then
+      self.invited = self.invited or {}
+      require("screens.invite").open(sess, self.invited)
+    end
+    y = y + 62
+  end
   if self.role == "local" then
     if ui.button("Main Menu", bx, y, bw, bh) then
       require("screens.confirm").ask("Leave this match?", "The match in progress will end.", function()

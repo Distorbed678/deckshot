@@ -1,18 +1,18 @@
 deckshot-map 4
 name Elevator Shaft
 theme void
-spawn 190 612
-spawn 1346 612
-spawn 200 352
-spawn 1336 352
-rect 96 660 264 204
-rect 1176 660 264 204
-rect 96 400 228 36
-rect 1212 400 228 36
-obj rail force=6 id=1 path=768,700;768,300 speed=120 x=768 y=700
-obj block h=20 id=2 material=metal parent=1 w=216 x=660 y=690
-obj rail force=6 id=3 path=500,360;500,700 speed=120 x=500 y=360
-obj block h=20 id=4 material=metal parent=3 w=120 x=440 y=350
-obj rail force=6 id=5 path=1036,700;1036,360 speed=120 x=1036 y=700
-obj block h=20 id=6 material=metal parent=5 w=120 x=976 y=690
-oneway 684 184 168 14
+spawn 192 624
+spawn 1344 624
+spawn 204 360
+spawn 1332 360
+rect 96 672 264 192
+rect 1176 672 264 192
+rect 96 408 240 24
+rect 1200 408 240 24
+obj rail force=6 id=1 path=768,696;768,300 speed=120 x=768 y=696
+obj block h=20 id=2 material=metal parent=1 w=192 x=672 y=696
+obj rail force=6 id=3 path=504,360;504,696 speed=120 x=504 y=360
+obj block h=20 id=4 material=metal parent=3 w=120 x=432 y=360
+obj rail force=6 id=5 path=1032,696;1032,360 speed=120 x=1032 y=696
+obj block h=20 id=6 material=metal parent=5 w=120 x=984 y=696
+oneway 696 192 144 14

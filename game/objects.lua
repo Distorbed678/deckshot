@@ -328,7 +328,29 @@ local function flameAngle(o)
   return math.atan2(d[2], d[1]) + (o.rot or 0)
 end
 
--- Laser emitter: charge line, then a beam that stops at the first solid (crates are cover).
+-- Which way a laser points, turning with whatever it's attached to.
+function Objects.laserDir(o)
+  local d = DIRS[o.dir] or DIRS.down
+  local r = o.rot or 0
+  if r == 0 then return d[1], d[2] end
+  local c, s = math.cos(r), math.sin(r)
+  return d[1] * c - d[2] * s, d[1] * s + d[2] * c
+end
+
+-- What stops a beam: walls and solid blocks, any other map object (props, hazards, weights,
+-- turrets...) and living players. One-way platforms, ropes, liquids and fields let it through.
+local BEAM_PASSES = { liquid = true, fan = true, pad = true, rope = true, arm = true, rail = true }
+local beamSelf
+local function beamStops(ud)
+  if not ud or ud == beamSelf then return false end
+  if ud.kind == "hitbox" then return not ud.p.dead end
+  if ud.kind then return false end
+  if ud.oneway or ud.alive == false or BEAM_PASSES[ud.type] then return false end
+  return true
+end
+
+-- Laser emitter: charge line, then a beam that stops at the first thing in its way. Only the
+-- first player it reaches is hurt: whoever stands in front shields the rest.
 T.laser = {
   update = function(o, world, dt)
     local ph = cyclePhase(world.time, o.off, o.warn, o.on, o.phase)
@@ -336,25 +358,20 @@ T.laser = {
     o.s = ph == "on" and 2 or ph == "warn" and 1 or 0
     if o.s == 1 and prev == 0 then sfx.play("laserCharge", o.x, 0.7) end
     if o.s == 2 and prev ~= 2 then sfx.play("laserFire", o.x) end
-    local d = DIRS[o.dir] or DIRS.down
-    -- Beam length: march until a solid.
-    local len = 0
-    local rects = world.solids
-    while len < 1500 do
-      local px, py = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
-      if px < -10 or px > Map.W + 10 or py < -10 or py > Map.H + 10 or Physics.hit(world, px - 2, py - 2, 4, 4) then break end
-      len = len + 6
-    end
-    o.a = len
+    local dx, dy = Objects.laserDir(o)
+    local x0, y0 = o.x + dx * 14, o.y + dy * 14
+    local reach = 1500
+    beamSelf = o
+    local hit, hx, hy = Physics.ray(world, x0, y0, x0 + dx * reach, y0 + dy * reach, beamStops)
+    beamSelf = nil
+    o.a = hit and math.sqrt((hx - x0) ^ 2 + (hy - y0) ^ 2) or reach
     if o.s ~= 2 then return end
-    local ex, ey = o.x + d[1] * (len + 14), o.y + d[2] * (len + 14)
-    for _, p in ipairs(world.players) do
-      if not p.dead and segDist(p.x, p.y, o.x, o.y, ex, ey) < p.r + 5 then
-        -- Pushed sideways off the beam.
-        local side = d[1] == 0 and (p.x >= o.x and 1 or -1) or 0
-        local sideY = d[2] == 0 and (p.y >= o.y and 1 or -1) or -0.4
-        Objects.hazardHit(world, o, p, o.damage, side, sideY, "laser", 0.5)
-      end
+    local p = hit and hit.kind == "hitbox" and hit.p
+    if p then
+      -- Pushed sideways off the beam.
+      local side = math.abs(dx) < 0.5 and (p.x >= o.x and 1 or -1) or 0
+      local sideY = math.abs(dy) < 0.5 and (p.y >= o.y and 1 or -1) or -0.4
+      Objects.hazardHit(world, o, p, o.damage, side, sideY, "laser", 0.5)
     end
   end,
 }

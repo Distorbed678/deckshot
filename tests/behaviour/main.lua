@@ -322,6 +322,24 @@ function love.load()
   check("killer wins and takes over",w.nextJugg==h[2] and w.roundWinner==h[2],tostring(w.nextJugg and w.nextJugg.name))
   w.state="countdown"; w:beginRound(); 
   check("next juggernaut is the killer",w.jugg==h[2] and #j.cards==0,#j.cards)
+
+  -- Built-in maps sit on the editor's 24 px grid, and the ground under every spawn reaches the bottom.
+  local offGrid, floating = {}, {}
+  for _,m in ipairs(Map.list) do
+    if not m.custom then
+      for _,r in ipairs(m.rects) do
+        if r.x%24~=0 or r.y%24~=0 or r.w%24~=0 then offGrid[#offGrid+1]=m.id break end
+      end
+      -- A wide floor low in the arena is "the ground" (island and lava maps have narrow ones on purpose).
+      for _,r in ipairs(m.rects) do
+        local rests=false
+        for _,q in ipairs(m.rects) do if q~=r and q.y==r.y+r.h and q.x<r.x+r.w and r.x<q.x+q.w then rests=true end end
+        if not r.oneway and not rests and r.w>=600 and r.y>=600 and r.y+r.h<Map.H then floating[#floating+1]=m.id break end
+      end
+    end
+  end
+  check("built-in maps are on the 24 px grid",#offGrid==0,table.concat(offGrid," "))
+  check("wide grounds reach the bottom",#floating==0,table.concat(floating," "))
   print("END")
   love.event.quit(failed>0 and 1 or 0)
 end

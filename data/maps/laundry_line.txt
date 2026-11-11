@@ -1,36 +1,36 @@
 deckshot-map 4
 name Laundry Line
 theme jungle
-spawn 170 382
-spawn 1366 382
-spawn 245 382
-spawn 1291 382
-rect 120 430 168 434
-rect 1248 430 168 434
+spawn 168 384
+spawn 1368 384
+spawn 240 384
+spawn 1296 384
+rect 120 432 168 432
+rect 1248 432 168 432
 obj block h=16 id=1 material=wood physics=true w=108 x=300 y=440
-obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=308 x2=308 y=150 y2=440
-obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=400 x2=400 y=150 y2=440
+obj rope id=2 level=true segHp=60 slack=1.05 target=1 x=312 x2=308 y=156 y2=440
+obj rope id=3 level=true segHp=60 slack=1.05 target=1 x=396 x2=400 y=156 y2=440
 obj block h=16 id=4 material=wood physics=true w=108 x=417 y=440
-obj rope id=5 level=true segHp=40 slack=1.05 target=4 x=425 x2=425 y=150 y2=440
-obj rope id=6 level=true segHp=40 slack=1.05 target=4 x=517 x2=517 y=150 y2=440
+obj rope id=5 level=true segHp=40 slack=1.05 target=4 x=420 x2=425 y=156 y2=440
+obj rope id=6 level=true segHp=40 slack=1.05 target=4 x=516 x2=517 y=156 y2=440
 obj block h=16 id=7 material=wood physics=true w=108 x=534 y=440
-obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=542 x2=542 y=150 y2=440
-obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=634 x2=634 y=150 y2=440
+obj rope id=8 level=true segHp=60 slack=1.05 target=7 x=540 x2=542 y=156 y2=440
+obj rope id=9 level=true segHp=60 slack=1.05 target=7 x=636 x2=634 y=156 y2=440
 obj block h=16 id=10 material=wood physics=true w=108 x=651 y=440
-obj rope id=11 level=true segHp=40 slack=1.05 target=10 x=659 x2=659 y=150 y2=440
-obj rope id=12 level=true segHp=40 slack=1.05 target=10 x=751 x2=751 y=150 y2=440
+obj rope id=11 level=true segHp=40 slack=1.05 target=10 x=660 x2=659 y=156 y2=440
+obj rope id=12 level=true segHp=40 slack=1.05 target=10 x=756 x2=751 y=156 y2=440
 obj block h=16 id=13 material=wood physics=true w=108 x=768 y=440
-obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=776 x2=776 y=150 y2=440
-obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=868 x2=868 y=150 y2=440
+obj rope id=14 level=true segHp=60 slack=1.05 target=13 x=780 x2=776 y=156 y2=440
+obj rope id=15 level=true segHp=60 slack=1.05 target=13 x=864 x2=868 y=156 y2=440
 obj block h=16 id=16 material=wood physics=true w=108 x=885 y=440
-obj rope id=17 level=true segHp=40 slack=1.05 target=16 x=893 x2=893 y=150 y2=440
-obj rope id=18 level=true segHp=40 slack=1.05 target=16 x=985 x2=985 y=150 y2=440
+obj rope id=17 level=true segHp=40 slack=1.05 target=16 x=888 x2=893 y=156 y2=440
+obj rope id=18 level=true segHp=40 slack=1.05 target=16 x=984 x2=985 y=156 y2=440
 obj block h=16 id=19 material=wood physics=true w=108 x=1002 y=440
-obj rope id=20 level=true segHp=60 slack=1.05 target=19 x=1010 x2=1010 y=150 y2=440
-obj rope id=21 level=true segHp=60 slack=1.05 target=19 x=1102 x2=1102 y=150 y2=440
+obj rope id=20 level=true segHp=60 slack=1.05 target=19 x=1008 x2=1010 y=156 y2=440
+obj rope id=21 level=true segHp=60 slack=1.05 target=19 x=1104 x2=1102 y=156 y2=440
 obj block h=16 id=22 material=wood physics=true w=108 x=1119 y=440
-obj rope id=23 level=true segHp=40 slack=1.05 target=22 x=1127 x2=1127 y=150 y2=440
-obj rope id=24 level=true segHp=40 slack=1.05 target=22 x=1219 x2=1219 y=150 y2=440
-oneway 440 650 180 14
-oneway 916 650 180 14
+obj rope id=23 level=true segHp=40 slack=1.05 target=22 x=1128 x2=1127 y=156 y2=440
+obj rope id=24 level=true segHp=40 slack=1.05 target=22 x=1224 x2=1219 y=156 y2=440
+oneway 432 648 192 14
+oneway 912 648 192 14
 oneway 672 720 192 14

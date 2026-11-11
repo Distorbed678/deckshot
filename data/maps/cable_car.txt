@@ -1,18 +1,18 @@
 deckshot-map 4
 name Cable Car
 theme desert
-spawn 190 522
-spawn 1346 522
-spawn 310 522
-spawn 1226 522
-rect 96 570 300 294
-rect 1140 570 300 294
-obj rail force=6 id=1 path=492,520;1044,520 speed=110 x=492 y=520
-obj block h=20 id=2 material=metal parent=1 w=192 x=396 y=510
-obj weight damage=60 id=3 physics=true r=30 x=768 y=250
+spawn 192 528
+spawn 1344 528
+spawn 312 528
+spawn 1224 528
+rect 96 576 312 288
+rect 1128 576 312 288
+obj rail force=6 id=1 path=492,516;1044,516 speed=110 x=492 y=516
+obj block h=20 id=2 material=metal parent=1 w=192 x=408 y=504
+obj weight damage=60 id=3 physics=true r=30 x=768 y=252
 obj rope id=4 segHp=60 slack=1 target=3 x=768 y=60
-oneway 290 356 170 14
-oneway 1076 356 170 14
+oneway 288 360 168 14
+oneway 1080 360 168 14
 oneway 672 720 192 14
-obj block drop=0.1 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=120 y=522
-obj block drop=0.1 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=1368 y=522
+obj block drop=0.1 h=48 hp=60 id=5 material=crate onBreak=pickup physics=true w=48 x=120 y=528
+obj block drop=0.1 h=48 hp=60 id=6 material=crate onBreak=pickup physics=true w=48 x=1368 y=528

@@ -1,22 +1,22 @@
 deckshot-map 4
 name Marionette
 theme jungle
-spawn 320 708
-spawn 1216 708
-spawn 450 708
-spawn 1086 708
-rect 240 756 1056 48
-obj block h=18 id=1 material=wood physics=true w=144 x=330 y=590
-obj rope id=2 segHp=60 slack=1.02 target=1 x=402 x2=402 y=50 y2=590
-obj block h=18 id=3 material=wood physics=true w=144 x=1062 y=590
-obj rope id=4 segHp=60 slack=1.02 target=3 x=1134 x2=1134 y=50 y2=590
+spawn 324 720
+spawn 1212 720
+spawn 456 720
+spawn 1092 720
+rect 240 768 1056 96
+obj block h=18 id=1 material=wood physics=true w=144 x=330 y=602
+obj rope id=2 segHp=60 slack=1.02 target=1 x=408 x2=402 y=48 y2=602
+obj block h=18 id=3 material=wood physics=true w=144 x=1062 y=602
+obj rope id=4 segHp=60 slack=1.02 target=3 x=1140 x2=1134 y=48 y2=602
 obj block h=18 id=5 material=wood physics=true w=144 x=570 y=440
-obj rope id=6 segHp=60 slack=1.02 target=5 x=642 x2=642 y=50 y2=440
+obj rope id=6 segHp=60 slack=1.02 target=5 x=648 x2=642 y=48 y2=440
 obj block h=18 id=7 material=wood physics=true w=144 x=822 y=440
-obj rope id=8 segHp=60 slack=1.02 target=7 x=894 x2=894 y=50 y2=440
+obj rope id=8 segHp=60 slack=1.02 target=7 x=900 x2=894 y=48 y2=440
 obj block h=18 id=9 material=wood physics=true w=144 x=696 y=300
-obj rope id=10 segHp=60 slack=1.02 target=9 x=768 x2=768 y=50 y2=300
+obj rope id=10 segHp=60 slack=1.02 target=9 x=768 x2=768 y=48 y2=300
 obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=492 y=250
-obj rope id=12 segHp=40 slack=1 target=11 x=516 y=50
+obj rope id=12 segHp=40 slack=1 target=11 x=516 y=48
 obj block drop=0.1 h=48 hp=60 id=13 material=crate onBreak=pickup physics=true w=48 x=996 y=250
-obj rope id=14 segHp=40 slack=1 target=13 x=1020 y=50
+obj rope id=14 segHp=40 slack=1 target=13 x=1020 y=48

@@ -22,7 +22,7 @@ local MOVE = {
   coyote = 0.1, jumpBuffer = 0.12,
   wallSlide = 160, wallCoyote = 0.08,
   cornerCeiling = 8, cornerLedge = 6,
-  dashTime = 0.14, dashKeep = 0.6, dropTime = 0.25,
+  dashTime = 0.14, dashKeep = 0.6, dropTime = 0.25, dropHold = 0.06,
 }
 Player.MOVE = MOVE
 
@@ -309,6 +309,14 @@ function Player:update(dt, frozen)
   self.meleeCd = math.max(0, self.meleeCd - dt)
   self.edgeCd = math.max(0, self.edgeCd - dt)
   self.dropTimer = math.max(0, self.dropTimer - dt)
+  -- Holding down: one-way platforms don't hold you (like Terraria's), so you fall through every
+  -- one you meet until you let go. A short grace keeps you falling through the one just left.
+  if inp.down and not frozen and not stunned then
+    self.dropTimer = math.max(self.dropTimer, MOVE.dropHold)
+    -- A tap is enough to leave the platform you stand on.
+    if not self.downWasHeld and self.onGround and self.groundOneway then self.dropTimer = MOVE.dropTime end
+  end
+  self.downWasHeld = inp.down and true or false
   self.swingTimer = math.max(0, self.swingTimer - dt)
   self.jumpBuffer = math.max(0, self.jumpBuffer - dt)
 

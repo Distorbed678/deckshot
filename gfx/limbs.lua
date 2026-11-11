@@ -57,6 +57,21 @@ local function addLimb(rig, ax, ay, ex, ey, hx, hy, width, force)
   return limb
 end
 
+-- Elbow and hand (or knee and foot) at sensible lengths: pointing the way body.lua's targets
+-- do, but never longer than a limb should be, however stale those targets are.
+local function pose(ax, ay, ex, ey, hx, hy, l1, l2, defX, defY)
+  local function toward(fx, fy, tx, ty, len, dx, dy)
+    local vx, vy = tx - fx, ty - fy
+    local d = math.sqrt(vx * vx + vy * vy)
+    if d < 1 then vx, vy, d = dx, dy, 1 end
+    local k = math.min(d, len) / d
+    return fx + vx * k, fy + vy * k
+  end
+  ex, ey = toward(ax, ay, ex, ey, l1, defX, defY)
+  hx, hy = toward(ex, ey, hx, hy, l2, defX, defY)
+  return ex, ey, hx, hy
+end
+
 -- Build the limbs from the positions body.lua has already worked out.
 local function newRig(p, b)
   local P = love.physics
@@ -71,10 +86,16 @@ local function newRig(p, b)
   tf:setCategory(CAT_LIMB)
   tf:setMask(CAT_LIMB)
   rig.torsoFixture = tf
-  rig.gun = addLimb(rig, p.x + side * r * 0.55, p.y + r * 0.05, b.gunE.x, b.gunE.y, b.gun.x, b.gun.y, width, 900)
-  rig.off = addLimb(rig, p.x - side * r * 0.55, p.y + r * 0.05, b.offE.x, b.offE.y, b.off.x, b.off.y, width, 600)
+  local armL = r * 0.95
+  local legL = (r * 0.38 + (p.leg or r * 0.7)) * 0.62
+  local function limb(ax, ay, e, h, l, dx, dy, force)
+    local ex, ey, hx, hy = pose(ax, ay, e.x, e.y, h.x, h.y, l, l, dx, dy)
+    return addLimb(rig, ax, ay, ex, ey, hx, hy, width, force)
+  end
+  rig.gun = limb(p.x + side * r * 0.55, p.y + r * 0.05, b.gunE, b.gun, armL, side, 0.3, 900)
+  rig.off = limb(p.x - side * r * 0.55, p.y + r * 0.05, b.offE, b.off, armL, -side, 0.3, 600)
   for i, l in ipairs(b.legs) do
-    rig.legs[i] = addLimb(rig, p.x + l.side * r * 0.5, p.y + r * 0.62, l.knee.x, l.knee.y, l.foot.x, l.foot.y, width, 900)
+    rig.legs[i] = limb(p.x + l.side * r * 0.5, p.y + r * 0.62, l.knee, l.foot, legL, l.side * 0.2, 1, 900)
   end
   return rig
 end
@@ -162,6 +183,7 @@ function Limbs.ragdoll(p, b)
   local rig = b.rig
   if not rig then return end
   b.rig = nil
+  b.stale = true -- the next life builds its body from scratch
   local P = love.physics
   local torso = rig.torso
   torso:setType("dynamic")

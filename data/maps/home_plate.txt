@@ -1,16 +1,16 @@
 deckshot-map 4
 name Home Plate
 theme foundry
-spawn 290 708
-spawn 1246 708
-spawn 190 708
-spawn 1346 708
-rect 144 756 1248 48
-rect 528 660 480 96
-obj block h=96 id=1 material=stone slope=right w=96 x=432 y=660
-obj block h=96 id=2 material=stone slope=left w=96 x=1008 y=660
-oneway 228 560 180 14
-oneway 1128 560 180 14
-oneway 648 460 240 14
-oneway 420 330 150 14
-oneway 966 330 150 14
+spawn 288 720
+spawn 1248 720
+spawn 192 720
+spawn 1344 720
+rect 144 768 1248 96
+rect 528 672 480 96
+obj block h=96 id=1 material=stone slope=right w=96 x=432 y=672
+obj block h=96 id=2 material=stone slope=left w=96 x=1008 y=672
+oneway 240 552 168 14
+oneway 1128 552 168 14
+oneway 648 456 240 14
+oneway 432 336 144 14
+oneway 960 336 144 14

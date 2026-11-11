@@ -1,27 +1,27 @@
 deckshot-map 4
 name Crate Maze
 theme foundry
-spawn 210 708
-spawn 1326 708
-spawn 310 708
-spawn 1226 708
-rect 144 756 1248 48
-obj block h=48 hp=60 id=1 material=crate w=48 x=432 y=708
-obj block h=48 hp=60 id=2 material=crate w=48 x=432 y=516
-obj block h=48 hp=60 id=3 material=crate w=48 x=528 y=612
-obj block drop=0.15 h=48 hp=60 id=4 material=crate onBreak=pickup w=48 x=528 y=420
-obj block h=48 hp=60 id=5 material=crate w=48 x=624 y=708
-obj block h=48 hp=60 id=6 material=crate w=48 x=624 y=516
-obj block h=48 hp=60 id=7 material=crate w=48 x=720 y=612
-obj block drop=0.15 h=48 hp=60 id=8 material=crate onBreak=pickup w=48 x=720 y=420
-obj block h=48 hp=60 id=9 material=crate w=48 x=816 y=708
-obj block h=48 hp=60 id=10 material=crate w=48 x=816 y=516
-obj block h=48 hp=60 id=11 material=crate w=48 x=912 y=612
-obj block drop=0.15 h=48 hp=60 id=12 material=crate onBreak=pickup w=48 x=912 y=420
-obj block h=48 hp=60 id=13 material=crate w=48 x=1008 y=708
-obj block h=48 hp=60 id=14 material=crate w=48 x=1008 y=516
-obj block h=48 hp=60 id=15 material=crate w=48 x=1104 y=612
-obj block drop=0.15 h=48 hp=60 id=16 material=crate onBreak=pickup w=48 x=1104 y=420
-oneway 170 560 170 14
-oneway 1196 560 170 14
-oneway 660 254 216 14
+spawn 216 720
+spawn 1332 720
+spawn 312 720
+spawn 1224 720
+rect 144 768 1248 96
+obj block h=48 hp=60 id=1 material=crate w=48 x=432 y=720
+obj block h=48 hp=60 id=2 material=crate w=48 x=432 y=528
+obj block h=48 hp=60 id=3 material=crate w=48 x=528 y=624
+obj block drop=0.15 h=48 hp=60 id=4 material=crate onBreak=pickup w=48 x=528 y=432
+obj block h=48 hp=60 id=5 material=crate w=48 x=624 y=720
+obj block h=48 hp=60 id=6 material=crate w=48 x=624 y=528
+obj block h=48 hp=60 id=7 material=crate w=48 x=720 y=624
+obj block drop=0.15 h=48 hp=60 id=8 material=crate onBreak=pickup w=48 x=720 y=432
+obj block h=48 hp=60 id=9 material=crate w=48 x=816 y=720
+obj block h=48 hp=60 id=10 material=crate w=48 x=816 y=528
+obj block h=48 hp=60 id=11 material=crate w=48 x=912 y=624
+obj block drop=0.15 h=48 hp=60 id=12 material=crate onBreak=pickup w=48 x=912 y=432
+obj block h=48 hp=60 id=13 material=crate w=48 x=1008 y=720
+obj block h=48 hp=60 id=14 material=crate w=48 x=1008 y=528
+obj block h=48 hp=60 id=15 material=crate w=48 x=1104 y=624
+obj block drop=0.15 h=48 hp=60 id=16 material=crate onBreak=pickup w=48 x=1104 y=432
+oneway 168 552 168 14
+oneway 1200 552 168 14
+oneway 672 264 192 14

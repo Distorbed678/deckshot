@@ -547,7 +547,9 @@ function Lobby:drawSteamInfo(session, rx, ry, rw, rh)
     love.system.setClipboardText(session.code or "")
     self.copied = 1.5
   end
-  if ui.button("Steam Invite...", rx + 16, ry + 144, cw, 42) then session.openInviteDialog() end
+  if ui.button("Steam Invite...", rx + 16, ry + 144, cw, 42) and not session.openInviteDialog() then
+    require("screens.invite").open(session, self.invited)
+  end
 
   local fx0 = rx + cw + 40
   love.graphics.setFont(app.fonts.med)

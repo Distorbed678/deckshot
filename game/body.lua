@@ -44,7 +44,9 @@ end
 
 function Body.update(p, dt)
   local b = p.body
-  if not b or math.abs(p.x - b.lastX) + math.abs(p.y - b.lastY) > 260 then
+  -- Start afresh on a jump in position, or after the limbs became a ragdoll (a respawn can be
+  -- close to where you died, and the old points would build stretched limbs).
+  if not b or b.stale or math.abs(p.x - b.lastX) + math.abs(p.y - b.lastY) > 140 then
     if b and b.rig then b.rig.world:destroy() end -- a jump in position: start the limbs afresh
     reset(p)
     b = p.body

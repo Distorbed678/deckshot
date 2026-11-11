@@ -205,6 +205,9 @@ local function looseFilter(fixture, o, attached)
     fixture:setCategory(CAT_LOOSE)
     if attached then
       fixture:setMask(unpack(ALL_MASKS)) -- carried hazards don't catch on the scenery
+    elseif o.type == "weight" then
+      -- Weights are heavy things you bump into, stand on and shoot; they hurt only when moving fast.
+      fixture:setMask(CAT_HITBOX, CAT_ROPE)
     else
       fixture:setMask(CAT_PLAYER, CAT_HITBOX, CAT_BULLET, CAT_ROPE)
     end
@@ -295,6 +298,12 @@ local function addAttachment(ph, o, parent)
   if not (parent and parent.body and o.body) then return end
   local cx, cy = centre(o)
   if o.attach == "hinge" then
+    o.joint = P.newRevoluteJoint(parent.body, o.body, cx, cy, false)
+  elseif o.attach == "level" then
+    -- Rides the parent but never turns: stays flat, top side up, like a Ferris wheel seat.
+    o.body:setAngle(0)
+    o.body:setFixedRotation(true)
+    o.rot = 0
     o.joint = P.newRevoluteJoint(parent.body, o.body, cx, cy, false)
   else
     o.joint = P.newWeldJoint(parent.body, o.body, cx, cy, false)

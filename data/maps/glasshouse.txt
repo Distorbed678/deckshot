@@ -1,26 +1,26 @@
 deckshot-map 4
 name Glasshouse
 theme ice
-spawn 210 708
-spawn 1326 708
-spawn 310 708
-spawn 1226 708
-rect 144 756 1248 48
-rect 396 420 30 216
-rect 1110 420 30 216
-oneway 396 396 300 14
-oneway 840 396 300 14
-obj block h=14 hp=1 id=1 material=glass w=144 x=696 y=396
-obj block h=120 hp=1 id=2 material=glass w=30 x=396 y=636
-obj block h=120 hp=1 id=3 material=glass w=30 x=1110 y=636
-obj block h=150 hp=1 id=4 material=glass w=30 x=753 y=410
-obj block h=182 hp=1 id=5 material=glass w=30 x=753 y=574
-obj block h=14 hp=1 id=6 material=glass w=163 x=426 y=560
-obj block h=14 hp=1 id=7 material=glass w=163 x=590 y=560
-obj block h=14 hp=1 id=8 material=glass w=163 x=783 y=560
-obj block h=14 hp=1 id=9 material=glass w=163 x=947 y=560
-oneway 170 560 170 14
-oneway 1196 560 170 14
-oneway 672 230 192 14
-obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=560 y=708
-obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=928 y=708
+spawn 216 720
+spawn 1332 720
+spawn 312 720
+spawn 1224 720
+rect 144 768 1248 96
+rect 408 432 24 216
+rect 1104 432 24 216
+oneway 408 408 288 14
+oneway 840 408 288 14
+obj block h=14 hp=1 id=1 material=glass w=144 x=696 y=394
+obj block h=120 hp=1 id=2 material=glass w=24 x=408 y=648
+obj block h=120 hp=1 id=3 material=glass w=24 x=1104 y=648
+obj block h=144 hp=1 id=4 material=glass w=48 x=744 y=408
+obj block h=192 hp=1 id=5 material=glass w=48 x=744 y=576
+obj block h=14 hp=1 id=6 material=glass w=168 x=432 y=552
+obj block h=14 hp=1 id=7 material=glass w=144 x=600 y=552
+obj block h=14 hp=1 id=8 material=glass w=144 x=792 y=552
+obj block h=14 hp=1 id=9 material=glass w=168 x=936 y=552
+oneway 168 552 168 14
+oneway 1200 552 168 14
+oneway 672 240 192 14
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=560 y=720
+obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=928 y=720
