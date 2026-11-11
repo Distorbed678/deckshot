@@ -12,10 +12,6 @@ rect 576 384 24 120
 rect 936 384 24 120
 oneway 336 624 168 14
 oneway 1032 624 168 14
-oneway 1032 624 168 14
-oneway 336 624 168 14
 oneway 144 480 144 14
 oneway 1248 480 144 14
-oneway 1248 480 144 14
-oneway 144 480 144 14
 obj block h=96 hp=150 id=1 material=brick w=96 x=720 y=456

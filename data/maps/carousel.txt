@@ -5,10 +5,11 @@ spawn 288 720
 spawn 1248 720
 spawn 204 720
 spawn 1332 720
+oneway 144 192 168 14
+oneway 1224 192 168 14
+oneway 144 624 168 14
+oneway 1224 624 168 14
 rect 144 768 1248 96
 obj arm count=2 force=4 id=1 length=270 spin=0.7 x=768 y=432
 obj block attach=level h=18 id=2 material=metal parent=1 w=144 x=960 y=432
 obj block attach=level h=18 id=3 material=metal parent=1 w=144 x=432 y=432
-oneway 144 624 168 14
-oneway 1224 624 168 14
-oneway 696 264 144 14

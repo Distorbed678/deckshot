@@ -9,8 +9,6 @@ rect 96 768 1344 96
 rect 696 408 144 24
 oneway 96 624 144 14
 oneway 1296 624 144 14
-oneway 1296 552 144 14
-oneway 96 552 144 14
 obj rail force=6 id=1 path=456,720;456,552 speed=110 x=456 y=720
 obj block h=20 id=2 material=metal parent=1 w=96 x=408 y=710
 obj rail force=6 id=3 path=648,552;648,720 speed=110 x=648 y=552

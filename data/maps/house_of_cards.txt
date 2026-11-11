@@ -1,27 +1,27 @@
 deckshot-map 4
 name House of Cards
 theme neon
-spawn 252 720
-spawn 1284 720
-spawn 384 720
-spawn 1152 720
-rect 144 768 1248 96
-obj block h=120 hp=40 id=1 material=wood physics=true w=18 x=564 y=648
-obj block h=120 hp=40 id=2 material=wood physics=true w=18 x=702 y=648
-obj block h=120 hp=40 id=3 material=wood physics=true w=18 x=840 y=648
-obj block h=120 hp=40 id=4 material=wood physics=true w=18 x=978 y=648
-obj block h=18 hp=40 id=5 material=wood physics=true w=144 x=564 y=630
-obj block h=18 hp=40 id=6 material=wood physics=true w=144 x=708 y=630
-obj block h=18 hp=40 id=7 material=wood physics=true w=144 x=852 y=630
-obj block h=120 hp=40 id=8 material=wood physics=true w=18 x=633 y=510
-obj block h=120 hp=40 id=9 material=wood physics=true w=18 x=771 y=510
-obj block h=120 hp=40 id=10 material=wood physics=true w=18 x=909 y=510
-obj block h=18 hp=40 id=11 material=wood physics=true w=150 x=630 y=492
-obj block h=18 hp=40 id=12 material=wood physics=true w=150 x=780 y=492
-obj block h=120 hp=40 id=13 material=wood physics=true w=18 x=702 y=372
-obj block h=120 hp=40 id=14 material=wood physics=true w=18 x=822 y=372
-obj block h=18 hp=40 id=15 material=wood physics=true w=150 x=696 y=354
-oneway 168 624 168 14
-oneway 1200 624 168 14
-oneway 312 480 144 14
-oneway 1080 480 144 14
+spawn 250 708
+spawn 1286 708
+spawn 380 708
+spawn 1156 708
+rect 144 756 1248 108
+obj block h=120 hp=40 id=1 material=wood physics=true w=18 x=564 y=636
+obj block h=120 hp=40 id=2 material=wood physics=true w=18 x=702 y=636
+obj block h=120 hp=40 id=3 material=wood physics=true w=18 x=840 y=636
+obj block h=120 hp=40 id=4 material=wood physics=true w=18 x=978 y=636
+obj block h=18 hp=40 id=5 material=wood physics=true w=144 x=564 y=618
+obj block h=18 hp=40 id=6 material=wood physics=true w=144 x=708 y=618
+obj block h=18 hp=40 id=7 material=wood physics=true w=144 x=852 y=618
+obj block h=120 hp=40 id=8 material=wood physics=true w=18 x=633 y=498
+obj block h=120 hp=40 id=9 material=wood physics=true w=18 x=771 y=498
+obj block h=120 hp=40 id=10 material=wood physics=true w=18 x=909 y=498
+obj block h=18 hp=40 id=11 material=wood physics=true w=150 x=630 y=480
+obj block h=18 hp=40 id=12 material=wood physics=true w=150 x=780 y=480
+obj block h=120 hp=40 id=13 material=wood physics=true w=18 x=702 y=360
+obj block h=120 hp=40 id=14 material=wood physics=true w=18 x=822 y=360
+obj block h=18 hp=40 id=15 material=wood physics=true w=150 x=696 y=342
+oneway 170 608 170 14
+oneway 1196 608 170 14
+oneway 300 460 150 14
+oneway 1086 460 150 14

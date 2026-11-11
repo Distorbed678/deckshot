@@ -1,21 +1,21 @@
 deckshot-map 4
 name Half Pipe
 theme neon
-spawn 192 480
-spawn 1344 480
-spawn 504 720
-spawn 1032 720
-rect 432 768 672 96
-obj block h=240 id=1 material=stone slope=left w=192 x=240 y=528
-obj block h=240 id=2 material=stone slope=right w=192 x=1104 y=528
-rect 240 768 192 96
-rect 1104 768 192 96
-rect 144 528 96 336
-rect 1296 528 96 336
-obj block h=96 id=3 material=stone slope=right w=96 x=672 y=672
-obj block h=96 id=4 material=stone slope=left w=96 x=768 y=672
-oneway 96 384 192 14
-oneway 1248 384 192 14
-oneway 672 504 192 14
-oneway 432 336 168 14
-oneway 936 336 168 14
+spawn 190 468
+spawn 1346 468
+spawn 500 708
+spawn 1036 708
+rect 432 756 672 108
+obj block h=240 id=1 material=stone slope=left w=192 x=240 y=516
+obj block h=240 id=2 material=stone slope=right w=192 x=1104 y=516
+rect 240 756 192 108
+rect 1104 756 192 108
+rect 144 516 96 348
+rect 1296 516 96 348
+obj block h=96 id=3 material=stone slope=right w=108 x=660 y=660
+obj block h=96 id=4 material=stone slope=left w=108 x=768 y=660
+oneway 96 380 200 14
+oneway 1240 380 200 14
+oneway 660 500 216 14
+oneway 420 330 170 14
+oneway 946 330 170 14

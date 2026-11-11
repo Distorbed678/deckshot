@@ -1,20 +1,20 @@
 deckshot-map 4
 name Boulder Field
 theme desert
-spawn 216 744
-spawn 1320 744
-spawn 132 744
-spawn 1404 744
-rect 96 792 1344 72
-rect 696 600 144 192
-obj block h=192 id=1 material=stone slope=right w=432 x=264 y=600
-obj block h=192 id=2 material=stone slope=left w=432 x=840 y=600
+spawn 220 732
+spawn 1316 732
+spawn 130 732
+spawn 1406 732
+rect 96 780 1344 84
+rect 696 600 144 180
+obj block h=180 id=1 material=stone slope=right w=432 x=264 y=600
+obj block h=180 id=2 material=stone slope=left w=432 x=840 y=600
 obj block h=60 id=3 material=stone physics=true w=60 x=702 y=540
 obj block h=60 id=4 material=stone physics=true w=60 x=774 y=540
-obj block h=60 id=5 material=stone physics=true w=60 x=255 y=420
-obj block h=60 id=6 material=stone physics=true w=60 x=1221 y=420
-oneway 192 504 192 14
-oneway 1152 504 192 14
-oneway 672 456 192 14
-oneway 432 336 144 14
-oneway 960 336 144 14
+obj block h=60 id=5 material=stone physics=true w=60 x=255 y=442
+obj block h=60 id=6 material=stone physics=true w=60 x=1221 y=442
+oneway 190 502 190 14
+oneway 1156 502 190 14
+oneway 660 456 216 14
+oneway 420 330 150 14
+oneway 966 330 150 14

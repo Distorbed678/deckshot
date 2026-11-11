@@ -5,14 +5,14 @@ spawn 192 720
 spawn 1344 720
 spawn 264 720
 spawn 1272 720
+oneway 672 624 192 14
 rect 144 768 1248 96
 obj arm count=2 force=4 id=1 length=170 spin=0.8 x=420 y=456
-obj block attach=level h=18 id=2 material=metal parent=1 w=120 x=528 y=432
-obj block attach=level h=18 id=3 material=metal parent=1 w=120 x=192 y=432
+obj block attach=level h=18 id=2 material=metal parent=1 w=120 x=528 y=444
+obj block attach=level h=18 id=3 material=metal parent=1 w=120 x=192 y=444
 obj arm count=2 force=4 id=4 length=170 spin=-0.8 x=1116 y=456
-obj block attach=level h=18 id=5 material=metal parent=4 w=120 x=1224 y=432
-obj block attach=level h=18 id=6 material=metal parent=4 w=120 x=888 y=432
+obj block attach=level h=18 id=5 material=metal parent=4 w=120 x=1224 y=444
+obj block attach=level h=18 id=6 material=metal parent=4 w=120 x=888 y=444
 obj arm count=2 id=7 length=120 spin=-1.8 x=768 y=336
 obj saw damage=25 id=8 parent=7 r=24 x=888 y=336
 obj saw damage=25 id=9 parent=7 r=24 x=648 y=336
-oneway 672 624 192 14

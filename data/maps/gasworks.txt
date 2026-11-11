@@ -1,19 +1,18 @@
 deckshot-map 4
 name Gasworks
 theme jungle
-spawn 204 720
-spawn 1332 720
-spawn 300 720
-spawn 1236 720
+spawn 240 420
+spawn 1296 732
+spawn 1308 420
+spawn 228 732
 rect 144 768 1248 96
 obj block h=24 id=1 material=metal w=360 x=240 y=624
 obj block h=24 id=2 material=metal w=360 x=936 y=624
 obj block h=24 id=3 material=metal w=336 x=600 y=480
 obj block h=24 id=4 material=metal w=192 x=144 y=456
 obj block h=24 id=5 material=metal w=192 x=1200 y=456
-obj block h=48 hp=20 id=6 material=gas onBreak=gas physics=true radius=120 w=36 x=420 y=552
-obj block h=48 hp=20 id=7 material=gas onBreak=gas physics=true radius=120 w=36 x=1080 y=552
-obj block h=48 hp=20 id=8 material=gas onBreak=gas physics=true radius=120 w=36 x=750 y=408
-obj block h=48 hp=20 id=9 material=gas onBreak=gas physics=true radius=120 w=36 x=560 y=720
-obj block h=48 hp=20 id=10 material=gas onBreak=gas physics=true radius=120 w=36 x=940 y=720
-obj flame damage=12 dir=up id=11 length=200 off=2.5 on=1.2 phase=0 warn=0.5 x=768 y=756
+obj flame damage=12 dir=up id=11 length=200 off=2.5 on=1.2 phase=0 warn=0.5 x=768 y=768
+obj block h=72 hp=20 id=13 material=gas onBreak=gas physics=true radius=110 w=48 x=264 y=552
+obj block h=72 hp=20 id=14 material=gas onBreak=gas physics=true radius=110 w=48 x=1224 y=552
+obj block h=72 hp=20 id=15 material=gas onBreak=gas physics=true radius=110 w=48 x=624 y=408
+obj block h=72 hp=20 id=16 material=gas onBreak=gas physics=true radius=110 w=48 x=864 y=408

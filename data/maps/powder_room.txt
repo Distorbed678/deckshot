@@ -1,23 +1,29 @@
 deckshot-map 4
 name Powder Room
 theme foundry
-spawn 204 720
-spawn 1332 720
-spawn 240 720
-spawn 1296 720
-rect 144 768 1248 96
-rect 312 624 240 24
-rect 984 624 240 24
-rect 648 480 240 24
+spawn 192 720
+spawn 1104 720
+spawn 432 720
+spawn 1344 720
 oneway 144 480 168 14
 oneway 1224 480 168 14
-obj block damage=55 h=52 hp=30 id=1 material=barrel onBreak=explode physics=true radius=120 w=40 x=640 y=716
-obj block damage=55 h=52 hp=30 id=2 material=barrel onBreak=explode physics=true radius=120 w=40 x=748 y=716
-obj block damage=55 h=52 hp=30 id=3 material=barrel onBreak=explode physics=true radius=120 w=40 x=856 y=716
-obj block damage=55 h=52 hp=30 id=4 material=barrel onBreak=explode physics=true radius=120 w=40 x=400 y=524
-obj block damage=55 h=52 hp=30 id=5 material=barrel onBreak=explode physics=true radius=120 w=40 x=1096 y=524
-obj block damage=55 h=52 hp=30 id=6 material=barrel onBreak=explode physics=true radius=120 w=40 x=748 y=380
-obj block h=48 hp=60 id=7 material=crate physics=true w=48 x=694 y=720
-obj block h=48 hp=60 id=8 material=crate physics=true w=48 x=802 y=720
-obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=330 y=528
-obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=1158 y=528
+rect 648 480 240 24
+rect 312 624 240 24
+rect 984 624 240 24
+rect 144 768 1248 96
+obj block drop=0.1 h=48 hp=60 id=9 material=crate onBreak=pickup physics=true w=48 x=312 y=576
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=1176 y=576
+obj block drop=0.1 h=48 hp=60 id=17 material=crate onBreak=pickup physics=true w=48 x=504 y=576
+obj block drop=0.1 h=48 hp=60 id=18 material=crate onBreak=pickup physics=true w=48 x=984 y=576
+obj block drop=0.1 h=48 hp=60 id=19 material=crate onBreak=pickup physics=true w=48 x=648 y=432
+obj block drop=0.1 h=48 hp=60 id=20 material=crate onBreak=pickup physics=true w=48 x=840 y=432
+obj block drop=0.1 h=48 hp=60 id=21 material=crate onBreak=pickup physics=true w=48 x=840 y=720
+obj block drop=0.1 h=48 hp=60 id=22 material=crate onBreak=pickup physics=true w=48 x=648 y=720
+obj block damage=55 h=48 hp=30 id=23 material=barrel onBreak=explode physics=true radius=110 w=36 x=720 y=720
+obj block damage=55 h=48 hp=30 id=24 material=barrel onBreak=explode physics=true radius=110 w=36 x=780 y=720
+obj block damage=55 h=48 hp=30 id=25 material=barrel onBreak=explode physics=true radius=110 w=36 x=384 y=576
+obj block damage=55 h=48 hp=30 id=26 material=barrel onBreak=explode physics=true radius=110 w=36 x=444 y=576
+obj block damage=55 h=48 hp=30 id=27 material=barrel onBreak=explode physics=true radius=110 w=36 x=1116 y=576
+obj block damage=55 h=48 hp=30 id=28 material=barrel onBreak=explode physics=true radius=110 w=36 x=1056 y=576
+obj block damage=55 h=48 hp=30 id=29 material=barrel onBreak=explode physics=true radius=110 w=36 x=720 y=432
+obj block damage=55 h=48 hp=30 id=30 material=barrel onBreak=explode physics=true radius=110 w=36 x=780 y=432

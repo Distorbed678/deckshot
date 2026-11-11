@@ -1,19 +1,19 @@
 deckshot-map 4
 name Crossfire
 theme void
-spawn 324 720
-spawn 1212 720
-spawn 456 408
-spawn 1080 408
-rect 240 768 1056 96
-rect 696 384 144 144
-obj block h=24 id=1 material=sticky w=240 x=384 y=456
-obj block h=24 id=2 material=sticky w=240 x=912 y=456
-oneway 696 240 144 14
-oneway 696 624 144 14
-oneway 144 600 168 14
-oneway 1224 600 168 14
-oneway 144 312 168 14
-oneway 1224 312 168 14
-oneway 480 600 144 14
-oneway 912 600 144 14
+spawn 320 708
+spawn 1216 708
+spawn 460 402
+spawn 1076 402
+rect 240 756 1056 108
+rect 696 372 144 144
+obj block h=36 id=1 material=sticky w=252 x=372 y=450
+obj block h=36 id=2 material=sticky w=252 x=912 y=450
+oneway 684 230 168 14
+oneway 684 620 168 14
+oneway 132 600 180 14
+oneway 1224 600 180 14
+oneway 132 300 180 14
+oneway 1224 300 180 14
+oneway 470 600 150 14
+oneway 916 600 150 14

@@ -3,9 +3,12 @@
 local platform = require "core.platform"
 
 local Version = {
-  VERSION = "0.7.0",
+  VERSION = "0.7.1",
   REPO = "Distorbed678/deckshot",
   NOTES = {
+    "Maps restored: the built-in maps look as designed again (box sizes, symmetry, things that touch), with every platform still reachable with a normal jump.",
+    "Platforms on rails and spinning arms no longer bounce or wobble when you land on them or bump into them: they follow their machine exactly.",
+    "Calmer sky islands and caverns backdrops, so platforms stand out from the background.",
     "100 new cards: block and parry, dash, melee, gadgets, bounce, status effects and risk builds, plus new statuses: burn, shock, freeze and bleed.",
     "50 new maps, half of them simple physics arenas, and two new backdrops: sky islands and caverns.",
     "Fights are faster: three hits kill at the start. Bigger hits fire bigger bullets.",

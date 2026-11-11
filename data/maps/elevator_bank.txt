@@ -9,8 +9,6 @@ rect 96 768 1344 96
 rect 672 336 192 24
 oneway 96 576 144 14
 oneway 1296 576 144 14
-oneway 1296 552 144 14
-oneway 96 552 144 14
 oneway 336 456 120 14
 oneway 1080 456 120 14
 obj rail force=6 id=1 path=456,720;456,456 speed=110 x=456 y=720

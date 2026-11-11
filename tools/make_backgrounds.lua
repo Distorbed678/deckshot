@@ -17,8 +17,8 @@ local function clouds(n, y0, y1, op, color)
   out[#out + 1] = "</g>"
   return table.concat(out)
 end
-local function islands(n, y0, y1, color, scale)
-  local out = { '<g fill="' .. color .. '">' }
+local function islands(n, y0, y1, color, scale, op)
+  local out = { '<g fill="' .. color .. '" fill-opacity="' .. (op or "1") .. '">' }
   for i = 1, n do
     local cx = (i - 0.5) / n * 1600 + rnd(-60, 60)
     local cy, w = rnd(y0, y1), rnd(110, 220) * scale
@@ -60,17 +60,18 @@ local function crystals(n, color, op)
 end
 for v = 1, 2 do
   seed = 1000 * v + 7
-  -- Sky: a bright gradient, soft clouds, floating rock.
-  local grad = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' .. (v == 1 and "#3f7fc0" or "#4a77b8") ..
-    '"/><stop offset="1" stop-color="' .. (v == 1 and "#a9d3ee" or "#c5b8e6") .. '"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/>'
-  write("bg_sky_" .. v .. "_far", grad .. clouds(9, 120, 700, "0.35", "#ffffff") .. islands(5, 420, 640, "#5b7896", 0.7))
-  write("bg_sky_" .. v .. "_near", clouds(6, 600, 860, "0.45", "#ffffff") .. islands(4, 560, 760, "#41597a", 1))
-  -- Caverns: dark stone, stalactites, glowing crystals.
+  -- Sky: a pale, hazy gradient, faint clouds and far-off rock, all kept light so the
+  -- blue-grey platforms stand out against it.
+  local grad = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' .. (v == 1 and "#7f9fc2" or "#8496bb") ..
+    '"/><stop offset="1" stop-color="' .. (v == 1 and "#c8d9e7" or "#d2cbe5") .. '"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/>'
+  write("bg_sky_" .. v .. "_far", grad .. clouds(9, 120, 700, "0.16", "#ffffff") .. islands(5, 420, 640, "#b3c3d6", 0.7, "0.45"))
+  write("bg_sky_" .. v .. "_near", clouds(6, 600, 860, "0.2", "#ffffff") .. islands(4, 560, 760, "#a3b5ca", 1, "0.5"))
+  -- Caverns: dark stone, low-contrast stalactites and dim crystals, so the platforms read first.
   local cgrad = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0b13"/><stop offset="1" stop-color="' ..
     (v == 1 and "#1d1a2b" or "#16222a") .. '"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/>'
-  write("bg_caverns_" .. v .. "_far", cgrad .. spikes(26, true, 90, 260, "#1b1826", "1") .. spikes(20, false, 120, 320, "#1e1b2b", "1")
-    .. crystals(6, v == 1 and "#46d8cf" or "#b06cf0", "0.18"))
-  write("bg_caverns_" .. v .. "_near", spikes(16, true, 60, 160, "#141220", "1") .. spikes(14, false, 80, 200, "#15131f", "1")
-    .. crystals(5, v == 1 and "#46d8cf" or "#b06cf0", "0.35"))
+  write("bg_caverns_" .. v .. "_far", cgrad .. spikes(26, true, 90, 260, "#16141f", "1") .. spikes(20, false, 120, 320, "#191724", "1")
+    .. crystals(6, v == 1 and "#46d8cf" or "#b06cf0", "0.06"))
+  write("bg_caverns_" .. v .. "_near", spikes(16, true, 60, 160, "#100e18", "0.75") .. spikes(14, false, 80, 200, "#110f19", "0.75")
+    .. crystals(5, v == 1 and "#46d8cf" or "#b06cf0", "0.1"))
 end
 print("ok")

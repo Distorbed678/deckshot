@@ -1,27 +1,31 @@
 deckshot-map 4
 name Facets
 theme ice
-spawn 216 720
-spawn 1332 720
-spawn 396 720
-spawn 1140 720
+spawn 192 720
+spawn 1344 720
+spawn 552 216
+spawn 984 216
+rect 480 312 144 20
+rect 912 312 144 20
+rect 672 408 192 24
+rect 480 528 144 20
+rect 912 528 144 20
+rect 168 600 240 24
+rect 1128 600 240 24
 rect 144 768 1248 96
 obj block h=120 id=1 material=stone slope=right w=168 x=600 y=648
 obj block h=120 id=2 material=stone slope=left w=168 x=768 y=648
-obj block h=48 id=3 material=stone slope=right w=120 x=216 y=480
-obj block h=48 id=4 material=stone slope=left w=120 x=336 y=480
-rect 216 576 240 24
-obj block h=48 id=5 material=stone slope=right w=120 x=1080 y=480
-obj block h=48 id=6 material=stone slope=left w=120 x=1200 y=480
-rect 1080 576 240 24
+obj block h=48 id=3 material=stone slope=right w=120 x=168 y=552
+obj block h=48 id=4 material=stone slope=left w=120 x=288 y=552
+obj block h=48 id=5 material=stone slope=right w=120 x=1128 y=552
+obj block h=48 id=6 material=stone slope=left w=120 x=1248 y=552
 obj block h=72 id=7 material=stone slope=right w=96 x=672 y=336
 obj block h=72 id=8 material=stone slope=left w=96 x=768 y=336
-rect 672 408 192 24
 obj block h=48 id=9 material=stone slope=right w=72 x=480 y=264
 obj block h=48 id=10 material=stone slope=left w=72 x=552 y=264
-rect 480 312 144 20
 obj block h=48 id=11 material=stone slope=right w=72 x=912 y=264
 obj block h=48 id=12 material=stone slope=left w=72 x=984 y=264
-rect 912 312 144 20
-oneway 120 600 144 14
-oneway 1272 600 144 14
+obj block h=48 id=20 material=stone slope=right w=72 x=912 y=480
+obj block h=48 id=21 material=stone slope=left w=72 x=984 y=480
+obj block h=48 id=23 material=stone slope=right w=72 x=480 y=480
+obj block h=48 id=24 material=stone slope=left w=72 x=552 y=480

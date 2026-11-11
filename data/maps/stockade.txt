@@ -1,25 +1,25 @@
 deckshot-map 4
 name Stockade
 theme desert
-spawn 480 720
-spawn 1068 720
-spawn 228 720
-spawn 1308 720
-rect 144 768 1248 96
-obj block h=144 hp=40 id=1 material=wood w=24 x=384 y=624
-obj block h=144 hp=40 id=2 material=wood w=24 x=1128 y=624
-obj block h=144 hp=40 id=3 material=wood w=24 x=576 y=624
-obj block h=144 hp=40 id=4 material=wood w=24 x=936 y=624
-obj block h=18 hp=40 id=5 material=wood w=216 x=384 y=606
-obj block h=18 hp=40 id=6 material=wood w=216 x=936 y=606
-obj block h=144 hp=40 id=7 material=wood w=24 x=696 y=624
-obj block h=120 hp=40 id=8 material=wood w=24 x=696 y=486
-obj block h=144 hp=40 id=9 material=wood w=24 x=816 y=624
-obj block h=120 hp=40 id=10 material=wood w=24 x=816 y=486
-obj block h=18 hp=40 id=11 material=wood w=192 x=672 y=606
-obj block h=18 hp=40 id=12 material=wood w=192 x=672 y=468
-oneway 144 528 168 14
-oneway 1224 528 168 14
-oneway 432 384 144 14
-oneway 960 384 144 14
-obj block drop=0.1 h=48 hp=60 id=13 material=crate onBreak=pickup physics=true w=48 x=744 y=558
+spawn 474 708
+spawn 1062 708
+spawn 230 708
+spawn 1306 708
+rect 144 756 1248 108
+obj block h=144 hp=40 id=1 material=wood w=24 x=384 y=612
+obj block h=144 hp=40 id=2 material=wood w=24 x=1128 y=612
+obj block h=144 hp=40 id=3 material=wood w=24 x=564 y=612
+obj block h=144 hp=40 id=4 material=wood w=24 x=948 y=612
+obj block h=18 hp=40 id=5 material=wood w=228 x=372 y=594
+obj block h=18 hp=40 id=6 material=wood w=228 x=936 y=594
+obj block h=144 hp=40 id=7 material=wood w=24 x=690 y=612
+obj block h=126 hp=40 id=8 material=wood w=24 x=690 y=468
+obj block h=144 hp=40 id=9 material=wood w=24 x=822 y=612
+obj block h=126 hp=40 id=10 material=wood w=24 x=822 y=468
+obj block h=18 hp=40 id=11 material=wood w=180 x=678 y=594
+obj block h=18 hp=40 id=12 material=wood w=180 x=678 y=450
+oneway 140 520 170 14
+oneway 1226 520 170 14
+oneway 430 380 150 14
+oneway 956 380 150 14
+obj block drop=0.1 h=48 hp=60 id=13 material=crate onBreak=pickup physics=true w=48 x=744 y=546

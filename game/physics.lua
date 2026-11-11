@@ -186,7 +186,7 @@ local function newSim(map)
   local b2 = P.newWorld(0, GRAVITY, true)
   b2:setCallbacks(beginContact, nil, preSolve, nil)
   local ph = { b2 = b2, ground = P.newBody(b2, 0, 0, "static"), loose = {}, fixed = {}, fields = {}, players = {},
-    bullets = {}, events = {}, probes = {}, ropes = {}, rails = {} }
+    bullets = {}, events = {}, probes = {}, ropes = {}, rails = {}, machines = {}, followers = {} }
   for _, r in ipairs(map.rects) do
     local f = P.newFixture(ph.ground, P.newRectangleShape(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h))
     f:setFriction(0.7)
@@ -243,18 +243,17 @@ end
 
 local function addArm(ph, o)
   local P = love.physics
-  local body = P.newBody(ph.b2, o.x, o.y, "dynamic")
+  -- A machine: it turns at its own speed whatever bumps into it (kinematic).
+  local body = P.newBody(ph.b2, o.x, o.y, "kinematic")
   body:setAngle(o.phase or 0)
+  body:setAngularVelocity(o.spin or 0)
   local fixture = P.newFixture(body, P.newRectangleShape(o.length * 2, 10), 0.3)
   fixture:setCategory(CAT_LOOSE)
   fixture:setMask(unpack(ALL_MASKS))
   fixture:setUserData(o)
   o.body, o.fixture = body, fixture
-  o.rot, o.loose, o.mass = o.phase or 0, true, body:getMass()
-  o.joint = P.newRevoluteJoint(ph.ground, body, o.x, o.y, false)
-  o.joint:setMotorEnabled(true)
-  o.joint:setMotorSpeed(o.spin or 0)
-  o.joint:setMaxMotorTorque(1) -- worked out once its attachments are known
+  o.rot, o.loose, o.mass = o.phase or 0, true, 1
+  ph.machines[#ph.machines + 1] = o
   ph.loose[#ph.loose + 1] = o
 end
 
@@ -263,21 +262,17 @@ local function addRail(ph, o)
   local path = o.path
   if not path or #path < 2 then path = { { o.x, o.y }, { o.x, o.y } } ; o.path = path end
   o.x, o.y = path[1][1], path[1][2]
-  local body = P.newBody(ph.b2, o.x, o.y, "dynamic")
-  body:setFixedRotation(true)
-  body:setGravityScale(0)
+  -- The carriage is a machine: it keeps to its path whatever bumps into it (kinematic).
+  local body = P.newBody(ph.b2, o.x, o.y, "kinematic")
   local fixture = P.newFixture(body, P.newCircleShape(8), 1)
   fixture:setCategory(CAT_LOOSE)
   fixture:setMask(unpack(ALL_MASKS))
   fixture:setUserData(o)
   o.body, o.fixture = body, fixture
-  o.rot, o.loose, o.mass = 0, true, body:getMass()
-  o.joint = P.newMouseJoint(body, o.x, o.y)
-  o.joint:setMaxForce(1)
-  o.joint:setFrequency(12)
-  o.joint:setDampingRatio(1)
-  o.seg, o.dirn, o.tx, o.ty, o.stall = 1, 1, o.x, o.y, 0
+  o.rot, o.loose, o.mass = 0, true, 1
+  o.seg, o.dirn, o.tx, o.ty = 1, 1, o.x, o.y
   ph.rails[#ph.rails + 1] = o
+  ph.machines[#ph.machines + 1] = o
   ph.loose[#ph.loose + 1] = o
 end
 
@@ -297,7 +292,25 @@ local function addAttachment(ph, o, parent)
   local P = love.physics
   if not (parent and parent.body and o.body) then return end
   local cx, cy = centre(o)
-  if o.attach == "hinge" then
+  if o.attach ~= "hinge" and parent.body:getType() == "kinematic" then
+    -- Riding a machine (or something riding one): it goes exactly where its parent takes it,
+    -- like part of it, and nothing that bumps into it can shake it.
+    local pa = parent.body:getAngle()
+    local px, py = parent.body:getPosition()
+    local c, s = math.cos(-pa), math.sin(-pa)
+    local dx, dy = cx - px, cy - py
+    o.followDx, o.followDy = dx * c - dy * s, dx * s + dy * c
+    if o.attach == "level" then
+      o.body:setAngle(0)
+      o.rot, o.followLevel = 0, true
+    else
+      o.followDa = o.body:getAngle() - pa
+    end
+    o.body:setType("kinematic")
+    o.follow = parent
+    ph.followers[#ph.followers + 1] = o
+    return
+  elseif o.attach == "hinge" then
     o.joint = P.newRevoluteJoint(parent.body, o.body, cx, cy, false)
   elseif o.attach == "level" then
     -- Rides the parent but never turns: stays flat, top side up, like a Ferris wheel seat.
@@ -516,17 +529,18 @@ function Physics.setup(world)
       if o.type == "fan" or o.conveyor or o.type == "pad" or (o.type == "liquid" and o.buoyant) then ph.fields[#ph.fields + 1] = o end
     end
   end
-  for _, o in ipairs(world.objects) do
-    if o.alive and o.parentObj then addAttachment(ph, o, o.parentObj) end
+  -- Parents before their children, so a chain of attachments all rides the machine at its root.
+  local function depth(o)
+    local d, p = 0, o.parentObj
+    while p and d < 20 do d, p = d + 1, p.parentObj end
+    return d
   end
-  -- Motors strong enough for what they carry, but no stronger: a big enough jam stops them.
+  local attached = {}
   for _, o in ipairs(world.objects) do
-    if o.type == "arm" and o.joint then
-      o.joint:setMaxMotorTorque(math.max(60000, (o.loadTorque or 0) * GRAVITY * 6) * (o.force or 1))
-    elseif o.type == "rail" and o.joint then
-      o.joint:setMaxForce(((o.load or 0) + 2) * GRAVITY * 6 * (o.force or 1))
-    end
+    if o.alive and o.parentObj then attached[#attached + 1] = o; o.attachDepth = depth(o) end
   end
+  table.sort(attached, function(a, b) return a.attachDepth < b.attachDepth end)
+  for _, o in ipairs(attached) do addAttachment(ph, o, o.parentObj) end
   for _, o in ipairs(world.objects) do
     if o.type == "rope" and o.alive then addRope(ph, world, o) end
   end
@@ -845,7 +859,13 @@ function Physics.release(world, o)
     o.parent, o.parentObj = nil, nil
     if o.fixture then looseFilter(o.fixture, o, false) end
   end
+  o.follow = nil
   if not o.loose or o.fixture and o.body:getType() == "kinematic" then
+    if o.loose then
+      for i, f in ipairs(ph.loose) do
+        if f == o then table.remove(ph.loose, i) break end
+      end
+    end
     if o.body then
       for i, f in ipairs(ph.fixed) do
         if f == o then table.remove(ph.fixed, i) break end
@@ -1054,49 +1074,75 @@ local function syncBullets(ph, world, dt)
   end
 end
 
--- Rails walk a target along the path; the carriage follows it with limited force, so if it
--- falls behind (something heavy in the way) the target waits, and after a while turns back.
+-- Rails walk a target along the path and the carriage goes exactly there; machines don't stall.
 local function syncRails(ph, dt)
   for _, o in ipairs(ph.rails) do
     if o.alive and o.body then
-      local bx, by = o.body:getPosition()
-      local lag = math.sqrt((bx - o.tx) ^ 2 + (by - o.ty) ^ 2)
-      if lag > 28 then
-        o.stall = o.stall + dt
-        if o.stall > 1.2 then
-          o.stall, o.dirn = 0, -o.dirn
-          o.seg = o.seg + o.dirn
-          if o.seg < 1 then o.seg = o.loop and #o.path or 2 elseif o.seg > #o.path then o.seg = o.loop and 1 or #o.path - 1 end
-          o.tx, o.ty = bx, by
-        end
-      else
-        o.stall = 0
-        local remaining = (o.speed or 120) * dt
-        for _ = 1, 8 do
-          local nxt = o.seg + o.dirn
-          if nxt > #o.path or nxt < 1 then
-            if o.loop then
-              nxt = nxt > #o.path and 1 or #o.path
-            else
-              o.dirn = -o.dirn
-              nxt = o.seg + o.dirn
-            end
-          end
-          local p = o.path[nxt]
-          if not p then break end
-          local dx, dy = p[1] - o.tx, p[2] - o.ty
-          local d = math.sqrt(dx * dx + dy * dy)
-          if d <= remaining then
-            o.tx, o.ty = p[1], p[2]
-            o.seg = nxt
-            remaining = remaining - d
+      local remaining = (o.speed or 120) * dt
+      for _ = 1, 8 do
+        local nxt = o.seg + o.dirn
+        if nxt > #o.path or nxt < 1 then
+          if o.loop then
+            nxt = nxt > #o.path and 1 or #o.path
           else
-            o.tx, o.ty = o.tx + dx / d * remaining, o.ty + dy / d * remaining
-            break
+            o.dirn = -o.dirn
+            nxt = o.seg + o.dirn
           end
+        end
+        local p = o.path[nxt]
+        if not p then break end
+        local dx, dy = p[1] - o.tx, p[2] - o.ty
+        local d = math.sqrt(dx * dx + dy * dy)
+        if d <= remaining then
+          o.tx, o.ty = p[1], p[2]
+          o.seg = nxt
+          remaining = remaining - d
+        else
+          o.tx, o.ty = o.tx + dx / d * remaining, o.ty + dy / d * remaining
+          break
         end
       end
-      o.joint:setTarget(o.tx, o.ty)
+      local bx, by = o.body:getPosition()
+      o.body:setLinearVelocity((o.tx - bx) / dt, (o.ty - by) / dt)
+    end
+  end
+end
+
+-- Where a machine-driven body will be after this step (its velocities are already set).
+local function nextPose(ph, o, dt)
+  if o.nextStep == ph.stepNo and o.nextT == o.body then return o.nextX, o.nextY, o.nextA end
+  local x, y = o.body:getPosition()
+  local vx, vy = o.body:getLinearVelocity()
+  return x + vx * dt, y + vy * dt, o.body:getAngle() + o.body:getAngularVelocity() * dt
+end
+
+-- Things riding a machine move by velocity to their place on it, so Box2D carries whoever
+-- stands on them, but nothing can push them out of place.
+local function syncFollowers(ph, dt)
+  ph.stepNo = (ph.stepNo or 0) + 1
+  local i = 1
+  while ph.followers[i] do -- in order: parents come before their children
+    local o = ph.followers[i]
+    local parent = o.follow
+    if not (o.alive and o.body and o.follow == parent and parent and parent.alive and parent.body
+        and o.body:getType() == "kinematic") then
+      if o.body and o.body:getType() == "kinematic" and o.alive then
+        o.body:setType("dynamic") -- its machine is gone: it falls
+        o.body:setAwake(true)
+      end
+      o.follow = nil
+      table.remove(ph.followers, i)
+    else
+      i = i + 1
+      local px, py, pa = nextPose(ph, parent, dt)
+      local c, s = math.cos(pa), math.sin(pa)
+      local tx, ty = px + o.followDx * c - o.followDy * s, py + o.followDx * s + o.followDy * c
+      local ta = o.followLevel and 0 or pa + o.followDa
+      local bx, by = o.body:getPosition()
+      local da = (ta - o.body:getAngle() + math.pi) % (math.pi * 2) - math.pi
+      o.body:setLinearVelocity((tx - bx) / dt, (ty - by) / dt)
+      o.body:setAngularVelocity(da / dt)
+      o.nextX, o.nextY, o.nextA, o.nextT, o.nextStep = tx, ty, o.body:getAngle() + da, o.body, ph.stepNo
     end
   end
 end
@@ -1106,6 +1152,7 @@ function Physics.step(world, dt)
   if not ph or dt <= 0 then return end
   dt = math.min(dt, 1 / 30)
   syncRails(ph, dt)
+  syncFollowers(ph, dt)
   for _, p in ipairs(ph.actors or world.players) do
     local rec = ph.players[p]
     if rec then rec.body:setActive(not p.dead) end

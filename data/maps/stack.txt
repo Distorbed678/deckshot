@@ -8,12 +8,8 @@ spawn 1224 720
 rect 96 768 1344 96
 oneway 288 624 168 14
 oneway 1080 624 168 14
-oneway 1080 600 168 14
-oneway 288 600 168 14
-oneway 504 456 144 14
-oneway 888 456 144 14
-oneway 888 456 144 14
-oneway 504 456 144 14
+oneway 504 480 144 14
+oneway 888 480 144 14
 obj block h=48 hp=60 id=1 material=crate physics=true w=48 x=720 y=720
 obj block h=48 hp=60 id=2 material=crate physics=true w=48 x=732 y=672
 obj block h=48 hp=60 id=3 material=crate physics=true w=48 x=720 y=624

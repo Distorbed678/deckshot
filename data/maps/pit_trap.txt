@@ -1,22 +1,22 @@
 deckshot-map 4
 name Pit Trap
 theme desert
-spawn 204 696
-spawn 1332 696
+spawn 200 696
+spawn 1336 696
 spawn 300 696
 spawn 1236 696
-rect 144 744 312 120
-rect 1080 744 312 120
-rect 576 744 384 120
-rect 456 816 120 48
-rect 960 816 120 48
-obj spikes anchored=true damage=30 dir=up h=16 id=1 w=120 x=456 y=800
-obj block back=4 crumble=true delay=0.6 h=18 id=2 material=stone w=120 x=456 y=744
-obj spikes anchored=true damage=30 dir=up h=16 id=3 w=120 x=960 y=800
-obj block back=4 crumble=true delay=0.6 h=18 id=4 material=stone w=120 x=960 y=744
-rect 672 600 192 24
-obj spikes anchored=true damage=30 dir=down h=16 id=5 w=192 x=672 y=528
-oneway 240 552 192 14
-oneway 1104 552 192 14
-oneway 432 408 168 14
-oneway 936 408 168 14
+rect 144 744 300 120
+rect 1092 744 300 120
+rect 564 744 408 120
+rect 444 820 120 44
+rect 972 820 120 44
+obj spikes anchored=true damage=30 dir=up h=16 id=1 w=120 x=444 y=804
+obj block back=4 crumble=true delay=0.6 h=18 id=2 material=stone w=120 x=444 y=744
+obj spikes anchored=true damage=30 dir=up h=16 id=3 w=120 x=972 y=804
+obj block back=4 crumble=true delay=0.6 h=18 id=4 material=stone w=120 x=972 y=744
+rect 660 600 216 24
+obj spikes anchored=true damage=30 dir=down h=16 id=5 w=216 x=660 y=524
+oneway 240 550 180 14
+oneway 1116 550 180 14
+oneway 420 408 170 14
+oneway 946 408 170 14

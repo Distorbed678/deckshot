@@ -1,19 +1,21 @@
 deckshot-map 4
 name Keystone
 theme neon
-spawn 300 432
-spawn 1236 432
-spawn 456 432
-spawn 1080 432
+spawn 168 576
+spawn 1032 288
+spawn 504 288
+spawn 1368 576
+oneway 696 240 144 14
+oneway 432 336 168 14
+oneway 936 336 168 14
 rect 240 480 144 384
 rect 1152 480 144 384
-rect 384 480 768 48
-rect 384 792 768 72
+oneway 384 528 336 48
+oneway 816 528 336 48
 rect 720 528 96 96
 oneway 96 624 144 14
 oneway 1296 624 144 14
 oneway 480 648 144 14
 oneway 912 648 144 14
-oneway 432 336 168 14
-oneway 936 336 168 14
-oneway 696 240 144 14
+oneway 696 720 144 14
+rect 384 792 768 72

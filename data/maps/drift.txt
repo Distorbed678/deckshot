@@ -1,15 +1,15 @@
 deckshot-map 4
 name Drift
 theme void
-spawn 180 576
-spawn 1356 576
-spawn 300 576
-spawn 1236 576
-rect 120 624 240 48
-rect 1176 624 240 48
+spawn 180 572
+spawn 1356 572
+spawn 300 572
+spawn 1236 572
+rect 120 620 240 48
+rect 1176 620 240 48
 rect 432 480 216 48
 rect 888 480 216 48
-obj block h=48 id=1 material=ice w=192 x=672 y=672
-oneway 672 336 192 14
-oneway 192 336 168 14
-oneway 1176 336 168 14
+obj block h=48 id=1 material=ice w=216 x=660 y=660
+oneway 672 330 192 14
+oneway 200 330 170 14
+oneway 1166 330 170 14

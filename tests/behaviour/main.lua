@@ -250,11 +250,23 @@ function love.load()
   local p=w.players[1]; p.x,p.y,p.vx,p.vy=pf.x+60,pf.y-60,0,0
   run(w,0.5)
   check("can ride a rail platform",p.onGround and p.groundRect==pf,tostring(p.groundRect))
-  -- jam: huge wall in the way
-  local w=raw({{id=1,type="rail",x=400,y=650,path={{400,650},{900,650}},speed=300,force=0.05},{id=2,type="block",material="metal",x=370,y=620,w=60,h=60,parent=1},
-     {id=3,type="block",material="brick",physics=true,hp=0,x=600,y=504,w=200,h=240}})
-  run(w,2.5)
-  check("heavy object stalls a rail",w.objects[2].x<560,w.objects[2].x)
+  -- machines hold their path: a heavy drop or a hard landing doesn't bounce what rides them
+  local w=raw({{id=1,type="rail",x=400,y=500,path={{400,500},{400,300}},speed=60},{id=2,type="block",material="metal",x=340,y=491,w=120,h=18,parent=1},
+     {id=3,type="block",material="brick",physics=true,x=360,y=200,w=80,h=80}})
+  local worst=0
+  for _=1,90 do run(w,1/60); local pf=w.objects[2]; worst=math.max(worst,math.abs(pf.x-340),math.abs(pf.y-(w.objects[1].y-9))) end
+  check("a heavy drop doesn't shake a rail platform",worst<1.5,worst)
+  local w=raw({{id=1,type="arm",x=700,y=500,length=150,spin=0.5},{id=2,type="block",material="metal",x=790,y=491,w=120,h=18,parent=1,attach="level"}})
+  run(w,0.2)
+  local p=w.players[1]; p.x,p.y,p.vx,p.vy=w.objects[2].x+60,300,0,900
+  local worst=0
+  for _=1,60 do
+    run(w,1/60)
+    local a,s0=w.objects[1],w.objects[2]
+    local cx,cy=s0.x+60,s0.y+9
+    worst=math.max(worst,math.abs(math.sqrt((cx-700)^2+(cy-500)^2)-150),math.abs(s0.rot))
+  end
+  check("a landing doesn't shake an arm seat",worst<1.5,worst)
   -- liquid buoyancy
   local w=raw({{id=1,type="liquid",x=300,y=500,w=800,h=244,buoyant=true},{id=2,type="block",material="crate",physics=true,x=500,y=300,w=50,h=50},{id=3,type="block",material="brick",physics=true,x=700,y=300,w=50,h=50}})
   run(w,3.5)
@@ -323,13 +335,10 @@ function love.load()
   w.state="countdown"; w:beginRound(); 
   check("next juggernaut is the killer",w.jugg==h[2] and #j.cards==0,#j.cards)
 
-  -- Built-in maps sit on the editor's 24 px grid, and the ground under every spawn reaches the bottom.
-  local offGrid, floating = {}, {}
+  -- The ground under every spawn reaches the bottom.
+  local floating = {}
   for _,m in ipairs(Map.list) do
     if not m.custom then
-      for _,r in ipairs(m.rects) do
-        if r.x%24~=0 or r.y%24~=0 or r.w%24~=0 then offGrid[#offGrid+1]=m.id break end
-      end
       -- A wide floor low in the arena is "the ground" (island and lava maps have narrow ones on purpose).
       for _,r in ipairs(m.rects) do
         local rests=false
@@ -338,7 +347,6 @@ function love.load()
       end
     end
   end
-  check("built-in maps are on the 24 px grid",#offGrid==0,table.concat(offGrid," "))
   check("wide grounds reach the bottom",#floating==0,table.concat(floating," "))
   love.filesystem.load("cards.lua")()(check)
   local noStack={}

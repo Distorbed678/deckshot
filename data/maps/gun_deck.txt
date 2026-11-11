@@ -1,19 +1,19 @@
 deckshot-map 4
 name Gun Deck
 theme void
-spawn 228 720
-spawn 1308 720
-spawn 336 720
-spawn 1212 720
-rect 144 768 1248 96
-rect 360 576 216 24
-rect 960 576 216 24
-rect 720 432 96 24
-rect 96 432 144 24
-rect 1296 432 144 24
-obj turret damage=15 hp=60 id=1 physics=false rate=2.4 x=768 y=408
-obj turret damage=15 hp=60 id=2 physics=false rate=3 x=168 y=420
-obj turret damage=15 hp=60 id=3 physics=false rate=3 x=1380 y=420
-obj block h=48 hp=150 id=4 material=brick w=144 x=432 y=720
-obj block h=48 hp=150 id=5 material=brick w=144 x=960 y=720
-obj block h=48 hp=150 id=6 material=brick w=144 x=696 y=720
+spawn 230 708
+spawn 1306 708
+spawn 330 708
+spawn 1206 708
+rect 144 756 1248 108
+rect 360 570 216 36
+rect 960 570 216 36
+rect 720 430 96 36
+rect 96 424 132 24
+rect 1308 424 132 24
+obj turret damage=15 hp=60 id=1 physics=false rate=2.4 x=768 y=412
+obj turret damage=15 hp=60 id=2 physics=false rate=3 x=162 y=406
+obj turret damage=15 hp=60 id=3 physics=false rate=3 x=1374 y=406
+obj block h=48 hp=150 id=4 material=brick w=144 x=420 y=708
+obj block h=48 hp=150 id=5 material=brick w=144 x=972 y=708
+obj block h=48 hp=150 id=6 material=brick w=144 x=696 y=708

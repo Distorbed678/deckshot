@@ -1,19 +1,19 @@
 deckshot-map 4
 name Gauntlet
 theme void
-spawn 204 720
-spawn 1332 720
-spawn 288 720
-spawn 1248 720
-rect 144 768 1248 96
+spawn 200 708
+spawn 1336 708
+spawn 290 708
+spawn 1246 708
+rect 144 756 1248 108
 obj rail id=1 path=768,300;768,660 speed=150 x=768 y=300
 obj saw damage=25 id=2 parent=1 r=28 x=768 y=300
 obj flame damage=12 dir=up id=3 length=190 off=2.6 on=1.1 phase=0 physics=false warn=0.5 x=600 y=756
 obj flame damage=12 dir=up id=4 length=190 off=2.6 on=1.1 phase=1.3 physics=false warn=0.5 x=936 y=756
 obj laser damage=40 dir=down id=5 off=3 on=0.8 phase=1.5 physics=false warn=0.8 x=768 y=120
-oneway 288 624 192 14
-oneway 1056 624 192 14
-rect 552 480 120 24
-rect 864 480 120 24
-oneway 168 384 144 14
-oneway 1224 384 144 14
+oneway 290 612 200 14
+oneway 1046 612 200 14
+rect 560 468 110 24
+rect 866 468 110 24
+oneway 170 380 150 14
+oneway 1216 380 150 14

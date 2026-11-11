@@ -5,14 +5,14 @@ spawn 192 624
 spawn 1344 624
 spawn 204 360
 spawn 1332 360
-rect 96 672 264 192
-rect 1176 672 264 192
+oneway 696 216 144 14
 rect 96 408 240 24
 rect 1200 408 240 24
-obj rail force=6 id=1 path=768,696;768,300 speed=120 x=768 y=696
-obj block h=20 id=2 material=metal parent=1 w=192 x=672 y=696
-obj rail force=6 id=3 path=504,360;504,696 speed=120 x=504 y=360
-obj block h=20 id=4 material=metal parent=3 w=120 x=432 y=360
-obj rail force=6 id=5 path=1032,696;1032,360 speed=120 x=1032 y=696
-obj block h=20 id=6 material=metal parent=5 w=120 x=984 y=696
-oneway 696 216 144 14
+rect 96 672 264 192
+rect 1176 672 264 192
+obj rail force=6 id=5 speed=120 x=1032 y=696 path=1032,696;1032,360
+obj block h=20 id=6 material=metal parent=5 w=120 x=972 y=684
+obj rail force=6 id=12 speed=120 x=504 y=696 path=504,696;504,360
+obj block h=20 id=13 material=metal parent=12 w=120 x=444 y=684
+obj rail force=1 id=14 speed=120 x=768 y=288 path=768,288;768,696
+obj block h=19 id=15 material=metal parent=14 w=144 x=696 y=280

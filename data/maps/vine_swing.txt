@@ -6,11 +6,11 @@ spawn 1368 720
 spawn 312 720
 spawn 1224 720
 rect 96 768 1344 96
-oneway 96 624 120 14
-oneway 1320 624 120 14
-obj block h=16 hp=40 id=1 material=wood physics=true w=96 x=336 y=600
+oneway 96 504 120 14
+oneway 1320 504 120 14
+obj block h=16 hp=40 id=1 material=wood physics=true w=96 x=336 y=624
 obj rope id=2 segHp=60 slack=1 target=1 x=384 y=48
-obj block h=16 hp=40 id=3 material=wood physics=true w=96 x=1104 y=600
+obj block h=16 hp=40 id=3 material=wood physics=true w=96 x=1104 y=624
 obj rope id=4 segHp=60 slack=1 target=3 x=1152 y=48
 obj block h=16 hp=40 id=5 material=wood physics=true w=96 x=552 y=492
 obj rope id=6 segHp=60 slack=1 target=5 x=600 y=48

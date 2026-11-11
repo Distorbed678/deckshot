@@ -5,22 +5,23 @@ spawn 216 720
 spawn 1332 720
 spawn 312 720
 spawn 1224 720
-rect 144 768 1248 96
-rect 408 432 24 216
-rect 1104 432 24 216
-oneway 408 408 288 14
-oneway 840 408 288 14
-obj block h=14 hp=1 id=1 material=glass w=144 x=696 y=394
-obj block h=120 hp=1 id=2 material=glass w=24 x=408 y=648
-obj block h=120 hp=1 id=3 material=glass w=24 x=1104 y=648
-obj block h=144 hp=1 id=4 material=glass w=48 x=744 y=408
-obj block h=192 hp=1 id=5 material=glass w=48 x=744 y=576
-obj block h=14 hp=1 id=6 material=glass w=168 x=432 y=552
-obj block h=14 hp=1 id=7 material=glass w=144 x=600 y=552
-obj block h=14 hp=1 id=8 material=glass w=144 x=792 y=552
-obj block h=14 hp=1 id=9 material=glass w=168 x=936 y=552
+oneway 672 264 192 14
+oneway 432 408 312 24
+oneway 792 408 312 24
 oneway 168 552 168 14
 oneway 1200 552 168 14
-oneway 672 264 192 14
-obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=560 y=720
-obj block drop=0.1 h=48 hp=60 id=11 material=crate onBreak=pickup physics=true w=48 x=928 y=720
+rect 144 768 1248 96
+obj block h=192 hp=1 id=3 material=glass w=24 x=1104 y=576
+obj block h=168 hp=1 id=4 material=glass w=48 x=744 y=408
+obj block h=192 hp=1 id=5 material=glass w=48 x=744 y=576
+obj block h=12 hp=1 id=6 material=glass w=312 x=432 y=576
+obj block drop=0.1 h=48 hp=60 id=10 material=crate onBreak=pickup physics=true w=48 x=564 y=720
+obj block h=12 hp=1 id=20 material=glass w=312 x=792 y=576
+obj block h=168 hp=1 id=21 material=glass w=24 x=1104 y=408
+obj block h=192 hp=1 id=22 material=glass w=24 x=408 y=576
+obj block h=168 hp=1 id=23 material=glass w=24 x=408 y=408
+obj block drop=0.1 h=48 hp=60 id=24 material=crate onBreak=pickup physics=true w=48 x=924 y=720
+obj block drop=0.1 h=48 hp=60 id=25 material=crate onBreak=pickup physics=true w=48 x=564 y=528
+obj block drop=0.1 h=48 hp=60 id=26 material=crate onBreak=pickup physics=true w=48 x=924 y=528
+obj block drop=0.1 h=48 hp=60 id=27 material=crate onBreak=pickup physics=true w=48 x=564 y=360
+obj block drop=0.1 h=48 hp=60 id=28 material=crate onBreak=pickup physics=true w=48 x=924 y=360

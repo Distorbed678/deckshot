@@ -5,14 +5,12 @@ spawn 468 720
 spawn 1068 720
 spawn 588 720
 spawn 948 720
-rect 384 768 768 96
-obj block h=240 id=1 material=stone slope=left w=240 x=144 y=528
-obj block h=240 id=2 material=stone slope=right w=240 x=1152 y=528
-rect 144 768 240 96
-rect 1152 768 240 96
-rect 96 528 48 336
-rect 1392 528 48 336
-oneway 648 576 240 14
+oneway 672 312 192 14
 oneway 432 432 168 14
 oneway 936 432 168 14
-oneway 672 312 192 14
+rect 0 528 144 336
+rect 1392 528 144 336
+oneway 648 576 240 14
+rect 144 768 1248 96
+obj block h=240 id=1 material=stone slope=left w=240 x=144 y=528
+obj block h=240 id=2 material=stone slope=right w=240 x=1152 y=528

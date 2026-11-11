@@ -1,25 +1,25 @@
 deckshot-map 4
 name Wrecking Yard
 theme foundry
-spawn 216 720
-spawn 1320 720
-spawn 324 720
-spawn 1212 720
-rect 144 768 1248 96
-obj weight damage=60 id=1 physics=true r=32 x=456 y=384
+spawn 220 708
+spawn 1316 708
+spawn 320 708
+spawn 1216 708
+rect 144 756 1248 108
+obj weight damage=60 id=1 physics=true r=32 x=456 y=380
 obj rope id=2 segHp=60 slack=1 target=1 x=456 y=60
-obj weight damage=60 id=3 physics=true r=32 x=1080 y=384
+obj weight damage=60 id=3 physics=true r=32 x=1080 y=380
 obj rope id=4 segHp=60 slack=1 target=3 x=1080 y=60
-obj block h=48 hp=150 id=5 material=brick physics=true w=96 x=720 y=720
-obj block h=48 hp=150 id=6 material=brick physics=true w=96 x=720 y=672
-obj block h=48 hp=150 id=7 material=brick physics=true w=96 x=720 y=624
-obj block h=48 hp=150 id=8 material=brick physics=true w=96 x=720 y=576
-obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=560 y=720
-obj block h=48 hp=60 id=10 material=crate physics=true w=48 x=560 y=672
-obj block h=48 hp=60 id=11 material=crate physics=true w=48 x=928 y=720
-obj block h=48 hp=60 id=12 material=crate physics=true w=48 x=928 y=672
-oneway 168 624 192 14
-oneway 1176 624 192 14
-oneway 672 408 192 14
+obj block h=48 hp=150 id=5 material=brick physics=true w=96 x=720 y=708
+obj block h=48 hp=150 id=6 material=brick physics=true w=96 x=720 y=660
+obj block h=48 hp=150 id=7 material=brick physics=true w=96 x=720 y=612
+obj block h=48 hp=150 id=8 material=brick physics=true w=96 x=720 y=564
+obj block h=48 hp=60 id=9 material=crate physics=true w=48 x=560 y=708
+obj block h=48 hp=60 id=10 material=crate physics=true w=48 x=560 y=660
+obj block h=48 hp=60 id=11 material=crate physics=true w=48 x=928 y=708
+obj block h=48 hp=60 id=12 material=crate physics=true w=48 x=928 y=660
+oneway 170 608 190 14
+oneway 1176 608 190 14
+oneway 672 396 192 14
 oneway 456 504 96 14
 oneway 984 504 96 14
