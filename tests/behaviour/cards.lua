@@ -103,7 +103,7 @@ return function(check)
     check("Grenadier's 5th shot is a grenade", gren~=nil) end
   -- Bee Swarm.
   do local w,a,b=mk({"bee_swarm"}); a.x,b.x=300,500; local bl=shootAt(w,a,b); require("game.abilities").shotDamage(a,bl); run(w,0.2)
-    local bees=0; for _,q in ipairs(w.bullets) do if q.isBee then bees=bees+1 end end
+    local bees=a.beesMade or 0
     check("Bee Swarm releases a bee on hit", bees>0, bees) end
   -- Mine Layer.
   do local w,a=mk({"mine_layer"}); run(w,4.5); local n=0; for _,q in ipairs(w.bullets) do if q.fromMineDrop then n=n+1 end end

@@ -753,7 +753,8 @@ function A.bulletLanded(b, p, game)
     local alive = 0
     for _, q in ipairs(game.bullets) do if q.isBee and q.owner == o and not q.dead then alive = alive + 1 end end
     if alive < 6 + 4 * (s.bees - 1) then
-      local a = love.math.random() * math.pi * 2
+      local a = -math.pi / 2 + (love.math.random() - 0.5) * math.pi -- upward, away from the floor
+      o.beesMade = (o.beesMade or 0) + 1
       local bee = b:spawnChild(game, p.x + math.cos(a) * (p.r + 14), p.y + math.sin(a) * (p.r + 14), a, 380,
         10 * A.gadgetDamage(o), p)
       bee.isBee, bee.homing, bee.gravity, bee.life, bee.r = true, 9, 0, 4, 3
