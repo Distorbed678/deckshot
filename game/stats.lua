@@ -51,7 +51,6 @@ Stats.LIST = {
   { "cluster", 0, "Bullets", "count", "high", "cluster blasts" },
   { "hydra", 0, "Bullets", "count", "high", "hydra heads" },
   { "laser", 0, "Bullets", "count", "high", "laser" },
-  { "railgun", 0, "Bullets", "count", "high", "railgun" },
   { "mirror", 0, "Bullets", "count", "high", "mirror shots" },
   { "scavenger", 0, "Bullets", "flat", "high", "ammo refunded per hit" },
   -- Melee

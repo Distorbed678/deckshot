@@ -103,6 +103,7 @@ local defaults = {
   touchOpacity = 0.5,
   mobileDefaults = false, -- lighter effects were applied for a touch device
   practiceControls = "p1", -- last choice on the practice / tutorial control picker
+  testInput = "ask",        -- what the card and map editors test with (Settings.TEST_INPUTS)
   padOnline = false,     -- play online with the first gamepad instead of mouse + keys
   clientToken = "",      -- random id, so a LAN host can give you your slot back after a disconnect
   lobbyVisibility = "public", -- Steam lobbies: public (listed), friends, code (unlisted)

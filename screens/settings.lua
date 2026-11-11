@@ -382,7 +382,7 @@ function Screen:drawControls(x, y0, w, viewH)
   self.controlsScroll = self.controlsScroll or { y = 0 }
   local rowsMax = 0
   for _, scheme in ipairs(schemes) do rowsMax = math.max(rowsMax, #scheme.actions) end
-  local y = ui.beginScroll(self.controlsScroll, x - 4, y0, w + 8, viewH, 44 + rowsMax * 38 + 104)
+  local y = ui.beginScroll(self.controlsScroll, x - 4, y0, w + 8, viewH, 44 + rowsMax * 38 + 154)
   local gapX = 20
   local colW = (w - gapX * (#schemes - 1)) / #schemes
   local h, gap = 34, 38
@@ -443,6 +443,12 @@ function Screen:drawControls(x, y0, w, viewH)
   end
   d = ui.cycler("Gamepad online", v.padOnline and "On" or "Off", x + 768, by + 30, w - 768, 40)
   if d ~= 0 then v.padOnline = not v.padOnline end
+  -- What the card and map editors' test play uses.
+  local InputPick = require "screens.inputpick"
+  local cur = 1
+  for k, c in ipairs(InputPick.CHOICES) do if c[1] == v.testInput then cur = k end end
+  d = ui.cycler("Editor test play with", InputPick.CHOICES[cur][2], x, by + 80, 520, 40)
+  if d ~= 0 then v.testInput = InputPick.CHOICES[(cur - 1 + d) % #InputPick.CHOICES + 1][1] end
   ui.endScroll(self.controlsScroll)
 end
 

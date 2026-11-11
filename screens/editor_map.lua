@@ -1038,7 +1038,10 @@ function Editor:test()
   local Match = require "screens.match"
   local copy = self:exported()
   copy.index = 0
-  app.switch(Match.newLocal(99, { map = copy, returnTo = self, test = true }))
+  require("screens.inputpick").choose(function(kind)
+    app.switch(Match.newLocal(99, { map = copy, returnTo = self, test = true,
+      setup = { { kind = kind, color = 1, team = 1 }, { kind = "dummy", color = 2, team = 2 } } }))
+  end)
 end
 
 function Editor:exit()

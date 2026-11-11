@@ -75,6 +75,7 @@ function CardEditor:update(dt)
 end
 
 function CardEditor:wheelmoved(_, dy)
+  if self.picker and self.picker.scroll then return ui.wheel(self.picker.scroll, dy) end
   self.scroll = math.max(0, self.scroll - dy * 40)
 end
 
@@ -114,13 +115,18 @@ function CardEditor:save()
   sfx.ui("cardPick")
 end
 
-function CardEditor:test()
+-- Try the card at once: against a dummy that stands still, or a bot that fights back. The
+-- controls come from Settings > Controls > Editor test play with (or a quick question).
+function CardEditor:test(vsBot)
   local Match = require "screens.match"
   local cards = {}
   local card = CardData.build(copyDef(self.def))
   card.id, card.index = "test", 0
   for _ = 1, self.testCopies do cards[#cards + 1] = card end
-  app.switch(Match.newLocal(99, { test = true, returnTo = self, giveCards = cards }))
+  require("screens.inputpick").choose(function(kind)
+    app.switch(Match.newLocal(99, { test = true, returnTo = self, giveCards = cards,
+      setup = { { kind = kind, color = 1, team = 1 }, { kind = vsBot and "bot2" or "dummy", color = 2, team = 2 } } }))
+  end)
 end
 
 function CardEditor:keypressed(key)
@@ -169,29 +175,64 @@ function CardEditor:drawStatPicker()
   love.graphics.setFont(app.fonts.title)
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("Choose a stat", 54, 44)
-  local cols = { Gun = 1, Bullets = 2, Melee = 3, Movement = 3, Defense = 4, Block = 5, Abilities = 6 }
-  local colY = {}
-  local cw = (app.W - 120) / 6
+  -- Search by name or group.
+  pk.q = pk.q or ""
+  self:textRow(pk, "q", app.W - 420, 46, 360, 32, "Search stats...")
+  local q = pk.q:lower()
+  pk.scroll = pk.scroll or { y = 0 }
+  self.pickerScroll = pk.scroll
+  local cols, cw, rowH = 5, (app.W - 120 - 4 * 8) / 5, 26
+  -- Lay the stats out group by group, five to a row.
+  local items, contentH = {}, 0
   for _, group in ipairs(Stats.GROUPS) do
-    local c = cols[group]
-    local x = 50 + (c - 1) * (cw + 4)
-    colY[c] = (colY[c] or 82) + 8
-    label(group:upper(), x + 2, colY[c], 0.45)
-    colY[c] = colY[c] + 18
+    local list = {}
     for _, row in ipairs(Stats.LIST) do
       local inf = Stats.INFO[row[1]]
-      if inf.group == group then
-        if ui.button(inf.label, x, colY[c], cw, 21, { font = app.fonts.tiny, color = pk.row.stat == inf.key and ui.ACCENT or nil }) then
-          pk.row.stat = inf.key
-          pk.row.value = pk.row.op == "mul" and 1.2 or stepFor(inf.key, pk.row.op)
-          self.picker = nil
-          return
-        end
-        colY[c] = colY[c] + 23
+      if inf.group == group and (q == "" or inf.label:lower():find(q, 1, true) or group:lower():find(q, 1, true)) then
+        list[#list + 1] = inf
       end
     end
+    if #list > 0 then
+      items[#items + 1] = { header = group, y = contentH }
+      contentH = contentH + 24
+      for k, inf in ipairs(list) do
+        items[#items + 1] = { inf = inf, x = ((k - 1) % cols), y = contentH + math.floor((k - 1) / cols) * rowH }
+      end
+      contentH = contentH + math.ceil(#list / cols) * rowH + 10
+    end
   end
-  if ui.button("Cancel", app.W / 2 - 80, app.H - 80, 160, 36, { back = true }) then self.picker = nil end
+  local top = ui.beginScroll(pk.scroll, 50, 92, app.W - 100, app.H - 200, contentH)
+  local hover
+  for _, it in ipairs(items) do
+    if it.header then
+      label(it.header:upper(), 52, top + it.y + 4, 0.45)
+    else
+      local inf = it.inf
+      local x, y = 50 + it.x * (cw + 8), top + it.y
+      if ui.button(inf.label, x, y, cw, rowH - 4, { font = app.fonts.tiny, color = pk.row.stat == inf.key and ui.ACCENT or nil }) then
+        pk.row.stat = inf.key
+        pk.row.value = pk.row.op == "mul" and 1.2 or stepFor(inf.key, pk.row.op)
+        self.picker = nil
+        ui.endScroll(pk.scroll)
+        return
+      end
+      local mx, my = app.mouse()
+      if mx >= x and mx <= x + cw and my >= y and my <= y + rowH - 4 and my > 92 and my < app.H - 108 then hover = inf end
+    end
+  end
+  ui.endScroll(pk.scroll)
+  if #items == 0 then
+    love.graphics.setFont(app.fonts.med)
+    love.graphics.setColor(1, 1, 1, 0.45)
+    love.graphics.printf("No stat matches \"" .. pk.q .. "\"", 50, 200, app.W - 100, "center")
+  end
+  -- What the pointed-at stat is.
+  love.graphics.setFont(app.fonts.small)
+  love.graphics.setColor(1, 1, 1, 0.65)
+  local info = hover and (hover.label .. "  -  starts at " .. Stats.num(hover.base) .. ", " .. (hover.better == "low" and "lower is better" or "higher is better")
+    .. (hover.fmt == "count" and "  -  an ability: one per copy; describe it with a note" or "")) or "Point at a stat to see what it starts at"
+  love.graphics.printf(info, 50, app.H - 100, app.W - 300, "left")
+  if ui.button("Cancel", app.W - 240, app.H - 84, 160, 36, { back = true }) then self.picker = nil end
 end
 
 function CardEditor:drawRows(x, y, w)
@@ -326,9 +367,9 @@ function CardEditor:draw()
   love.graphics.print(kind, 20, 8)
   self:textRow(def, "name", 20, 26, 260, 32, "Card name")
   local buttons = {
-    { "Test (" .. self.testCopies .. "x)", function() self:test() end },
-    { "Copies -", function() self.testCopies = math.max(1, self.testCopies - 1) end },
-    { "Copies +", function() self.testCopies = math.min(10, self.testCopies + 1) end },
+    { "Test vs dummy", function() self:test(false) end },
+    { "Test vs bot", function() self:test(true) end },
+    { "Copies: " .. self.testCopies, function() self.testCopies = self.testCopies % 5 + 1 end },
     { "Save", function() self:save() end },
     { "Share", function()
       local ok = pcall(love.system.setClipboardText, CardData.encodeShare(def))
